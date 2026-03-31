@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <ExcludeByFile>**/obj/**/*.cs</ExcludeByFile>
+          <ExcludeByAttribute>ExcludeFromCodeCoverage,CompilerGenerated,GeneratedCode</ExcludeByAttribute>
+          <Include>[MapaTributario.API]*</Include>
+          <Exclude>[*]Microsoft.AspNetCore.OpenApi.Generated*,[*]System.Runtime.CompilerServices*,[*]Program</Exclude>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

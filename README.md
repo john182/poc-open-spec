@@ -61,7 +61,7 @@ GET /parametrizacao/{municipio}/{servico}/{competencia}/aliquota
 
 **Parâmetros**:
 - `municipio`: Código IBGE do município (ex: 3106200 para Belo Horizonte)
-- `servico`: Código de serviço seguindo LC 116/2003 (ex: 01.01.01.001). Esse código de serviço pode estar definido de duas formas. No modelo de 6 dígitos ou no modelo de 9 dígitos.
+- `servico`: Código de serviço seguindo LC 116/2003 (ex: 01.01.01.001).
 - `competencia`: Data no formato YYYYMM (ex: 202603 para Março de 2026)
 
 **Exemplo de Resposta**:

@@ -1,29 +1,29 @@
-# Tax Rate Crawler with City Selection Frontend
+# Crawler de Alíquotas com Frontend de Seleção de Cidades
 
-A greenfield project that periodically crawls Brazilian municipal tax rates from the NFS-e API and presents them via an interactive frontend where users can browse tax information by city and service code.
+Um projeto greenfield que periodicamente coleta alíquotas de impostos municipais brasileiros da API NFS-e e apresenta através de um frontend interativo onde usuários podem navegar pelas informações tributárias por cidade e código de serviço.
 
-**Team Challenge**: Tech stack is decided by your team. This architecture is language and framework-agnostic.
+**Desafio em Equipe**: A stack tecnológica é decidida pela sua equipe. Esta arquitetura é agnóstica a linguagens e frameworks.
 
 ---
 
-## Project Overview
+## Visão Geral do Projeto
 
-### What It Does
+### O Que Faz
 
-1. **Crawler**: Automatically fetches current tax rates for predefined municipalities and service codes from the NFS-e API
-2. **Backend API**: Serves cached tax rate data with fast query capabilities
-3. **Frontend**: Interactive UI where users:
-   - Select a city from a list of municipalities
-   - View all available service codes for that city
-   - Select a specific service code to see detailed tax rate information
+1. **Crawler**: Busca automaticamente as alíquotas atuais para municípios e códigos de serviço predefinidos da API NFS-e
+2. **API Backend**: Serve dados de alíquotas em cache com capacidades de consulta rápida
+3. **Frontend**: UI interativa onde os usuários:
+   - Selecionam uma cidade de uma lista de municípios
+   - Visualizam todos os códigos de serviço disponíveis para aquela cidade
+   - Selecionam um código de serviço específico para ver informações detalhadas sobre a alíquota
 
-### Architecture
+### Arquitetura
 
 ```
 ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
 │   Crawler    │────────▶│  Data Store  │◀────────│  Backend API │
-│   Worker     │         │ (DB or In-   │         │              │
-│  (Scheduled) │         │   Memory)    │         └───────┬──────┘
+│   Worker     │         │ (BD ou Em    │         │              │
+│  (Agendado)  │         │   Memória)   │         └───────┬──────┘
 └──────────────┘         └──────────────┘                 │
                                                            │ HTTP
                                                            │
@@ -33,38 +33,38 @@ A greenfield project that periodically crawls Brazilian municipal tax rates from
                                                     └─────────────┘
 ```
 
-**3-Tier Architecture**:
-- **Crawler Worker**: Scheduled service that fetches data from NFS-e API and populates data store
-- **Backend API**: REST API serving cached data to frontend
-- **Frontend**: User interface for city and service code selection with tax rate display
+**Arquitetura 3 Camadas**:
+- **Crawler Worker**: Serviço agendado que busca dados da API NFS-e e popula o armazenamento de dados
+- **Backend API**: API REST servindo dados em cache para o frontend
+- **Frontend**: Interface do usuário para seleção de cidade e código de serviço com exibição de alíquotas
 
 ---
 
-## User Experience Flow
+## Fluxo de Experiência do Usuário
 
-1. **City Selection**: User opens app and sees a list of available municipalities (display format: team decision)
-2. **Service Codes List**: After selecting a city, user sees all service codes available for that municipality
-3. **Tax Rate Details**: User selects a specific service code and views detailed tax information (alíquota, competência, etc.)
+1. **Seleção de Cidade**: Usuário abre o app e vê uma lista de municípios disponíveis (formato de exibição: decisão da equipe)
+2. **Lista de Códigos de Serviço**: Após selecionar uma cidade, usuário vê todos os códigos de serviço disponíveis para aquele município
+3. **Detalhes da Alíquota**: Usuário seleciona um código de serviço específico e visualiza informações tributárias detalhadas (alíquota, competência, etc.)
 
 ---
 
-## API Reference
+## Referência da API
 
-### NFS-e API (External - Source Data)
+### API NFS-e (Externa - Fonte de Dados)
 
-**Base URL**: (from Bruno collection)
+**URL Base**: (da coleção Bruno)
 
-#### Get Current Tax Rate
+#### Obter Alíquota Atual
 ```
 GET /parametrizacao/{municipio}/{servico}/{competencia}/aliquota
 ```
 
-**Parameters**:
-- `municipio`: IBGE municipality code (e.g., 3106200 for Belo Horizonte)
-- `servico`: Service code following LC 116/2003 (e.g., 01.01.01.001)
-- `competencia`: Date in YYYYMM format (e.g., 202603 for March 2026)
+**Parâmetros**:
+- `municipio`: Código IBGE do município (ex: 3106200 para Belo Horizonte)
+- `servico`: Código de serviço seguindo LC 116/2003 (ex: 01.01.01.001)
+- `competencia`: Data no formato YYYYMM (ex: 202603 para Março de 2026)
 
-**Response Example**:
+**Exemplo de Resposta**:
 ```json
 {
   "codigoMunicipio": "3106200",

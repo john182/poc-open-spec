@@ -1,6 +1,6 @@
 # Crawler de Alíquotas com Frontend de Seleção de Cidades
 
-Um projeto greenfield que periodicamente coleta alíquotas de impostos municipais brasileiros da API NFS-e e apresenta através de um frontend interativo onde usuários podem navegar pelas informações tributárias por cidade e código de serviço.
+Um projeto greenfield que periodicamente coleta alíquotas de impostos municipais brasileiros da API NFS-e e apresenta através de um frontend interativo onde usuários podem navegar pelas informações tributárias (somente ISS retornado pela API do ADN) por cidade e código de serviço.
 
 **Desafio em Equipe**: A stack tecnológica é decidida pela sua equipe. Esta arquitetura é agnóstica a linguagens e frameworks. O projeto deve estar disponível em uma imagem (dockerizado).
 

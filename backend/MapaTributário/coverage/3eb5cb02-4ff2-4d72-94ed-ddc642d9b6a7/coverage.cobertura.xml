@@ -1,0 +1,542 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coverage line-rate="0.9677" branch-rate="0.5714" version="1.9" timestamp="1774998802" lines-covered="150" lines-valid="155" branches-covered="8" branches-valid="14">
+  <sources>
+    <source>D:\exemplos\worktrees\backend-auth\backend\MapaTributário\src\MapaTributario.API\</source>
+  </sources>
+  <packages>
+    <package name="MapaTributario.API" line-rate="0.9677" branch-rate="0.5714" complexity="33">
+      <classes>
+        <class name="MapaTributario.API.Validators.LoginRequestValidator" filename="Validators\LoginRequestValidator.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="8" hits="2" branch="False" />
+                <line number="9" hits="2" branch="False" />
+                <line number="10" hits="2" branch="False" />
+                <line number="11" hits="2" branch="False" />
+                <line number="12" hits="2" branch="False" />
+                <line number="14" hits="2" branch="False" />
+                <line number="15" hits="2" branch="False" />
+                <line number="16" hits="2" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="8" hits="2" branch="False" />
+            <line number="9" hits="2" branch="False" />
+            <line number="10" hits="2" branch="False" />
+            <line number="11" hits="2" branch="False" />
+            <line number="12" hits="2" branch="False" />
+            <line number="14" hits="2" branch="False" />
+            <line number="15" hits="2" branch="False" />
+            <line number="16" hits="2" branch="False" />
+          </lines>
+        </class>
+        <class name="MapaTributario.API.Validators.RefreshRequestValidator" filename="Validators\RefreshRequestValidator.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="8" hits="1" branch="False" />
+                <line number="9" hits="1" branch="False" />
+                <line number="10" hits="1" branch="False" />
+                <line number="11" hits="1" branch="False" />
+                <line number="12" hits="1" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="8" hits="1" branch="False" />
+            <line number="9" hits="1" branch="False" />
+            <line number="10" hits="1" branch="False" />
+            <line number="11" hits="1" branch="False" />
+            <line number="12" hits="1" branch="False" />
+          </lines>
+        </class>
+        <class name="MapaTributario.API.Validators.RegisterRequestValidator" filename="Validators\RegisterRequestValidator.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="8" hits="5" branch="False" />
+                <line number="9" hits="5" branch="False" />
+                <line number="10" hits="5" branch="False" />
+                <line number="11" hits="5" branch="False" />
+                <line number="12" hits="5" branch="False" />
+                <line number="14" hits="5" branch="False" />
+                <line number="15" hits="5" branch="False" />
+                <line number="16" hits="5" branch="False" />
+                <line number="18" hits="5" branch="False" />
+                <line number="19" hits="5" branch="False" />
+                <line number="20" hits="5" branch="False" />
+                <line number="21" hits="5" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="8" hits="5" branch="False" />
+            <line number="9" hits="5" branch="False" />
+            <line number="10" hits="5" branch="False" />
+            <line number="11" hits="5" branch="False" />
+            <line number="12" hits="5" branch="False" />
+            <line number="14" hits="5" branch="False" />
+            <line number="15" hits="5" branch="False" />
+            <line number="16" hits="5" branch="False" />
+            <line number="18" hits="5" branch="False" />
+            <line number="19" hits="5" branch="False" />
+            <line number="20" hits="5" branch="False" />
+            <line number="21" hits="5" branch="False" />
+          </lines>
+        </class>
+        <class name="MapaTributario.API.Middleware.ErrorHandlingMiddleware" filename="Middleware\ErrorHandlingMiddleware.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(Microsoft.AspNetCore.Http.RequestDelegate,Microsoft.Extensions.Logging.ILogger`1&lt;MapaTributario.API.Middleware.ErrorHandlingMiddleware&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="11" hits="6" branch="False" />
+                <line number="12" hits="6" branch="False" />
+                <line number="13" hits="6" branch="False" />
+                <line number="14" hits="6" branch="False" />
+                <line number="15" hits="6" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="11" hits="6" branch="False" />
+            <line number="12" hits="6" branch="False" />
+            <line number="13" hits="6" branch="False" />
+            <line number="14" hits="6" branch="False" />
+            <line number="15" hits="6" branch="False" />
+          </lines>
+        </class>
+        <class name="MapaTributario.API.Infrastructure.Repository.UserRepository" filename="Infrastructure\Repository\UserRepository.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(MongoDB.Driver.IMongoDatabase)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="11" hits="5" branch="False" />
+                <line number="12" hits="5" branch="False" />
+                <line number="13" hits="5" branch="False" />
+                <line number="14" hits="5" branch="False" />
+                <line number="15" hits="5" branch="False" />
+                <line number="16" hits="5" branch="False" />
+                <line number="17" hits="5" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="11" hits="5" branch="False" />
+            <line number="12" hits="5" branch="False" />
+            <line number="13" hits="5" branch="False" />
+            <line number="14" hits="5" branch="False" />
+            <line number="15" hits="5" branch="False" />
+            <line number="16" hits="5" branch="False" />
+            <line number="17" hits="5" branch="False" />
+          </lines>
+        </class>
+        <class name="MapaTributario.API.Infrastructure.Repository.Mongo.MongoMappings" filename="Infrastructure\Repository\Mongo\MongoMappings.cs" line-rate="1" branch-rate="1" complexity="2">
+          <methods>
+            <method name="Register" signature="()" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="12" hits="6" branch="False" />
+                <line number="13" hits="6" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="18" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="14" hits="5" branch="False" />
+                <line number="15" hits="5" branch="False" />
+                <line number="18" hits="1" branch="False" />
+                <line number="19" hits="1" branch="False" />
+                <line number="20" hits="1" branch="False" />
+                <line number="21" hits="1" branch="False" />
+                <line number="22" hits="1" branch="False" />
+                <line number="23" hits="1" branch="False" />
+                <line number="24" hits="1" branch="False" />
+                <line number="25" hits="1" branch="False" />
+                <line number="26" hits="1" branch="False" />
+                <line number="27" hits="1" branch="False" />
+                <line number="28" hits="1" branch="False" />
+                <line number="29" hits="1" branch="False" />
+                <line number="30" hits="1" branch="False" />
+                <line number="31" hits="6" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="12" hits="6" branch="False" />
+            <line number="13" hits="6" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="18" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="14" hits="5" branch="False" />
+            <line number="15" hits="5" branch="False" />
+            <line number="18" hits="1" branch="False" />
+            <line number="19" hits="1" branch="False" />
+            <line number="20" hits="1" branch="False" />
+            <line number="21" hits="1" branch="False" />
+            <line number="22" hits="1" branch="False" />
+            <line number="23" hits="1" branch="False" />
+            <line number="24" hits="1" branch="False" />
+            <line number="25" hits="1" branch="False" />
+            <line number="26" hits="1" branch="False" />
+            <line number="27" hits="1" branch="False" />
+            <line number="28" hits="1" branch="False" />
+            <line number="29" hits="1" branch="False" />
+            <line number="30" hits="1" branch="False" />
+            <line number="31" hits="6" branch="False" />
+          </lines>
+        </class>
+        <class name="MapaTributario.API.Infrastructure.Auth.BcryptPasswordHasher" filename="Infrastructure\Auth\BcryptPasswordHasher.cs" line-rate="1" branch-rate="1" complexity="2">
+          <methods>
+            <method name="Hash" signature="(System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="10" hits="4" branch="False" />
+                <line number="11" hits="4" branch="False" />
+                <line number="12" hits="4" branch="False" />
+              </lines>
+            </method>
+            <method name="Verify" signature="(System.String,System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="15" hits="1" branch="False" />
+                <line number="16" hits="1" branch="False" />
+                <line number="17" hits="1" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="10" hits="4" branch="False" />
+            <line number="11" hits="4" branch="False" />
+            <line number="12" hits="4" branch="False" />
+            <line number="15" hits="1" branch="False" />
+            <line number="16" hits="1" branch="False" />
+            <line number="17" hits="1" branch="False" />
+          </lines>
+        </class>
+        <class name="MapaTributario.API.Infrastructure.Auth.JwtTokenProvider" filename="Infrastructure\Auth\JwtTokenProvider.cs" line-rate="0.9375" branch-rate="0.5" complexity="15">
+          <methods>
+            <method name="get_AccessTokenExpirySeconds" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="23" hits="6" branch="False" />
+              </lines>
+            </method>
+            <method name="GenerateAccessToken" signature="(MapaTributario.API.Domain.Entities.User)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="26" hits="6" branch="False" />
+                <line number="27" hits="6" branch="False" />
+                <line number="28" hits="6" branch="False" />
+                <line number="29" hits="6" branch="False" />
+              </lines>
+            </method>
+            <method name="GenerateRefreshToken" signature="(MapaTributario.API.Domain.Entities.User)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="32" hits="6" branch="False" />
+                <line number="33" hits="6" branch="False" />
+                <line number="34" hits="6" branch="False" />
+                <line number="35" hits="6" branch="False" />
+              </lines>
+            </method>
+            <method name="GetUserIdFromToken" signature="(System.String)" line-rate="0.8332999999999999" branch-rate="0.5" complexity="6">
+              <lines>
+                <line number="38" hits="1" branch="False" />
+                <line number="40" hits="1" branch="False" />
+                <line number="41" hits="1" branch="False" />
+                <line number="42" hits="1" branch="True" condition-coverage="50% (2/4)">
+                  <conditions>
+                    <condition number="62" type="jump" coverage="50%" />
+                    <condition number="102" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="43" hits="1" branch="False" />
+                <line number="44" hits="1" branch="False" />
+                <line number="45" hits="1" branch="False" />
+                <line number="46" hits="1" branch="False" />
+                <line number="47" hits="1" branch="False" />
+                <line number="48" hits="1" branch="False" />
+                <line number="49" hits="1" branch="False" />
+                <line number="50" hits="1" branch="False" />
+                <line number="51" hits="1" branch="False" />
+                <line number="53" hits="1" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="144" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="55" hits="0" branch="False" />
+                <line number="56" hits="0" branch="False" />
+                <line number="57" hits="0" branch="False" />
+                <line number="59" hits="1" branch="False" />
+              </lines>
+            </method>
+            <method name="GenerateJwt" signature="(MapaTributario.API.Domain.Entities.User,System.TimeSpan)" line-rate="1" branch-rate="0.5" complexity="4">
+              <lines>
+                <line number="62" hits="12" branch="False" />
+                <line number="63" hits="12" branch="False" />
+                <line number="64" hits="12" branch="False" />
+                <line number="65" hits="12" branch="False" />
+                <line number="66" hits="12" branch="False" />
+                <line number="67" hits="12" branch="False" />
+                <line number="68" hits="12" branch="False" />
+                <line number="70" hits="12" branch="True" condition-coverage="50% (2/4)">
+                  <conditions>
+                    <condition number="82" type="jump" coverage="50%" />
+                    <condition number="107" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="71" hits="12" branch="False" />
+                <line number="72" hits="12" branch="False" />
+                <line number="73" hits="12" branch="False" />
+                <line number="74" hits="12" branch="False" />
+                <line number="75" hits="12" branch="False" />
+                <line number="77" hits="12" branch="False" />
+                <line number="78" hits="12" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(Microsoft.Extensions.Configuration.IConfiguration)" line-rate="1" branch-rate="0.5" complexity="2">
+              <lines>
+                <line number="15" hits="5" branch="False" />
+                <line number="16" hits="5" branch="False" />
+                <line number="17" hits="5" branch="False" />
+                <line number="18" hits="5" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="38" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="19" hits="5" branch="False" />
+                <line number="20" hits="5" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="23" hits="6" branch="False" />
+            <line number="26" hits="6" branch="False" />
+            <line number="27" hits="6" branch="False" />
+            <line number="28" hits="6" branch="False" />
+            <line number="29" hits="6" branch="False" />
+            <line number="32" hits="6" branch="False" />
+            <line number="33" hits="6" branch="False" />
+            <line number="34" hits="6" branch="False" />
+            <line number="35" hits="6" branch="False" />
+            <line number="38" hits="1" branch="False" />
+            <line number="40" hits="1" branch="False" />
+            <line number="41" hits="1" branch="False" />
+            <line number="42" hits="1" branch="True" condition-coverage="50% (2/4)">
+              <conditions>
+                <condition number="62" type="jump" coverage="50%" />
+                <condition number="102" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="43" hits="1" branch="False" />
+            <line number="44" hits="1" branch="False" />
+            <line number="45" hits="1" branch="False" />
+            <line number="46" hits="1" branch="False" />
+            <line number="47" hits="1" branch="False" />
+            <line number="48" hits="1" branch="False" />
+            <line number="49" hits="1" branch="False" />
+            <line number="50" hits="1" branch="False" />
+            <line number="51" hits="1" branch="False" />
+            <line number="53" hits="1" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="144" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="55" hits="0" branch="False" />
+            <line number="56" hits="0" branch="False" />
+            <line number="57" hits="0" branch="False" />
+            <line number="59" hits="1" branch="False" />
+            <line number="62" hits="12" branch="False" />
+            <line number="63" hits="12" branch="False" />
+            <line number="64" hits="12" branch="False" />
+            <line number="65" hits="12" branch="False" />
+            <line number="66" hits="12" branch="False" />
+            <line number="67" hits="12" branch="False" />
+            <line number="68" hits="12" branch="False" />
+            <line number="70" hits="12" branch="True" condition-coverage="50% (2/4)">
+              <conditions>
+                <condition number="82" type="jump" coverage="50%" />
+                <condition number="107" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="71" hits="12" branch="False" />
+            <line number="72" hits="12" branch="False" />
+            <line number="73" hits="12" branch="False" />
+            <line number="74" hits="12" branch="False" />
+            <line number="75" hits="12" branch="False" />
+            <line number="77" hits="12" branch="False" />
+            <line number="78" hits="12" branch="False" />
+            <line number="15" hits="5" branch="False" />
+            <line number="16" hits="5" branch="False" />
+            <line number="17" hits="5" branch="False" />
+            <line number="18" hits="5" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="38" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="19" hits="5" branch="False" />
+            <line number="20" hits="5" branch="False" />
+          </lines>
+        </class>
+        <class name="MapaTributario.API.Domain.Entities.User" filename="Domain\Entities\User.cs" line-rate="0.8461" branch-rate="1" complexity="4">
+          <methods>
+            <method name="Create" signature="(System.String,System.String,System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="15" hits="4" branch="False" />
+                <line number="16" hits="4" branch="False" />
+                <line number="17" hits="4" branch="False" />
+                <line number="18" hits="4" branch="False" />
+                <line number="19" hits="4" branch="False" />
+                <line number="20" hits="4" branch="False" />
+                <line number="21" hits="4" branch="False" />
+                <line number="22" hits="4" branch="False" />
+                <line number="23" hits="4" branch="False" />
+                <line number="24" hits="4" branch="False" />
+              </lines>
+            </method>
+            <method name="SetId" signature="(System.String)" line-rate="0" branch-rate="1" complexity="1">
+              <lines>
+                <line number="26" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name="Deactivate" signature="()" line-rate="0" branch-rate="1" complexity="1">
+              <lines>
+                <line number="28" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="12" hits="21" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="15" hits="4" branch="False" />
+            <line number="16" hits="4" branch="False" />
+            <line number="17" hits="4" branch="False" />
+            <line number="18" hits="4" branch="False" />
+            <line number="19" hits="4" branch="False" />
+            <line number="20" hits="4" branch="False" />
+            <line number="21" hits="4" branch="False" />
+            <line number="22" hits="4" branch="False" />
+            <line number="23" hits="4" branch="False" />
+            <line number="24" hits="4" branch="False" />
+            <line number="26" hits="0" branch="False" />
+            <line number="28" hits="0" branch="False" />
+            <line number="12" hits="21" branch="False" />
+          </lines>
+        </class>
+        <class name="MapaTributario.API.Controllers.AuthController" filename="Controllers\AuthController.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(MapaTributario.API.Application.Auth.RegisterUser,MapaTributario.API.Application.Auth.LoginUser,MapaTributario.API.Application.Auth.RefreshToken)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="17" hits="8" branch="False" />
+                <line number="18" hits="8" branch="False" />
+                <line number="19" hits="8" branch="False" />
+                <line number="20" hits="8" branch="False" />
+                <line number="21" hits="8" branch="False" />
+                <line number="22" hits="8" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="17" hits="8" branch="False" />
+            <line number="18" hits="8" branch="False" />
+            <line number="19" hits="8" branch="False" />
+            <line number="20" hits="8" branch="False" />
+            <line number="21" hits="8" branch="False" />
+            <line number="22" hits="8" branch="False" />
+          </lines>
+        </class>
+        <class name="MapaTributario.API.Controllers.HealthController" filename="Controllers\HealthController.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(MongoDB.Driver.IMongoDatabase)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="13" hits="1" branch="False" />
+                <line number="14" hits="1" branch="False" />
+                <line number="15" hits="1" branch="False" />
+                <line number="16" hits="1" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="13" hits="1" branch="False" />
+            <line number="14" hits="1" branch="False" />
+            <line number="15" hits="1" branch="False" />
+            <line number="16" hits="1" branch="False" />
+          </lines>
+        </class>
+        <class name="MapaTributario.API.Application.Auth.LoginUser" filename="Application\Auth\LoginUser.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(MapaTributario.API.Domain.Interfaces.IUserRepository,MapaTributario.API.Domain.Interfaces.IPasswordHasher,MapaTributario.API.Domain.Interfaces.ITokenProvider)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="13" hits="8" branch="False" />
+                <line number="14" hits="8" branch="False" />
+                <line number="15" hits="8" branch="False" />
+                <line number="16" hits="8" branch="False" />
+                <line number="17" hits="8" branch="False" />
+                <line number="18" hits="8" branch="False" />
+                <line number="19" hits="8" branch="False" />
+                <line number="20" hits="8" branch="False" />
+                <line number="21" hits="8" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="13" hits="8" branch="False" />
+            <line number="14" hits="8" branch="False" />
+            <line number="15" hits="8" branch="False" />
+            <line number="16" hits="8" branch="False" />
+            <line number="17" hits="8" branch="False" />
+            <line number="18" hits="8" branch="False" />
+            <line number="19" hits="8" branch="False" />
+            <line number="20" hits="8" branch="False" />
+            <line number="21" hits="8" branch="False" />
+          </lines>
+        </class>
+        <class name="MapaTributario.API.Application.Auth.RefreshToken" filename="Application\Auth\RefreshToken.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(MapaTributario.API.Domain.Interfaces.IUserRepository,MapaTributario.API.Domain.Interfaces.ITokenProvider)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="12" hits="8" branch="False" />
+                <line number="13" hits="8" branch="False" />
+                <line number="14" hits="8" branch="False" />
+                <line number="15" hits="8" branch="False" />
+                <line number="16" hits="8" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="12" hits="8" branch="False" />
+            <line number="13" hits="8" branch="False" />
+            <line number="14" hits="8" branch="False" />
+            <line number="15" hits="8" branch="False" />
+            <line number="16" hits="8" branch="False" />
+          </lines>
+        </class>
+        <class name="MapaTributario.API.Application.Auth.RegisterUser" filename="Application\Auth\RegisterUser.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(MapaTributario.API.Domain.Interfaces.IUserRepository,MapaTributario.API.Domain.Interfaces.IPasswordHasher,MapaTributario.API.Domain.Interfaces.ITokenProvider)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="14" hits="8" branch="False" />
+                <line number="15" hits="8" branch="False" />
+                <line number="16" hits="8" branch="False" />
+                <line number="17" hits="8" branch="False" />
+                <line number="18" hits="8" branch="False" />
+                <line number="19" hits="8" branch="False" />
+                <line number="20" hits="8" branch="False" />
+                <line number="21" hits="8" branch="False" />
+                <line number="22" hits="8" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="14" hits="8" branch="False" />
+            <line number="15" hits="8" branch="False" />
+            <line number="16" hits="8" branch="False" />
+            <line number="17" hits="8" branch="False" />
+            <line number="18" hits="8" branch="False" />
+            <line number="19" hits="8" branch="False" />
+            <line number="20" hits="8" branch="False" />
+            <line number="21" hits="8" branch="False" />
+            <line number="22" hits="8" branch="False" />
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>

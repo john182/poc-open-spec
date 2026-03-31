@@ -1,0 +1,45 @@
+root = true
+
+# Base inspirado no repositório oficial do Angular
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 2
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Markdown
+[*.md]
+insert_final_newline = false
+trim_trailing_whitespace = false
+
+# TypeScript / JavaScript
+[*.{ts,tsx,js,jsx,mjs,cjs}]
+indent_style = space
+indent_size = 2
+
+# Templates Angular
+[*.html]
+indent_style = space
+indent_size = 2
+
+# Estilos
+[*.{css,scss,sass,less}]
+indent_style = space
+indent_size = 2
+
+# JSON
+[*.json]
+indent_style = space
+indent_size = 2
+
+# YAML
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# SVG
+[*.svg]
+indent_style = space
+indent_size = 2

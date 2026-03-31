@@ -145,17 +145,17 @@ The worker SHALL support incremental processing — only fetch data that has not
 
 ---
 
-### Requirement: Service code discovery with subdivision early-stop
-The worker SHALL maintain a list of known service codes (seeded from LC 116/2003). The service code format is `XX.XX.XX.XXX` where the last 3 digits (XXX) are subdivisions of the service item. The worker SHALL iterate subdivisions starting at 001, and MUST stop iterating subdivisions for a given service item group (`XX.XX.XX`) after 9 consecutive misses (no data returned). This early-stop strategy drastically reduces the number of API calls. The worker SHALL use the convênio endpoint to discover which municipalities are active. The worker SHOULD use the CNC endpoint if it provides service discovery capability.
+### Requirement: Service code discovery with municipal complement early-stop
+The worker SHALL maintain a seed of ~391 national tax codes (cTribNac, format `ii.ss.dd`) sourced from the gov.br/nfse portal. These derive from the 40 items and ~197 subitems of LC 116/2003, extended with national desdobramentos by the ADN. The full code format is `ii.ss.dd.xxx` where `ii.ss.dd` is the national code and `xxx` is the municipal complement (cTribMun), which varies by municipality. The worker SHALL iterate municipal complements starting at 001, and MUST stop iterating for a given national code after 9 consecutive misses (no data returned). This early-stop drastically reduces API calls. The worker SHALL use the convenio endpoint to discover active municipalities. The worker SHOULD use the CNC endpoint if it provides service discovery.
 
-#### Scenario: Subdivision iteration with early-stop
-- **WHEN** the worker iterates subdivisions for service item `01.01.01` starting at `01.01.01.001`
-- **AND** subdivisions 001 through 009 all return 404 (no data)
-- **THEN** the worker stops iterating that service item group and moves to the next (`01.01.02`)
+#### Scenario: Municipal complement iteration with early-stop
+- **WHEN** the worker iterates complements for national code `01.01.01` starting at `01.01.01.001`
+- **AND** complements 001 through 009 all return 404 (no data)
+- **THEN** the worker stops iterating that national code and moves to the next (`01.01.02`)
 
-#### Scenario: Subdivision found then gap
+#### Scenario: Complement found then gap
 - **WHEN** the worker finds data for `01.01.01.001` but then 002 through 010 return 404 (9 consecutive misses)
-- **THEN** the worker stops iterating that service item group since no more subdivisions are expected
+- **THEN** the worker stops iterating that national code since no more complements are expected
 
 #### Scenario: Municipality discovery via convênio
 - **WHEN** the worker calls `GET /parametrizacao/{municipio}/convenio` and receives a successful response

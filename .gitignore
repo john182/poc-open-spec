@@ -1,3 +1,26 @@
 *.pfx
 .env
 *.zip
+
+# Dependencies
+node_modules/
+packages/
+
+# Build outputs
+dist/
+bin/
+obj/
+.angular/
+
+# IDE
+.idea/
+*.suo
+*.user
+*.vs/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Docker
+mongo-data/

@@ -15,7 +15,12 @@
       "WebSearch",
       "WebFetch(domain:blog.tecnospeed.com.br)",
       "WebFetch(domain:www.gov.br)",
-      "Bash(gh repo:*)"
+      "Bash(gh repo:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh label:*)",
+      "Bash(gh issue:*)",
+      "Bash(gh api:*)",
+      "Bash(cd:*)"
     ]
   }
 }

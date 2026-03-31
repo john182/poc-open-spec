@@ -42,7 +42,7 @@
 - [ ] 4.1 Criar modelos de domínio: `Estado`, `Municipio`, `Servico`, `Aliquota`
 - [ ] 4.2 Criar repositórios MongoDB para cada modelo com índices compostos
 - [ ] 4.3 Criar seed de estados (27 UFs) e municípios a partir de `context/municipios.json` (5.570 registros com Id, Codigo, Nome, Uf) executável no startup
-- [ ] 4.4 Criar seed de códigos de serviço (LC 116/2003)
+- [ ] 4.4 Criar seed de códigos de tributação nacional (~391 códigos ii.ss.dd do portal gov.br/nfse — derivados dos 40 itens e ~197 subitens da LC 116/2003)
 - [ ] 4.5 Criar `ConsultaService` com lógica de listagem paginada e filtros
 - [ ] 4.6 Criar `ConsultaController` com endpoints: GET estados, GET municipios por UF, GET aliquotas por município, GET detalhe aliquota
 - [ ] 4.7 Criar DTOs de response para consulta (EstadoResponse, MunicipioResponse, AliquotaResponse, AliquotaDetalheResponse, PaginatedResponse)

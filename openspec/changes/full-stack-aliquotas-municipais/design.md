@@ -176,20 +176,42 @@ flowchart TD
 
 **Fase 2 — Probe com serviços representativos:** Testa 5 códigos de serviço de grupos diferentes (ex: `01.01.01.001`, `07.02.01.001`, `14.01.01.001`, `17.01.01.001`, `25.01.01.001`). Se todos falharem → município marcado como "sem_dados_adn" e pulado inteiro. Custo: max 5 requests. Isso evita enfileirar centenas de serviços para um município que não tem dado algum.
 
-**Fase 3 — Crawl completo com early-stop por subdivisão:** O código de serviço segue o formato `XX.XX.XX.XXX` onde os 3 últimos dígitos são subdivisões. Para cada grupo `XX.XX.XX`:
-- Começar em `001`
-- Se 9 misses consecutivos (404) → parar e pular para o próximo grupo
-- Isso reduz de ~999 tentativas por grupo para ~9
+**Fase 3 — Crawl completo com early-stop por subdivisão:**
+
+O código de serviço na NFS-e Nacional segue o formato `ii.ss.dd.xxx`:
+
+```
+ii          → Item LC 116 (40 itens, ex: 01 = Informática)
+  ii.ss     → Subitem LC 116 (~197 subitens, ex: 01.01 = Análise e desenvolvimento)
+    ii.ss.dd → Desdobramento Nacional (~391 códigos, criado pelo ADN)
+      ii.ss.dd.xxx → Complemento Municipal (ponteiro para código local do município)
+```
+
+No XML: `cTribNac` = `iissdd` (6 dígitos) e `cTribMun` = `xxx` (3 dígitos).
+
+**Números validados:**
+- **40 itens** na LC 116/2003 (com lacunas: 01 a 39)
+- **~197 subitens** (LC 116 + emendas da LC 157/2016)
+- **~391 códigos de tributação nacional** (com desdobramentos — lista pública no portal gov.br/nfse)
+- **Complemento municipal (xxx)**: variável por município — é ESTE nível que precisa de early-stop
+
+**Estratégia de iteração:** Para cada um dos ~391 códigos nacionais (`ii.ss.dd`):
+- Seed estático dos 391 códigos a partir do portal gov.br/nfse (lista pública e conhecida)
+- Para cada código nacional, iterar complementos municipais: `.001`, `.002`, `.003`...
+- Se 9 misses consecutivos (404) no complemento → parar e pular para o próximo código nacional
+- Estimativa: ~3 complementos efetivos por código em média → ~1.200 códigos reais por município
 
 **Impacto na estimativa de volume:**
 
 | Cenário | Sem otimização | Com convênio + probe + early-stop |
 |---------|---------------|-----------------------------------|
-| 5.570 municípios (raw) | Milhões de requests | ~5.570 convênio + ~5.570×5 probe = ~33K |
-| ~2.000 municípios passam probe | — | ~2.000 × ~200 itens × ~9 subdivisões = ~3.6M |
-| MVP (27 capitais) | ~5.4M | ~27 + 135 probe + ~48.600 crawl = ~49K |
+| 5.570 municípios (raw) | ~391 × 999 × 5.570 = bilhões | ~5.570 convênio + ~5.570×5 probe = ~33K |
+| ~2.000 passam probe | — | ~2.000 × 391 × ~9 tentativas = ~7M |
+| MVP (27 capitais) | — | 27 + 135 + (27 × 391 × 9) = ~95K (~5.3h a 5 req/s) |
 
-**Seed de municípios:** Usar diretamente o arquivo `context/municipios.json` (5.570 municípios com Id, Codigo IBGE, Nome, UF) como fonte de seed no startup do backend. Não depender de API externa do IBGE.
+**Seeds:**
+- **Municípios:** Arquivo `context/municipios.json` (5.570 registros com Id, Codigo IBGE, Nome, UF)
+- **Códigos de serviço:** ~391 códigos de tributação nacional do portal gov.br/nfse — seedados estaticamente
 
 ---
 

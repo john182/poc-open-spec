@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git remote:*)",
+      "Bash(git push:*)",
+      "Bash(grep -E \"\\\\.\\(scss|css\\)$\")",
+      "Bash(xargs grep:*)",
+      "Bash(openspec --help)",
+      "Bash(openspec schemas:*)",
+      "Bash(openspec new:*)",
+      "Bash(openspec status:*)",
+      "Bash(openspec instructions:*)",
+      "Bash(wc:*)",
+      "Bash(python3:*)",
+      "WebSearch",
+      "WebFetch(domain:blog.tecnospeed.com.br)",
+      "WebFetch(domain:www.gov.br)",
+      "Bash(gh repo:*)"
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+meta {
+  name: param retencoes
+  type: http
+  seq: 5
+}
+
+get {
+  url: https://adn.nfse.gov.br/parametrizacao/{{codigoMunicipio}}/{{competencia}}/retencoes
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  codigoMunicipio: 3205002
+  competencia: 2026-01-01
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,22 @@
+meta {
+  name: cnc consulta
+  type: http
+  seq: 7
+}
+
+get {
+  url: https://adn.nfse.gov.br/cnc/consulta/cad/{{codigoMunicipio}}
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  codigoMunicipio: 3106200
+  codigoServico: 010301001
+  competencia: 2025-12-31
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

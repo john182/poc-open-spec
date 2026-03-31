@@ -1,0 +1,22 @@
+meta {
+  name: param alíquotas
+  type: http
+  seq: 4
+}
+
+get {
+  url: https://adn.nfse.gov.br/parametrizacao/{{codigoMunicipio}}/{{codigoServico}}/{{competencia}}/aliquota
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  codigoMunicipio: 3106200
+  codigoServico: 01.01.01.001
+  competencia: 2026-01-09
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

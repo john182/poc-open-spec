@@ -1,0 +1,22 @@
+meta {
+  name: param beneficio
+  type: http
+  seq: 6
+}
+
+get {
+  url: https://adn.nfse.gov.br/parametrizacao/{{codigoMunicipio}}/{{numeroBeneficio}}/{{competencia}}/beneficio
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  codigoMunicipio: 4106902
+  numeroBeneficio: 41069020200013
+  competencia: 2026-01-01
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

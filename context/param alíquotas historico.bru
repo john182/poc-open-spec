@@ -1,0 +1,21 @@
+meta {
+  name: param alíquotas historico
+  type: http
+  seq: 3
+}
+
+get {
+  url: https://adn.nfse.gov.br/parametrizacao/{{codigoMunicipio}}/{{codigoServico}}/historicoaliquotas
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  codigoMunicipio: 3304557
+  codigoServico: 17.23.01.001
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

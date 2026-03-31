@@ -1,0 +1,22 @@
+{
+  "version": "1",
+  "name": "NFSE-ADN",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ],
+  "size": 0.0033588409423828125,
+  "filesCount": 13,
+  "clientCertificates": {
+    "enabled": true,
+    "certs": [
+      {
+        "domain": "adn.nfse.gov.br",
+        "type": "pfx",
+        "pfxFilePath": "",
+        "passphrase": ""
+      }
+    ]
+  }
+}

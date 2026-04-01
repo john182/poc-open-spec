@@ -20,6 +20,7 @@ public class CrawlerServiceTests
     private readonly Mock<IRateLimiter> _rateLimiter = new();
     private readonly Mock<ICircuitBreaker> _circuitBreaker = new();
     private readonly Mock<ICertificateProtection> _certProtection = new();
+    private readonly Mock<ICrawlerExecutionGuard> _executionGuard = new();
     private readonly Mock<ILogger<CrawlerService>> _logger = new();
     private readonly CrawlerService _sut;
 
@@ -31,6 +32,7 @@ public class CrawlerServiceTests
         _certProtection.Setup(c => c.ShouldHalt).Returns(false);
         _certProtection.Setup(c => c.BudgetExhausted).Returns(false);
         _certProtection.Setup(c => c.OnItemProcessedAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+        _executionGuard.Setup(g => g.TryAcquire()).Returns(true);
         _execucaoRepo.Setup(r => r.CreateAsync(It.IsAny<ExecucaoCrawler>()))
             .ReturnsAsync((ExecucaoCrawler e) => e);
         _execucaoRepo.Setup(r => r.UpdateAsync(It.IsAny<ExecucaoCrawler>())).Returns(Task.CompletedTask);
@@ -48,23 +50,19 @@ public class CrawlerServiceTests
             _rateLimiter.Object,
             _circuitBreaker.Object,
             _certProtection.Object,
+            _executionGuard.Object,
             _logger.Object);
     }
 
     [Fact]
     public async Task ExecutarAsync_QuandoJaEmExecucao_LancaException()
     {
-        // Arrange - setup to simulate long-running execution
-        _municipioRepo.Setup(r => r.GetByUfAsync(It.IsAny<string>()))
-            .ReturnsAsync(new List<Municipio>());
+        // Arrange - guard refuses acquisition (already running)
+        _executionGuard.Setup(g => g.TryAcquire()).Returns(false);
 
-        // Start first execution (will complete quickly since no municipalities)
-        Task<ExecucaoCrawler> firstExec = _sut.ExecutarAsync(TipoExecucao.Manual);
-        await firstExec;
-
-        // Simulate concurrent call using reflection
-        // The real CrawlerService uses _emExecucao flag internally
-        _sut.EmExecucao.ShouldBeFalse(); // Should be false after completion
+        // Act & Assert
+        await Should.ThrowAsync<InvalidOperationException>(
+            () => _sut.ExecutarAsync(TipoExecucao.Manual));
     }
 
     [Fact]

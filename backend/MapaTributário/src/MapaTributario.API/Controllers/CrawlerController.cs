@@ -12,36 +12,38 @@ namespace MapaTributario.API.Controllers;
 [Authorize]
 public class CrawlerController : ControllerBase
 {
-    private readonly ICrawlerService _crawlerService;
+    private readonly ICrawlerExecutionGuard _executionGuard;
     private readonly IExecucaoCrawlerRepository _execucaoRepository;
+    private readonly IServiceProvider _serviceProvider;
 
     public CrawlerController(
-        ICrawlerService crawlerService,
-        IExecucaoCrawlerRepository execucaoRepository)
+        ICrawlerExecutionGuard executionGuard,
+        IExecucaoCrawlerRepository execucaoRepository,
+        IServiceProvider serviceProvider)
     {
-        _crawlerService = crawlerService;
+        _executionGuard = executionGuard;
         _execucaoRepository = execucaoRepository;
+        _serviceProvider = serviceProvider;
     }
 
     [HttpPost("executar")]
-    public async Task<IActionResult> Executar([FromBody] ExecutarCrawlerRequest? request)
+    public IActionResult Executar([FromBody] ExecutarCrawlerRequest? request)
     {
-        if (_crawlerService.EmExecucao)
+        if (_executionGuard.IsRunning)
         {
             return Conflict(new { erro = "Uma execucao ja esta em andamento" });
         }
 
         bool forcar = request?.ForcarReprocessamento ?? false;
 
-        // Start execution in background
-        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
-        await _execucaoRepository.CreateAsync(execucao);
-
+        // Fire-and-forget with a new scope (CrawlerService is Scoped)
         _ = Task.Run(async () =>
         {
+            using IServiceScope scope = _serviceProvider.CreateScope();
+            ICrawlerService crawlerService = scope.ServiceProvider.GetRequiredService<ICrawlerService>();
             try
             {
-                await _crawlerService.ExecutarAsync(TipoExecucao.Manual, forcar);
+                await crawlerService.ExecutarAsync(Domain.Entities.TipoExecucao.Manual, forcar);
             }
             catch (Exception)
             {
@@ -51,7 +53,6 @@ public class CrawlerController : ControllerBase
 
         return Accepted(new ExecutarCrawlerResponse
         {
-            ExecucaoId = execucao.Id,
             Mensagem = "Execucao iniciada com sucesso"
         });
     }

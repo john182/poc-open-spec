@@ -10,6 +10,8 @@
         <None Include="..\..\..\..\context\municipios.json" Link="context\municipios.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
+        <InternalsVisibleTo Include="MapaTributario.Tests.Unit" />
+        <InternalsVisibleTo Include="MapaTributario.Tests.Integration" />
     </ItemGroup>
 
     <ItemGroup>

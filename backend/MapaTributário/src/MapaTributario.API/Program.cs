@@ -60,7 +60,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddConsultaServices(builder.Configuration);
 
 // Crawler services (PBI #5)
-// builder.Services.AddCrawlerServices(builder.Configuration);
+builder.Services.AddCrawlerServices(builder.Configuration);
 
 // Controllers + OpenAPI
 builder.Services.AddControllers();

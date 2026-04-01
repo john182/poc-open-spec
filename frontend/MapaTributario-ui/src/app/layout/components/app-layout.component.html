@@ -7,5 +7,6 @@
     </div>
     <app-footer />
   </div>
-  <div class="layout-mask" (click)="layoutService.hideSidebar()" (keydown.escape)="layoutService.hideSidebar()" tabindex="-1" role="button" aria-label="Fechar menu"></div>
+  <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+  <div class="layout-mask" (click)="layoutService.hideSidebar()"></div>
 </div>

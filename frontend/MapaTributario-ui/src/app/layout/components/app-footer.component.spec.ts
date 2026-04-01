@@ -14,6 +14,7 @@ describe('AppFooterComponent', () => {
 
   it('deve exibir texto de copyright', async () => {
     await render(AppFooterComponent);
-    expect(screen.getByText(/Mapa Tributário © 2026/)).toBeTruthy();
+    const ano = new Date().getFullYear();
+    expect(screen.getByText(`Mapa Tributário © ${ano}`)).toBeTruthy();
   });
 });

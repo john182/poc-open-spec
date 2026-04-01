@@ -15,7 +15,8 @@ describe('Layout', () => {
   });
 
   it('deve exibir o footer', () => {
-    cy.get('[data-cy="app-footer"]').should('contain.text', 'Mapa Tributário © 2026');
+    const ano = new Date().getFullYear();
+    cy.get('[data-cy="app-footer"]').should('contain.text', `Mapa Tributário © ${ano}`);
   });
 
   it('deve navegar para consulta ao clicar no menu', () => {

@@ -23,13 +23,17 @@ export class FilterBarComponent {
   limpar = output<void>();
   valores: Record<string, string | number | undefined> = {};
 
-  onValorMudou(chave: string, valor: string | number): void {
-    const filtro = this.filtros().find((f) => f.chave === chave);
-    if (filtro?.tipo === 'number' && valor !== '') {
-      const numero = typeof valor === 'number' ? valor : Number(valor);
-      this.valores[chave] = Number.isNaN(numero) ? valor : numero;
+  onValorMudou(chave: string, valor: string | number | null): void {
+    if (valor === null || valor === '') {
+      this.valores[chave] = undefined;
     } else {
-      this.valores[chave] = valor;
+      const filtro = this.filtros().find((f) => f.chave === chave);
+      if (filtro?.tipo === 'number') {
+        const numero = typeof valor === 'number' ? valor : Number(valor);
+        this.valores[chave] = Number.isNaN(numero) ? valor : numero;
+      } else {
+        this.valores[chave] = valor;
+      }
     }
     const definidos: Record<string, string | number> = {};
     for (const [k, v] of Object.entries(this.valores)) {

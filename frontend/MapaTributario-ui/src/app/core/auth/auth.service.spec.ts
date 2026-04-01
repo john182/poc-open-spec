@@ -20,27 +20,32 @@ const validPayload = {
 
 const expiredPayload = { ...validPayload, exp: Math.floor(Date.now() / 1000) - 3600 };
 
+const testProviders = [
+  provideHttpClient(),
+  provideHttpClientTesting(),
+  provideRouter([{ path: 'auth/login', component: {} as any }]),
+  { provide: PLATFORM_ID, useValue: 'browser' },
+];
+
+function clearAllStorage(): void {
+  localStorage.clear();
+  sessionStorage.clear();
+}
+
 describe('AuthService', () => {
   let service: AuthService;
   let httpTesting: HttpTestingController;
 
   beforeEach(() => {
-    localStorage.clear();
-    TestBed.configureTestingModule({
-      providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        provideRouter([{ path: 'auth/login', component: {} as any }]),
-        { provide: PLATFORM_ID, useValue: 'browser' },
-      ],
-    });
+    clearAllStorage();
+    TestBed.configureTestingModule({ providers: testProviders });
     service = TestBed.inject(AuthService);
     httpTesting = TestBed.inject(HttpTestingController);
   });
 
   afterEach(() => {
     httpTesting.verify();
-    localStorage.clear();
+    clearAllStorage();
   });
 
   it('deve iniciar nao autenticado', () => {
@@ -65,6 +70,38 @@ describe('AuthService', () => {
       expect(service.userName()).toBe('Test User');
       expect(service.getAccessToken()).toBe(token);
       expect(service.getRefreshToken()).toBe('refresh-abc');
+    });
+
+    it('deve autenticar com lembrar=true e armazenar em localStorage', () => {
+      const token = makeJwt(validPayload);
+
+      service.login('test@test.com', 'password123', true).subscribe();
+
+      httpTesting.expectOne('/api/v1/auth/login').flush({
+        accessToken: token,
+        refreshToken: 'refresh-abc',
+        expiresIn: 3600,
+      });
+
+      expect(localStorage.getItem('rememberMe')).toBe('true');
+      expect(localStorage.getItem('accessToken')).toBe(token);
+      expect(localStorage.getItem('refreshToken')).toBe('refresh-abc');
+    });
+
+    it('deve autenticar com lembrar=false e armazenar em sessionStorage', () => {
+      const token = makeJwt(validPayload);
+
+      service.login('test@test.com', 'password123', false).subscribe();
+
+      httpTesting.expectOne('/api/v1/auth/login').flush({
+        accessToken: token,
+        refreshToken: 'refresh-abc',
+        expiresIn: 3600,
+      });
+
+      expect(localStorage.getItem('rememberMe')).toBe('false');
+      expect(sessionStorage.getItem('accessToken')).toBe(token);
+      expect(sessionStorage.getItem('refreshToken')).toBe('refresh-abc');
     });
 
     it('deve propagar erro de login', () => {
@@ -116,6 +153,7 @@ describe('AuthService', () => {
 
   describe('refresh', () => {
     it('deve atualizar access token com sucesso', () => {
+      localStorage.setItem('rememberMe', 'true');
       localStorage.setItem('refreshToken', 'old-refresh');
       const newToken = makeJwt(validPayload);
 
@@ -142,6 +180,7 @@ describe('AuthService', () => {
 
   describe('logout', () => {
     it('deve limpar tokens e redirecionar', () => {
+      localStorage.setItem('rememberMe', 'true');
       localStorage.setItem('accessToken', 'abc');
       localStorage.setItem('refreshToken', 'def');
 
@@ -152,55 +191,20 @@ describe('AuthService', () => {
       expect(service.getAccessToken()).toBeNull();
       expect(service.getRefreshToken()).toBeNull();
     });
+
+    it('deve limpar tokens de sessionStorage tambem', () => {
+      sessionStorage.setItem('accessToken', 'abc');
+      sessionStorage.setItem('refreshToken', 'def');
+
+      service.logout();
+
+      expect(sessionStorage.getItem('accessToken')).toBeNull();
+      expect(sessionStorage.getItem('refreshToken')).toBeNull();
+      expect(localStorage.getItem('rememberMe')).toBeNull();
+    });
   });
 
   describe('token decode', () => {
-    it('deve iniciar autenticado se localStorage tem token valido', () => {
-      localStorage.setItem('accessToken', makeJwt(validPayload));
-
-      const freshService = TestBed.inject(AuthService);
-      // Service was already created, so we need a new one
-      // Since AuthService is providedIn: root, we test the initial state differently
-      expect(freshService.getAccessToken()).toBe(localStorage.getItem('accessToken'));
-    });
-
-    it('deve tratar token expirado como nao autenticado', () => {
-      localStorage.setItem('accessToken', makeJwt(expiredPayload));
-
-      // Re-create TestBed to get fresh service
-      TestBed.resetTestingModule();
-      TestBed.configureTestingModule({
-        providers: [
-          provideHttpClient(),
-          provideHttpClientTesting(),
-          provideRouter([{ path: 'auth/login', component: {} as any }]),
-          { provide: PLATFORM_ID, useValue: 'browser' },
-        ],
-      });
-      const freshService = TestBed.inject(AuthService);
-      httpTesting = TestBed.inject(HttpTestingController);
-
-      expect(freshService.isAuthenticated()).toBe(false);
-    });
-
-    it('deve tratar token malformado como nao autenticado', () => {
-      localStorage.setItem('accessToken', 'not-a-jwt');
-
-      TestBed.resetTestingModule();
-      TestBed.configureTestingModule({
-        providers: [
-          provideHttpClient(),
-          provideHttpClientTesting(),
-          provideRouter([{ path: 'auth/login', component: {} as any }]),
-          { provide: PLATFORM_ID, useValue: 'browser' },
-        ],
-      });
-      const freshService = TestBed.inject(AuthService);
-      httpTesting = TestBed.inject(HttpTestingController);
-
-      expect(freshService.isAuthenticated()).toBe(false);
-    });
-
     it('deve extrair userName de claims padrao quando claims .NET nao existem', () => {
       const stdPayload = { sub: 'u1', email: 'std@test.com', name: 'Std User', exp: Math.floor(Date.now() / 1000) + 3600 };
       const token = makeJwt(stdPayload);
@@ -210,5 +214,51 @@ describe('AuthService', () => {
 
       expect(service.userName()).toBe('Std User');
     });
+  });
+});
+
+describe('AuthService (pre-loaded tokens)', () => {
+  let httpTesting: HttpTestingController;
+
+  afterEach(() => {
+    httpTesting.verify();
+    clearAllStorage();
+  });
+
+  it('deve iniciar autenticado se localStorage tem token valido', () => {
+    clearAllStorage();
+    localStorage.setItem('rememberMe', 'true');
+    localStorage.setItem('accessToken', makeJwt(validPayload));
+
+    TestBed.configureTestingModule({ providers: testProviders });
+    const freshService = TestBed.inject(AuthService);
+    httpTesting = TestBed.inject(HttpTestingController);
+
+    expect(freshService.isAuthenticated()).toBe(true);
+    expect(freshService.userName()).toBe('Test User');
+  });
+
+  it('deve tratar token expirado como nao autenticado', () => {
+    clearAllStorage();
+    localStorage.setItem('rememberMe', 'true');
+    localStorage.setItem('accessToken', makeJwt(expiredPayload));
+
+    TestBed.configureTestingModule({ providers: testProviders });
+    const freshService = TestBed.inject(AuthService);
+    httpTesting = TestBed.inject(HttpTestingController);
+
+    expect(freshService.isAuthenticated()).toBe(false);
+  });
+
+  it('deve tratar token malformado como nao autenticado', () => {
+    clearAllStorage();
+    localStorage.setItem('rememberMe', 'true');
+    localStorage.setItem('accessToken', 'not-a-jwt');
+
+    TestBed.configureTestingModule({ providers: testProviders });
+    const freshService = TestBed.inject(AuthService);
+    httpTesting = TestBed.inject(HttpTestingController);
+
+    expect(freshService.isAuthenticated()).toBe(false);
   });
 });

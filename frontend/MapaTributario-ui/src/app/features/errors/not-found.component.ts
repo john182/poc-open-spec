@@ -8,5 +8,6 @@ import { ButtonModule } from 'primeng/button';
   imports: [RouterModule, ButtonModule],
   templateUrl: './not-found.component.html',
   styleUrl: './not-found.component.scss',
+  host: { style: 'display: contents' },
 })
 export class NotFoundComponent {}

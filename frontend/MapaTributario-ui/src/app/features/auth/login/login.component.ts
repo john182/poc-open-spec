@@ -12,6 +12,7 @@ import { CheckboxModule } from 'primeng/checkbox';
   imports: [FormsModule, RouterModule, ButtonModule, InputTextModule, PasswordModule, CheckboxModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
+  host: { style: 'display: contents' },
 })
 export class LoginComponent {
   email = '';

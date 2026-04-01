@@ -11,6 +11,7 @@ import { PasswordModule } from 'primeng/password';
   imports: [FormsModule, RouterModule, ButtonModule, InputTextModule, PasswordModule],
   templateUrl: './signup.component.html',
   styleUrl: './signup.component.scss',
+  host: { style: 'display: contents' },
 })
 export class SignupComponent {
   nome = '';

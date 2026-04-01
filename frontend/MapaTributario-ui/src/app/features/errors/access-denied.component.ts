@@ -8,5 +8,6 @@ import { ButtonModule } from 'primeng/button';
   imports: [RouterModule, ButtonModule],
   templateUrl: './access-denied.component.html',
   styleUrl: './access-denied.component.scss',
+  host: { style: 'display: contents' },
 })
 export class AccessDeniedComponent {}

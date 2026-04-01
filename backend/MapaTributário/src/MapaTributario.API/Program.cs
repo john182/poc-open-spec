@@ -2,6 +2,7 @@ using System.Text;
 using FluentValidation;
 using MapaTributario.API.Application.Auth;
 using MapaTributario.API.Domain.Interfaces;
+using MapaTributario.API.Extensions;
 using MapaTributario.API.Infrastructure.Auth;
 using MapaTributario.API.Infrastructure.Repository;
 using MapaTributario.API.Infrastructure.Repository.Mongo;
@@ -54,6 +55,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 builder.Services.AddAuthorization();
+
+// Consulta services (PBI #4)
+// builder.Services.AddConsultaServices(builder.Configuration);
+
+// Crawler services (PBI #5)
+// builder.Services.AddCrawlerServices(builder.Configuration);
 
 // Controllers + OpenAPI
 builder.Services.AddControllers();

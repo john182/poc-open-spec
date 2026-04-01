@@ -38,7 +38,8 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 // JWT
 var jwtSecret = builder.Configuration["JWT:Secret"]
     ?? builder.Configuration["JWT_SECRET"]
-    ?? "default-dev-secret-change-in-production-32chars";
+    ?? throw new InvalidOperationException(
+        "JWT secret not configured. Set 'JWT:Secret' in appsettings or 'JWT_SECRET' environment variable.");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {

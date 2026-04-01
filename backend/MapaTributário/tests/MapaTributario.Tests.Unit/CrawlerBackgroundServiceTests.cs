@@ -69,13 +69,13 @@ public class CrawlerBackgroundServiceTests
     {
         CrawlerBackgroundService sut = CreateSut();
         _executionGuard.Setup(g => g.IsRunning).Returns(false);
-        _crawlerService.Setup(c => c.ExecutarAsync(TipoExecucao.Agendado, false, It.IsAny<CancellationToken>()))
+        _crawlerService.Setup(c => c.ExecutarAsync(TipoExecucao.Agendado, false, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(ExecucaoCrawler.Create(TipoExecucao.Agendado));
 
         await sut.ExecuteScheduledRunAsync(CancellationToken.None);
 
         _crawlerService.Verify(c => c.ExecutarAsync(
-            TipoExecucao.Agendado, false, It.IsAny<CancellationToken>()), Times.Once);
+            TipoExecucao.Agendado, false, null, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public class CrawlerBackgroundServiceTests
         await sut.ExecuteScheduledRunAsync(CancellationToken.None);
 
         _crawlerService.Verify(c => c.ExecutarAsync(
-            It.IsAny<TipoExecucao>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+            It.IsAny<TipoExecucao>(), It.IsAny<bool>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class CrawlerBackgroundServiceTests
     {
         CrawlerBackgroundService sut = CreateSut();
         _executionGuard.Setup(g => g.IsRunning).Returns(false);
-        _crawlerService.Setup(c => c.ExecutarAsync(It.IsAny<TipoExecucao>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+        _crawlerService.Setup(c => c.ExecutarAsync(It.IsAny<TipoExecucao>(), It.IsAny<bool>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database error"));
 
         // Should not throw

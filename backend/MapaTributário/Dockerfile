@@ -12,5 +12,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app/publish .
 EXPOSE 5000
+# HTTP is used inside the Docker network only; TLS is terminated at the reverse proxy (nginx/load balancer).
+# Do NOT expose this container directly to the internet without TLS termination.
 ENV ASPNETCORE_URLS=http://+:5000
 ENTRYPOINT ["dotnet", "MapaTributario.API.dll"]

@@ -4,63 +4,22 @@ using System.Net.Http.Json;
 using MapaTributario.API.Application.Auth.Contracts;
 using MapaTributario.API.Application.Consulta.Contracts;
 using MapaTributario.API.Domain.Entities;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using Shouldly;
-using Testcontainers.MongoDb;
 
 namespace MapaTributario.Tests.Integration;
 
-public class ConsultaControllerTests : IAsyncLifetime
+public class ConsultaControllerTests : IntegrationTestBase
 {
-    private readonly MongoDbContainer _mongoContainer = new MongoDbBuilder()
-        .WithImage("mongo:7")
-        .Build();
-
-    private WebApplicationFactory<Program> _factory = null!;
-    private HttpClient _client = null!;
-    private IMongoDatabase _database = null!;
-
-    public async Task InitializeAsync()
+    protected override async Task OnInitializedAsync()
     {
-        await _mongoContainer.StartAsync();
-
-        var mongoClient = new MongoClient(_mongoContainer.GetConnectionString());
-        _database = mongoClient.GetDatabase("test_db");
-
-        _factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureServices(services =>
-                {
-                    var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IMongoDatabase));
-                    if (descriptor is not null)
-                    {
-                        services.Remove(descriptor);
-                    }
-
-                    services.AddSingleton<IMongoDatabase>(_database);
-                });
-            });
-
-        _client = _factory.CreateClient();
-
         await SeedTestDataAsync();
         await AuthenticateAsync();
     }
 
-    public async Task DisposeAsync()
-    {
-        _client.Dispose();
-        await _factory.DisposeAsync();
-        await _mongoContainer.DisposeAsync();
-    }
-
     private async Task SeedTestDataAsync()
     {
-        // Seed aliquotas for testing (estados, municipios and servicos are seeded by the app startup)
-        var aliquotas = _database.GetCollection<Aliquota>("aliquotas");
+        var aliquotas = Database.GetCollection<Aliquota>("aliquotas");
 
         var testAliquotas = new List<Aliquota>
         {
@@ -82,9 +41,9 @@ public class ConsultaControllerTests : IAsyncLifetime
             Nome = "Consulta Test",
             Senha = "password123"
         };
-        var registerResp = await _client.PostAsJsonAsync("/api/v1/auth/register", registerReq);
+        var registerResp = await Client.PostAsJsonAsync("/api/v1/auth/register", registerReq);
         var tokens = await registerResp.Content.ReadFromJsonAsync<AuthResponse>();
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens!.AccessToken);
+        Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens!.AccessToken);
     }
 
     // --- Auth ---
@@ -92,7 +51,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_Estados_SemToken_Retorna401()
     {
-        var unauthClient = _factory.CreateClient();
+        var unauthClient = Factory.CreateClient();
 
         var response = await unauthClient.GetAsync("/api/v1/estados");
 
@@ -105,7 +64,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_Estados_Retorna200_ComEstados()
     {
-        var response = await _client.GetAsync("/api/v1/estados");
+        var response = await Client.GetAsync("/api/v1/estados");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var estados = await response.Content.ReadFromJsonAsync<List<EstadoResponse>>();
@@ -119,13 +78,11 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_Estados_EstaoOrdenadosPorNome()
     {
-        var response = await _client.GetAsync("/api/v1/estados");
+        var response = await Client.GetAsync("/api/v1/estados");
         var estados = await response.Content.ReadFromJsonAsync<List<EstadoResponse>>();
 
         estados.ShouldNotBeNull();
         var nomes = estados.Select(e => e.Nome).ToList();
-        // MongoDB uses binary sort by default (accent-insensitive ordering may differ from .NET)
-        // Verify the list is returned sorted by checking adjacent pairs via MongoDB's own sort
         var nomesOrdenadosMongo = nomes.OrderBy(n => n, StringComparer.Ordinal).ToList();
         nomes.ShouldBe(nomesOrdenadosMongo);
     }
@@ -135,7 +92,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_MunicipiosPorUf_UfValida_Retorna200()
     {
-        var response = await _client.GetAsync("/api/v1/estados/SP/municipios");
+        var response = await Client.GetAsync("/api/v1/estados/SP/municipios");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var municipios = await response.Content.ReadFromJsonAsync<List<MunicipioResponse>>();
@@ -147,7 +104,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_MunicipiosPorUf_UfInvalida_Retorna404()
     {
-        var response = await _client.GetAsync("/api/v1/estados/XX/municipios");
+        var response = await Client.GetAsync("/api/v1/estados/XX/municipios");
 
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
@@ -155,7 +112,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_MunicipiosPorUf_SemToken_Retorna401()
     {
-        var unauthClient = _factory.CreateClient();
+        var unauthClient = Factory.CreateClient();
 
         var response = await unauthClient.GetAsync("/api/v1/estados/SP/municipios");
 
@@ -168,7 +125,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_AliquotasPorMunicipio_Retorna200_ComPaginacao()
     {
-        var response = await _client.GetAsync("/api/v1/municipios/3550308/aliquotas");
+        var response = await Client.GetAsync("/api/v1/municipios/3550308/aliquotas");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var paginado = await response.Content.ReadFromJsonAsync<PaginatedResponse<AliquotaResponse>>();
@@ -183,7 +140,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_AliquotasPorMunicipio_ComTamanhoPagina_LimitaResultados()
     {
-        var response = await _client.GetAsync("/api/v1/municipios/3550308/aliquotas?tamanhoPagina=2&pagina=1");
+        var response = await Client.GetAsync("/api/v1/municipios/3550308/aliquotas?tamanhoPagina=2&pagina=1");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var paginado = await response.Content.ReadFromJsonAsync<PaginatedResponse<AliquotaResponse>>();
@@ -196,7 +153,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_AliquotasPorMunicipio_Pagina2_RetornaRestante()
     {
-        var response = await _client.GetAsync("/api/v1/municipios/3550308/aliquotas?tamanhoPagina=2&pagina=2");
+        var response = await Client.GetAsync("/api/v1/municipios/3550308/aliquotas?tamanhoPagina=2&pagina=2");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var paginado = await response.Content.ReadFromJsonAsync<PaginatedResponse<AliquotaResponse>>();
@@ -208,7 +165,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_AliquotasPorMunicipio_FiltroCodigoServico_Funciona()
     {
-        var response = await _client.GetAsync("/api/v1/municipios/3550308/aliquotas?codigoServico=01.01.00");
+        var response = await Client.GetAsync("/api/v1/municipios/3550308/aliquotas?codigoServico=01.01.00");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var paginado = await response.Content.ReadFromJsonAsync<PaginatedResponse<AliquotaResponse>>();
@@ -220,7 +177,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_AliquotasPorMunicipio_FiltroPrefixoCodigoServico_RetornaMultiplos()
     {
-        var response = await _client.GetAsync("/api/v1/municipios/3550308/aliquotas?codigoServico=01");
+        var response = await Client.GetAsync("/api/v1/municipios/3550308/aliquotas?codigoServico=01");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var paginado = await response.Content.ReadFromJsonAsync<PaginatedResponse<AliquotaResponse>>();
@@ -231,7 +188,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_AliquotasPorMunicipio_FiltroPrefixo4Digitos_RetornaFiltrado()
     {
-        var response = await _client.GetAsync("/api/v1/municipios/3550308/aliquotas?codigoServico=01.01");
+        var response = await Client.GetAsync("/api/v1/municipios/3550308/aliquotas?codigoServico=01.01");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var paginado = await response.Content.ReadFromJsonAsync<PaginatedResponse<AliquotaResponse>>();
@@ -243,7 +200,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_AliquotasPorMunicipio_CodigoServicoInvalido_Retorna400()
     {
-        var response = await _client.GetAsync("/api/v1/municipios/3550308/aliquotas?codigoServico=abc");
+        var response = await Client.GetAsync("/api/v1/municipios/3550308/aliquotas?codigoServico=abc");
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
@@ -251,7 +208,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_AliquotasPorMunicipio_FiltroDescricao_Funciona()
     {
-        var response = await _client.GetAsync("/api/v1/municipios/3550308/aliquotas?descricao=Programa");
+        var response = await Client.GetAsync("/api/v1/municipios/3550308/aliquotas?descricao=Programa");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var paginado = await response.Content.ReadFromJsonAsync<PaginatedResponse<AliquotaResponse>>();
@@ -263,7 +220,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_AliquotasPorMunicipio_FiltroAliquotaMinMax_Funciona()
     {
-        var response = await _client.GetAsync("/api/v1/municipios/3550308/aliquotas?aliquotaMin=2.5&aliquotaMax=4.0");
+        var response = await Client.GetAsync("/api/v1/municipios/3550308/aliquotas?aliquotaMin=2.5&aliquotaMax=4.0");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var paginado = await response.Content.ReadFromJsonAsync<PaginatedResponse<AliquotaResponse>>();
@@ -275,7 +232,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_AliquotasPorMunicipio_MunicipioInexistente_Retorna404()
     {
-        var response = await _client.GetAsync("/api/v1/municipios/9999999/aliquotas");
+        var response = await Client.GetAsync("/api/v1/municipios/9999999/aliquotas");
 
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
@@ -283,7 +240,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_AliquotasPorMunicipio_TamanhoPaginaInvalido_Retorna400()
     {
-        var response = await _client.GetAsync("/api/v1/municipios/3550308/aliquotas?tamanhoPagina=0");
+        var response = await Client.GetAsync("/api/v1/municipios/3550308/aliquotas?tamanhoPagina=0");
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
@@ -291,7 +248,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_AliquotasPorMunicipio_SemToken_Retorna401()
     {
-        var unauthClient = _factory.CreateClient();
+        var unauthClient = Factory.CreateClient();
 
         var response = await unauthClient.GetAsync("/api/v1/municipios/3550308/aliquotas");
 
@@ -304,7 +261,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_DetalheAliquota_Existente_Retorna200()
     {
-        var response = await _client.GetAsync("/api/v1/municipios/3550308/aliquotas/01.01.00");
+        var response = await Client.GetAsync("/api/v1/municipios/3550308/aliquotas/01.01.00");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var detalhe = await response.Content.ReadFromJsonAsync<AliquotaDetalheResponse>();
@@ -319,7 +276,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_DetalheAliquota_CodigoSemPontos_Funciona()
     {
-        var response = await _client.GetAsync("/api/v1/municipios/3550308/aliquotas/010100");
+        var response = await Client.GetAsync("/api/v1/municipios/3550308/aliquotas/010100");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var detalhe = await response.Content.ReadFromJsonAsync<AliquotaDetalheResponse>();
@@ -330,7 +287,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_DetalheAliquota_Inexistente_Retorna404()
     {
-        var response = await _client.GetAsync("/api/v1/municipios/3550308/aliquotas/99.00.00");
+        var response = await Client.GetAsync("/api/v1/municipios/3550308/aliquotas/99.00.00");
 
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
@@ -338,7 +295,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_DetalheAliquota_MunicipioInexistente_Retorna404()
     {
-        var response = await _client.GetAsync("/api/v1/municipios/9999999/aliquotas/01.01.00");
+        var response = await Client.GetAsync("/api/v1/municipios/9999999/aliquotas/01.01.00");
 
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
@@ -346,7 +303,7 @@ public class ConsultaControllerTests : IAsyncLifetime
     [Fact]
     public async Task GET_DetalheAliquota_SemToken_Retorna401()
     {
-        var unauthClient = _factory.CreateClient();
+        var unauthClient = Factory.CreateClient();
 
         var response = await unauthClient.GetAsync("/api/v1/municipios/3550308/aliquotas/01.01.00");
 

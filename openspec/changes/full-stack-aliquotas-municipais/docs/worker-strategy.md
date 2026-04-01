@@ -108,15 +108,20 @@ graph TB
 
 ## Descoberta de Municipios Ativos
 
-Nem todos os 5.570 municipios brasileiros estao aderidos ao sistema NFS-e. O worker precisa descobrir quais municipios tem convenio ativo antes de tentar coletar aliquotas.
+Nem todos os 5.570 municipios brasileiros estao aderidos ao sistema NFS-e. O worker precisa descobrir quais municipios tem dados disponiveis antes de tentar coletar aliquotas.
 
-### Fluxo de descoberta
+**Importante:** Um municipio sem convenio formal pode ainda ter dados disponiveis na API. Por isso, o worker NAO descarta automaticamente municipios sem convenio — ele verifica tambem via endpoint CNC.
 
-1. Carregar lista completa de municipios da colecao `municipios` (seed IBGE)
+### Fluxo de descoberta (2 etapas)
+
+1. Carregar lista de municipios da colecao `municipios` (MVP: somente capitais)
 2. Para cada municipio, chamar `GET /parametrizacao/{codigoIbge}/convenio`
-3. Se a resposta for bem-sucedida (HTTP 200): marcar municipio como `ativo = true`
-4. Se a resposta for HTTP 404 ou vazia: marcar municipio como `ativo = false`
-5. Apenas municipios ativos entram na fila de coleta de aliquotas
+3. Se a resposta for bem-sucedida (HTTP 200): marcar municipio como `convenio = true`
+4. Se a resposta for HTTP 404 ou vazia: **nao descartar** — prosseguir para etapa CNC
+5. Para cada municipio (com ou sem convenio), chamar `GET /cnc/consulta/cad/{codigoIbge}`
+6. Se o CNC retornar servicos: marcar municipio como `ativo = true` e registrar servicos descobertos
+7. Se o CNC tambem falhar (municipio sem convenio E sem CNC): marcar como `ativo = false`
+8. Apenas municipios ativos (com servicos CNC) entram na fila de coleta de aliquotas
 
 ### Frequencia de redescoberta
 
@@ -126,21 +131,27 @@ Nem todos os 5.570 municipios brasileiros estao aderidos ao sistema NFS-e. O wor
 
 ```mermaid
 flowchart TD
-    A[Carregar municipios do MongoDB] --> B{Municipio ja verificado<br/>ha menos de 30 dias?}
+    A[Carregar municipios do MongoDB<br/>MVP: somente capitais] --> B{Municipio ja verificado<br/>ha menos de 30 dias?}
     B -->|Sim e ativo| C[Incluir na fila de aliquotas]
     B -->|Sim e inativo| D[Pular]
     B -->|Nao ou nunca verificado| E[Chamar endpoint convenio]
-    E -->|200 OK| F[Marcar ativo = true]
-    E -->|404 / vazio| G[Marcar ativo = false]
-    F --> C
-    G --> D
+    E -->|200 OK| F[Marcar convenio = true]
+    E -->|404 / vazio| F2[Sem convenio]
+    F --> G[Chamar endpoint CNC]
+    F2 --> G
+    G -->|CNC retornou servicos| H[Marcar ativo = true]
+    G -->|CNC vazio/404| I{Tem convenio?}
+    I -->|Sim| H2[Marcar ativo = true<br/>usar seed de servicos]
+    I -->|Nao| D2[Marcar ativo = false — Pular]
+    H --> C
+    H2 --> C
 ```
 
 ---
 
 ## Descoberta e Seed de Codigos de Servico
 
-Os codigos de servico seguem a tabela da LC 116/2003 (Lei Complementar). O sistema mantem uma colecao `servicos` com seed inicial.
+Os codigos de servico seguem a tabela da LC 116/2003 (Lei Complementar). O sistema mantem uma colecao `servicos` com seed inicial, mas a descoberta principal de servicos por municipio e feita via endpoint CNC.
 
 ### Seed da LC 116/2003
 
@@ -151,17 +162,22 @@ A tabela da LC 116/2003 define aproximadamente 600 codigos de servico tributavei
 - `descricao`: descricao do servico
 - `subitem`: subitem da lista
 
-### Estrategia de combinacao
+### Descoberta de servicos via CNC (estrategia principal)
 
-Para cada municipio ativo, o worker gera combinacoes `municipio + servico` para consulta de aliquota. O volume total e controlado pela estrategia de MVP (ver secao [Estrategia de MVP](#estrategia-de-mvp)).
+O endpoint `GET /cnc/consulta/cad/{municipio}` retorna a lista de servicos cadastrados pelo municipio. Esta e a estrategia principal para determinar quais servicos consultar para cada municipio:
 
-### Uso potencial do endpoint CNC
+- Chamado uma vez por municipio antes de gerar a fila de servicos
+- Retorna diretamente os servicos validos, eliminando a necessidade de iterar todos os ~391 codigos nacionais
+- Reduz drasticamente o volume de requests comparado com a iteracao bruta
+- Os servicos descobertos pelo CNC sao enfileirados diretamente para consulta de aliquota
 
-O endpoint `GET /cnc/consulta/cad/{municipio}` pode retornar informacoes sobre quais servicos o municipio cadastrou. Se confirmado em testes:
+### Estrategia de combinacao (revisada)
 
-- Pode ser usado para reduzir o numero de combinacoes (consultar apenas servicos que o municipio efetivamente oferece)
-- Seria chamado uma vez por municipio antes de gerar a fila
-- Esta pendente de validacao (ver Open Questions no design.md)
+Para cada municipio ativo:
+1. Chamar endpoint CNC para obter servicos cadastrados
+2. Enfileirar diretamente os servicos retornados pelo CNC
+3. Para desdobramentos municipais (complemento `xxx`) nao cobertos pelo CNC, usar iteracao com early-stop agressivo: se `001` retornar 404, parar imediatamente
+4. Retry de 3 tentativas apenas para erros (nao para 404)
 
 ---
 
@@ -291,9 +307,9 @@ SemaphoreSlim _semaphore = new SemaphoreSlim(maxConcurrency); // default: 3
 
 ### Justificativa do default
 
-- A API NFS-e nao documenta limite de conexoes simultaneas
+- A API NFS-e nao documenta limite de conexoes simultaneas nem rate limit oficial
 - 3 conexoes simultaneas evita sobrecarga na API externa
-- Combinado com o rate limit de 10 req/s, oferece throughput suficiente
+- Combinado com o rate limit de 5 req/s, oferece throughput suficiente
 - Pode ser aumentado progressivamente apos monitoramento
 
 ---
@@ -305,18 +321,19 @@ O worker impoe um limite maximo de requisicoes por segundo para evitar sobrecarg
 ### Implementacao
 
 - Token bucket ou sliding window counter
-- Default: **10 requisicoes por segundo**
+- Default: **5 requisicoes por segundo** (conservador — API nao documenta rate limit oficial)
 - Se o limite for atingido, a proxima requisicao aguarda ate a janela seguinte
+- Em caso de erro (nao 404), o worker aplica rate de 3 retries antes de desistir do item
 
 ### Interacao com concorrencia
 
 O rate limiting atua como um segundo controle alem do semaforo:
 
 ```
-Cenario: maxConcurrency = 3, rateLimit = 10/s
+Cenario: maxConcurrency = 3, rateLimit = 5/s
 
-- Se cada request leva 500ms: 3 slots x 2 req/s = 6 req/s (abaixo do rate limit)
-- Se cada request leva 100ms: 3 slots x 10 req/s = 30 req/s (rate limit ativa, reduz para 10/s)
+- Se cada request leva 500ms: 3 slots x 2 req/s = 6 req/s (rate limit ativa, reduz para 5/s)
+- Se cada request leva 1000ms: 3 slots x 1 req/s = 3 req/s (abaixo do rate limit)
 ```
 
 O rate limiter garante que mesmo com requests rapidos, o worker nao exceda o limite configurado.
@@ -568,7 +585,7 @@ Todas as configuracoes do worker sao expostas via `appsettings.json` e podem ser
   "Worker": {
     "CronSchedule": "0 2 * * *",
     "MaxConcurrency": 3,
-    "RateLimitPerSecond": 10,
+    "RateLimitPerSecond": 5,
     "RequestTimeoutSeconds": 30,
     "Retry": {
       "MaxAttempts": 3,
@@ -595,7 +612,7 @@ Todas as configuracoes do worker sao expostas via `appsettings.json` e podem ser
 |-----------|---------|-----------|
 | CronSchedule | `0 2 * * *` | Expressao CRON para agendamento (default: diario as 02:00 UTC) |
 | MaxConcurrency | 3 | Numero maximo de chamadas simultaneas a API NFS-e |
-| RateLimitPerSecond | 10 | Maximo de requisicoes por segundo |
+| RateLimitPerSecond | 5 | Maximo de requisicoes por segundo |
 | RequestTimeoutSeconds | 30 | Timeout por requisicao individual a API |
 | Retry.MaxAttempts | 3 | Maximo de tentativas por item |
 | Retry.BaseDelaySeconds | 30 | Delay base para exponential backoff |
@@ -624,70 +641,77 @@ Worker__CircuitBreaker__ErrorThresholdPercent=60
 
 ## Estimativa de Volume
 
-### Numeros de referencia
+### Numeros de referencia (revisados com CNC)
 
 | Dado | Quantidade |
 |------|------------|
 | Municipios brasileiros (IBGE) | 5.570 |
-| Codigos de servico (LC 116/2003) | ~600 |
-| Combinacoes totais (municipio x servico) | ~3.342.000 |
-| Municipios com convenio ativo (estimativa) | ~2.000 a 3.000 |
-| Combinacoes efetivas estimadas | ~1.200.000 a 1.800.000 |
+| Codigos de servico (seed LC 116/2003) | ~600 |
+| Servicos medios por municipio (via CNC) | ~50 |
+| Municipios MVP (capitais) | 27 |
+| Requests descoberta MVP | ~54 (convenio + CNC) |
+| Requests coleta MVP | ~1.350 (27 x ~50) |
+| Total MVP | ~1.400 requests |
+| Municipios com dados (estimativa) | ~2.000 a 3.000 |
+| Requests descoberta completa | ~11.140 (convenio + CNC) |
+| Requests coleta completa | ~125.000 (2.500 x ~50) |
 
-### Estimativa de tempo (coleta completa)
+### Estimativa de tempo (coleta completa com CNC)
 
 Com as configuracoes default:
 
 ```
-Rate limit: 10 req/s
-Combinacoes efetivas: ~1.500.000 (estimativa media)
-Tempo estimado: 1.500.000 / 10 = 150.000 segundos = ~41 horas
-
-Com MaxConcurrency=3 e requests de ~500ms:
-Throughput real: ~6 req/s (limitado pela latencia)
-Tempo estimado: 1.500.000 / 6 = ~69 horas
+Rate limit: 5 req/s
+MVP (27 capitais): ~1.400 / 5 = ~5 minutos
+Fase 2 (100 municipios): ~5.200 / 5 = ~17 minutos
+Fase 3 (2.500 municipios): ~125.000 / 5 = ~7 horas
 ```
 
-Isso confirma que uma coleta completa de todos os municipios e inviavel em um unico ciclo diario. A estrategia de MVP e essencial.
+A descoberta via CNC reduz drasticamente o volume comparado com a estrategia anterior de iteracao bruta (~95K para MVP vs ~1.4K com CNC).
 
 ### Estimativa de armazenamento
 
 ```
 Tamanho medio por documento aliquota: ~500 bytes
-1.500.000 documentos: ~750 MB
-Com indices: ~1 GB total estimado
+MVP (1.350 documentos): ~675 KB
+Completo (125.000 documentos): ~62.5 MB
+Com indices: ~100 MB total estimado
 ```
 
 ---
 
 ## Estrategia de MVP
 
-Dada a impossibilidade de coletar todos os municipios em um ciclo diario, o MVP adota uma abordagem progressiva.
+Dada a impossibilidade de coletar todos os municipios em um ciclo diario, o MVP adota uma abordagem progressiva. O seed inicial inclui todos os estados e municipios do IBGE, mas o crawler processa somente capitais.
 
 ### Fase 1: Capitais (27 municipios)
 
 ```
 Municipios: 27 capitais estaduais
-Combinacoes: 27 x 600 = ~16.200
-Tempo estimado: 16.200 / 10 = ~27 minutos
+Descoberta: 27 convenio + 27 CNC = 54 requests
+Servicos estimados: ~50 por capital via CNC = ~1.350
+Tempo estimado: ~1.400 / 5 = ~5 minutos
 ```
 
-Essa fase e totalmente viavel em um ciclo diario e permite validar toda a infraestrutura do worker.
+Essa fase e totalmente viavel em um ciclo diario e permite validar toda a infraestrutura do worker. Com CNC, o volume e drasticamente menor que a estimativa anterior baseada em iteracao bruta.
 
 ### Fase 2: Capitais + municipios mais populosos (100 municipios)
 
 ```
 Municipios: ~100 (capitais + maiores por populacao)
-Combinacoes: 100 x 600 = ~60.000
-Tempo estimado: 60.000 / 10 = ~100 minutos (~1h40)
+Descoberta: 100 convenio + 100 CNC = 200 requests
+Servicos estimados: ~50 por municipio via CNC = ~5.000
+Tempo estimado: ~5.200 / 5 = ~17 minutos
 ```
 
-### Fase 3: Todos os municipios com convenio ativo
+### Fase 3: Todos os municipios com dados disponiveis
 
 ```
-Municipios: ~2.000 a 3.000
-Combinacoes: ~1.200.000 a 1.800.000
+Municipios: ~2.000 a 3.000 (com convenio OU com CNC)
+Descoberta: ~5.570 convenio + ~5.570 CNC = ~11.140 requests
+Servicos estimados: ~50 por municipio x 2.500 = ~125.000
 Estrategia: processar em multiplos ciclos, priorizando municipios sem dados
+Tempo estimado por ciclo: ~125.000 / 5 = ~7 horas
 ```
 
 Para a Fase 3, o processamento incremental e essencial: cada ciclo diario processa apenas o delta (novos municipios ou servicos nao coletados).

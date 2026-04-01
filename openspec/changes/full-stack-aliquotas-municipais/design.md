@@ -37,7 +37,7 @@ Este projeto é greenfield — não existe sistema anterior. A motivação é co
 **Non-Goals:**
 - SSO, OAuth2 ou integração com provedores de identidade externos
 - Edição ou cadastro de alíquotas pelo usuário (sistema é somente leitura)
-- Cobertura de todos os 5.570 municípios no MVP — iniciar com conjunto controlado
+- Cobertura de todos os 5.570 municípios no MVP — iniciar somente com 27 capitais
 - Notificações push ou real-time via WebSocket
 - Multi-tenancy ou isolamento por organização
 - Deploy em cloud ou CI/CD pipeline (foco é ambiente local dockerizado)
@@ -164,19 +164,24 @@ Nem todos os 5.570 municípios do IBGE (arquivo `context/municipios.json`) terã
 flowchart TD
     M[Município do IBGE] --> F1{Fase 1: Convênio}
     F1 -->|GET /parametrizacao/{mun}/convenio| C1{Resposta OK?}
-    C1 -->|Não| SKIP1[Marcar 'sem_convenio' — SKIP]
-    C1 -->|Sim| F2{Fase 2: Probe}
-    F2 -->|Testar 5 serviços representativos| C2{Pelo menos 1 retornou dados?}
+    C1 -->|Não| F1B{Fase 1b: CNC sem convênio}
+    F1B -->|GET /cnc/consulta/cad/{mun}| C1B{Retornou serviços?}
+    C1B -->|Não| SKIP1[Marcar 'sem_dados' — SKIP]
+    C1B -->|Sim| F3[Fase 3: Crawl dos serviços CNC]
+    C1 -->|Sim| F2{Fase 2: Descoberta CNC}
+    F2 -->|GET /cnc/consulta/cad/{mun}| C2{Retornou serviços?}
     C2 -->|Não| SKIP2[Marcar 'sem_dados_adn' — SKIP]
-    C2 -->|Sim| F3[Fase 3: Crawl completo com early-stop]
-    F3 --> DONE[Processar todos os serviços]
+    C2 -->|Sim| F3
+    F3 --> DONE[Processar serviços descobertos]
 ```
 
-**Fase 1 — Filtro por convênio:** Chama `GET /parametrizacao/{municipio}/convenio`. Se 404/erro → skip. Custo: 1 request por município.
+**Fase 1 — Verificação de convênio:** Chama `GET /parametrizacao/{municipio}/convenio`. Custo: 1 request por município. **Importante:** município sem convênio NÃO é automaticamente descartado — ainda passa pela Fase 1b de verificação CNC.
 
-**Fase 2 — Probe com serviços representativos:** Testa 5 códigos de serviço de grupos diferentes (ex: `01.01.01.001`, `07.02.01.001`, `14.01.01.001`, `17.01.01.001`, `25.01.01.001`). Se todos falharem → município marcado como "sem_dados_adn" e pulado inteiro. Custo: max 5 requests. Isso evita enfileirar centenas de serviços para um município que não tem dado algum.
+**Fase 1b — Verificação CNC para municípios sem convênio:** Se o convênio falhou (404/erro), o worker ainda tenta `GET /cnc/consulta/cad/{municipio}`. Se retornar serviços, o município entra no crawl. Somente se ambas verificações falharem o município é descartado.
 
-**Fase 3 — Crawl completo com early-stop por subdivisão:**
+**Fase 2 — Descoberta de serviços via CNC:** Para municípios com convênio, o worker chama `GET /cnc/consulta/cad/{municipio}` para obter a lista de serviços cadastrados. Isso substitui a antiga estratégia de iterar todos os ~391 códigos nacionais × complementos municipais. O CNC retorna diretamente os serviços válidos, eliminando a necessidade de probe com serviços representativos e early-stop por subdivisão.
+
+**Fase 3 — Crawl dos serviços descobertos:** O worker enfileira apenas os serviços retornados pelo CNC. Para a iteração de desdobramentos municipais (complemento `xxx`), usa early-stop agressivo: começa em `000`, avança para `001`, e se não encontrar dados já para a iteração daquele código. Isso é mais eficiente que a premissa anterior de 9 misses consecutivos.
 
 O código de serviço na NFS-e Nacional segue o formato `ii.ss.dd.xxx`:
 
@@ -193,25 +198,27 @@ No XML: `cTribNac` = `iissdd` (6 dígitos) e `cTribMun` = `xxx` (3 dígitos).
 - **40 itens** na LC 116/2003 (com lacunas: 01 a 39)
 - **~197 subitens** (LC 116 + emendas da LC 157/2016)
 - **~391 códigos de tributação nacional** (com desdobramentos — lista pública no portal gov.br/nfse)
-- **Complemento municipal (xxx)**: variável por município — é ESTE nível que precisa de early-stop
+- **Complemento municipal (xxx)**: variável por município — descoberto via CNC, com early-stop agressivo na iteração
 
-**Estratégia de iteração:** Para cada um dos ~391 códigos nacionais (`ii.ss.dd`):
-- Seed estático dos 391 códigos a partir do portal gov.br/nfse (lista pública e conhecida)
-- Para cada código nacional, iterar complementos municipais: `.001`, `.002`, `.003`...
-- Se 9 misses consecutivos (404) no complemento → parar e pular para o próximo código nacional
-- Estimativa: ~3 complementos efetivos por código em média → ~1.200 códigos reais por município
+**Estratégia de iteração (revisada com CNC):**
+- Chamar CNC para obter serviços cadastrados do município
+- Para cada serviço do CNC, consultar alíquota diretamente
+- Para desdobramentos não cobertos pelo CNC, iterar complementos: `.000`, `.001`...
+- Se `001` retornar 404 → parar imediatamente para aquele código nacional (early-stop agressivo)
+- Retry de 3 tentativas apenas em caso de erro (não 404)
 
 **Impacto na estimativa de volume:**
 
-| Cenário | Sem otimização | Com convênio + probe + early-stop |
-|---------|---------------|-----------------------------------|
-| 5.570 municípios (raw) | ~391 × 999 × 5.570 = bilhões | ~5.570 convênio + ~5.570×5 probe = ~33K |
-| ~2.000 passam probe | — | ~2.000 × 391 × ~9 tentativas = ~7M |
-| MVP (27 capitais) | — | 27 + 135 + (27 × 391 × 9) = ~95K (~5.3h a 5 req/s) |
+| Cenário | Sem otimização | Com CNC + early-stop agressivo |
+|---------|---------------|-------------------------------|
+| 5.570 municípios (raw) | ~391 × 999 × 5.570 = bilhões | ~5.570 convênio + ~5.570 CNC = ~11K |
+| ~2.000 com serviços CNC | — | ~2.000 × ~50 serviços médio = ~100K |
+| MVP (27 capitais) | — | 27 convênio + 27 CNC + ~1.350 serviços = ~1.4K (~5 min a 5 req/s) |
 
 **Seeds:**
-- **Municípios:** Arquivo `context/municipios.json` (5.570 registros com Id, Codigo IBGE, Nome, UF)
-- **Códigos de serviço:** ~391 códigos de tributação nacional do portal gov.br/nfse — seedados estaticamente
+- **Estados:** 27 UFs brasileiras (derivados do arquivo `context/municipios.json`)
+- **Municípios:** Arquivo `context/municipios.json` (5.570 registros com Id, Codigo IBGE, Nome, UF). Todos são seedados, mas o crawler no MVP processa somente capitais.
+- **Códigos de serviço:** ~391 códigos de tributação nacional do portal gov.br/nfse — seedados estaticamente. Complementados em runtime pela descoberta via endpoint CNC por município.
 
 ---
 
@@ -378,8 +385,8 @@ graph TB
 
 ### R2: Formato de código de serviço inconsistente
 **Risco:** Os arquivos Bruno mostram formatos diferentes (`01.01.01.001` vs `010301001`). O README diz LC 116/2003 com pontos.
-**Premissa:** Armazenar internamente sem pontos (numérico puro) e formatar para exibição. Normalizar na entrada tanto do worker quanto da API.
-**Mitigação:** Validação centralizada no domínio com regex que aceita ambos os formatos.
+**Decisão:** Armazenar internamente **sem pontos** (numérico puro, ex: `010101001`) para indexação e comparação simples. A API NFS-e nos endpoints de parametrização (alíquotas, histórico) usa formato com pontos — o worker normaliza para `XX.XX.XX.XXX` ao enviar. O frontend exibe com máscara (pontos). O backend aceita ambos os formatos na entrada do usuário e normaliza para sem pontos antes de persistir.
+**Mitigação:** Validação centralizada no domínio com regex que aceita ambos os formatos. Normalização bidirecional: sem pontos para storage, com pontos para API NFS-e e exibição.
 
 ### R3: Formato de competência divergente
 **Risco:** Bruno files usam data completa (`2026-01-09`), README usa `YYYYMM`.
@@ -387,12 +394,12 @@ graph TB
 **Mitigação:** Testar ambos os formatos na análise da API externa e documentar o comportamento real.
 
 ### R4: Volume de dados para crawling completo
-**Risco:** 5.570 municípios × ~600 códigos de serviço × competências = milhões de combinações possíveis.
-**Mitigação:** Iniciar com subconjunto controlado (capitais + municípios com convênio ativo). Expandir progressivamente. Worker com fila permite controle granular.
+**Risco:** 5.570 municípios × serviços variáveis × competências = grande volume de combinações possíveis.
+**Mitigação:** MVP inicia somente com as 27 capitais. Uso do endpoint CNC para descoberta de serviços por município reduz drasticamente o volume (de milhões para milhares). Worker com fila persistente permite expansão progressiva. Early-stop agressivo nos desdobramentos municipais.
 
 ### R5: Certificado PFX para API NFS-e
-**Risco:** O acesso à API requer certificado cliente. O gerenciamento do certificado em Docker precisa ser seguro.
-**Mitigação:** Montar certificado via volume ou secret do Docker. Nunca versionar o PFX (já no `.gitignore`). Documentar processo de configuração.
+**Risco:** O acesso à API requer certificado cliente. O gerenciamento do certificado precisa ser seguro e operacional.
+**Mitigação:** Certificado gerenciado via endpoint REST da API (`POST /api/v1/crawler/certificado`), restrito a usuários admin. Permite rotação sem restart do container. Nunca versionado no git (`.gitignore`). Status e validade monitoráveis via `GET /api/v1/crawler/certificado`.
 
 ### R6: Bloqueio do certificado PFX por excesso de requests
 **Risco:** A API NFS-e pode bloquear o certificado PFX se detectar volume excessivo de chamadas, causando parada total da coleta.
@@ -445,14 +452,30 @@ flowchart LR
 
 ---
 
-## Open Questions
+## Resolved Questions
 
-1. **Quais municípios incluir no seed inicial?** Premissa: 27 capitais + municípios com convênio ativo (descobertos via endpoint `/parametrizacao/{municipio}/convenio`).
+1. **Quais municípios incluir no seed inicial?**
+   - **Resposta:** Seed de todos os estados brasileiros (27 UFs) e somente capitais inicialmente.
+   - **Impacto:** O worker no MVP processa apenas as 27 capitais. A tabela `municipios` contém todos os 5.570 municípios do IBGE para referência, mas o crawler só enfileira capitais. Expansão para outros municípios será feita em fases futuras.
 
-2. **A API NFS-e tem rate limit documentado?** Não encontrado nos Bruno files. Premissa conservadora: max 10 req/s.
+2. **A API NFS-e tem rate limit documentado?**
+   - **Resposta:** Não há rate limit documentado. A estratégia adotada é:
+     - Para iteração de desdobramentos municipais (complemento `xxx`): começar pelo `000`; quando avançar para o `001` e não encontrar dados, já parar a iteração daquele código nacional. Ou seja, early-stop imediato após primeiro miss no complemento.
+     - Para busca de serviços: se não encontrar dados para um serviço, avançar para o próximo imediatamente. Em caso de erro (não 404), aplicar rate de 3 retries antes de desistir.
+   - **Impacto:** O early-stop do desdobramento é mais agressivo do que os 9 misses consecutivos da premissa original. Isso reduz drasticamente o volume de requests. O rate limit conservador de 5 req/s é mantido como proteção geral.
 
-3. **O endpoint CNC (`/cnc/consulta/cad/{municipio}`) retorna lista de serviços do município?** Se sim, pode ser usado para descobrir serviços válidos por município ao invés de iterar toda a tabela LC 116. Necessita teste real.
+3. **O endpoint CNC (`/cnc/consulta/cad/{municipio}`) retorna lista de serviços do município?**
+   - **Resposta:** Sim. Usar o endpoint CNC para descobrir serviços válidos por município em vez de iterar a tabela LC 116 inteira.
+   - **Impacto:** O worker DEVE chamar `GET /cnc/consulta/cad/{municipio}` antes de enfileirar serviços. Isso substitui a estratégia de iterar todos os ~391 códigos nacionais × complementos municipais. O CNC retorna diretamente quais serviços o município tem cadastrados, eliminando a necessidade de probe e early-stop para descoberta. A fase de probe (testar 5 serviços representativos) pode ser simplificada ou removida, já que o CNC já indica se o município tem serviços cadastrados.
 
-4. **Qual o comportamento da API quando município não tem convênio?** Premissa: retorna 404 ou resposta vazia. O worker deve tratar ambos os cenários.
+4. **Qual o comportamento da API quando município não tem convênio?**
+   - **Resposta:** Verificar na consulta — é possível que mesmo sem convênio formal, o município tenha dados disponíveis na API.
+   - **Impacto:** O worker NÃO deve descartar automaticamente municípios sem convênio. Em vez disso: (1) tentar o endpoint de convênio primeiro, (2) se não encontrar convênio, ainda assim tentar o endpoint CNC para verificar se há serviços cadastrados, (3) somente pular o município se ambas as verificações falharem. Isso garante cobertura de municípios que podem ter aderido recentemente ou que têm dados sem convênio formal registrado.
 
-5. **O certificado PFX será fornecido pela equipe ou existe um de desenvolvimento/sandbox?** Premissa: será fornecido e montado via volume Docker.
+5. **O certificado PFX será fornecido pela equipe ou existe um de desenvolvimento/sandbox?**
+   - **Resposta:** O certificado será gerenciado via endpoint de upload na API, restrito a usuários admin.
+   - **Impacto:** Não será montado via volume Docker. O backend expõe endpoints REST para gestão do certificado:
+     - `POST /api/v1/crawler/certificado` — upload do PFX (multipart/form-data, requer role admin)
+     - `GET /api/v1/crawler/certificado` — status do certificado (validade, thumbprint)
+     - `DELETE /api/v1/crawler/certificado` — remoção do certificado
+   - Vantagens: rotação sem restart do container, auditoria de uploads, monitoramento de validade via API.

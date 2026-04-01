@@ -139,3 +139,30 @@ The backend SHALL include a seed mechanism to populate states and municipalities
 #### Scenario: Seed data format
 - **WHEN** the seed reads `context/municipios.json`
 - **THEN** each municipality is stored with codigoIbge as string (7 digits from Codigo field), nome, and siglaEstado (from Uf field)
+
+---
+
+### Requirement: Certificate management endpoints
+The backend SHALL expose REST endpoints for managing the PFX client certificate used by the worker to authenticate with the NFS-e API. These endpoints SHALL require authentication with admin role.
+
+#### Scenario: Certificate upload
+- **WHEN** an admin user calls `POST /api/v1/crawler/certificado` with a PFX file (multipart/form-data) and password
+- **THEN** the system stores the certificate securely and returns HTTP 201 with certificate metadata (thumbprint, validade)
+
+#### Scenario: Certificate status
+- **WHEN** an authenticated user calls `GET /api/v1/crawler/certificado`
+- **AND** a certificate has been uploaded
+- **THEN** the system returns HTTP 200 with certificate metadata (thumbprint, validade, data de upload)
+
+#### Scenario: Certificate not configured
+- **WHEN** an authenticated user calls `GET /api/v1/crawler/certificado`
+- **AND** no certificate has been uploaded
+- **THEN** the system returns HTTP 404 with `{ erro: "Certificado não configurado" }`
+
+#### Scenario: Certificate removal
+- **WHEN** an admin user calls `DELETE /api/v1/crawler/certificado`
+- **THEN** the system removes the current certificate and returns HTTP 204
+
+#### Scenario: Non-admin access
+- **WHEN** a non-admin authenticated user calls `POST` or `DELETE` on `/api/v1/crawler/certificado`
+- **THEN** the system returns HTTP 403 Forbidden

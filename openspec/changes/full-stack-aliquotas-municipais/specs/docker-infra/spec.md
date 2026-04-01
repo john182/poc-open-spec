@@ -61,9 +61,13 @@ The project SHALL use `.env` file (gitignored) for environment-specific configur
 
 ---
 
-### Requirement: PFX certificate mounting
-The docker-compose SHALL support mounting the PFX client certificate for the NFS-e API via a volume. The certificate path SHALL be configurable via environment variable.
+### Requirement: PFX certificate management
+The PFX client certificate for the NFS-e API SHALL be managed via API endpoints (upload by admin user), NOT mounted as a Docker volume. The docker-compose SHALL NOT require a PFX file to start the stack. The worker SHALL check for certificate availability at runtime and report `sem_certificado` status if none has been uploaded.
 
-#### Scenario: Certificate available to worker
-- **WHEN** a PFX file is placed in the configured path and docker compose starts
-- **THEN** the worker can use the certificate for mTLS connections to the NFS-e API
+#### Scenario: Stack starts without certificate
+- **WHEN** docker compose starts and no PFX certificate has been uploaded
+- **THEN** all services start normally; the worker reports status `sem_certificado` and does not attempt API calls
+
+#### Scenario: Certificate uploaded at runtime
+- **WHEN** an admin uploads a PFX certificate via `POST /api/v1/crawler/certificado`
+- **THEN** the worker can use the certificate for mTLS connections without container restart

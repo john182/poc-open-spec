@@ -35,7 +35,7 @@ The worker SHALL use a persistent work queue (MongoDB collection `fila_processam
 ---
 
 ### Requirement: NFS-e API integration
-The worker SHALL call the NFS-e API at `adn.nfse.gov.br` using HTTPS with client certificate (PFX). The primary endpoint is `GET /parametrizacao/{codigoMunicipio}/{codigoServico}/{competencia}/aliquota`. The worker SHALL also use `GET /parametrizacao/{codigoMunicipio}/convenio` to discover municipality adherence.
+The worker SHALL call the NFS-e API at `adn.nfse.gov.br` using HTTPS with client certificate (PFX). The primary endpoint is `GET /parametrizacao/{codigoMunicipio}/{codigoServico}/{competencia}/aliquota`. The worker SHALL also use `GET /parametrizacao/{codigoMunicipio}/convenio` to discover municipality adherence, and `GET /cnc/consulta/cad/{codigoMunicipio}` to discover registered services per municipality. The PFX certificate SHALL be managed via API endpoint (upload by admin), not mounted as a Docker volume.
 
 #### Scenario: Successful tax rate fetch
 - **WHEN** the API returns HTTP 200 with valid tax rate data
@@ -145,47 +145,62 @@ The worker SHALL support incremental processing — only fetch data that has not
 
 ---
 
-### Requirement: Service code discovery with municipal complement early-stop
-The worker SHALL maintain a seed of ~391 national tax codes (cTribNac, format `ii.ss.dd`) sourced from the gov.br/nfse portal. These derive from the 40 items and ~197 subitems of LC 116/2003, extended with national desdobramentos by the ADN. The full code format is `ii.ss.dd.xxx` where `ii.ss.dd` is the national code and `xxx` is the municipal complement (cTribMun), which varies by municipality. The worker SHALL iterate municipal complements starting at 001, and MUST stop iterating for a given national code after 9 consecutive misses (no data returned). This early-stop drastically reduces API calls. The worker SHALL use the convenio endpoint to discover active municipalities. The worker SHOULD use the CNC endpoint if it provides service discovery.
+### Requirement: Service code discovery via CNC with municipal complement early-stop
+The worker SHALL use the CNC endpoint (`GET /cnc/consulta/cad/{municipio}`) as the primary mechanism for discovering which services a municipality has registered. This replaces the previous strategy of iterating all ~391 national codes with probe and early-stop. The worker SHALL maintain a seed of ~391 national tax codes (cTribNac, format `ii.ss.dd`) sourced from the gov.br/nfse portal as fallback reference. The full code format is `ii.ss.dd.xxx` where `ii.ss.dd` is the national code and `xxx` is the municipal complement (cTribMun), which varies by municipality. When iterating municipal complements for codes not covered by CNC, the worker SHALL use aggressive early-stop: start at `000`, advance to `001`, and if `001` returns no data, stop immediately for that national code.
 
-#### Scenario: Municipal complement iteration with early-stop
-- **WHEN** the worker iterates complements for national code `01.01.01` starting at `01.01.01.001`
-- **AND** complements 001 through 009 all return 404 (no data)
-- **THEN** the worker stops iterating that national code and moves to the next (`01.01.02`)
+#### Scenario: CNC discovery replaces brute-force iteration
+- **WHEN** the worker starts processing a municipality that passed the convênio or CNC check
+- **THEN** the worker calls `GET /cnc/consulta/cad/{municipio}` to get the list of registered services
+- **AND** enqueues only the services returned by the CNC endpoint
+
+#### Scenario: Municipal complement iteration with aggressive early-stop
+- **WHEN** the worker iterates complements for a national code not covered by CNC, starting at `000`
+- **AND** complement `001` returns 404 (no data)
+- **THEN** the worker stops iterating that national code and moves to the next
 
 #### Scenario: Complement found then gap
-- **WHEN** the worker finds data for `01.01.01.001` but then 002 through 010 return 404 (9 consecutive misses)
-- **THEN** the worker stops iterating that national code since no more complements are expected
+- **WHEN** the worker finds data for `01.01.01.000` but `01.01.01.001` returns 404
+- **THEN** the worker stops iterating that national code immediately (aggressive early-stop)
 
 #### Scenario: Municipality discovery via convênio
 - **WHEN** the worker calls `GET /parametrizacao/{municipio}/convenio` and receives a successful response
-- **THEN** the municipality is marked as active and proceeds to the probe phase
+- **THEN** the municipality is marked as having convênio and proceeds to CNC discovery
 
-#### Scenario: Municipality not adherent
+#### Scenario: Municipality without convênio but with CNC data
 - **WHEN** the convênio endpoint returns 404 or empty response
-- **THEN** the municipality is marked as "sem_convenio" and skipped in subsequent cycles
+- **AND** the CNC endpoint `GET /cnc/consulta/cad/{municipio}` returns services
+- **THEN** the municipality is still processed with the services discovered via CNC
+
+#### Scenario: Municipality without convênio and without CNC data
+- **WHEN** the convênio endpoint returns 404 or empty response
+- **AND** the CNC endpoint also returns 404 or empty response
+- **THEN** the municipality is marked as "sem_dados" and skipped in subsequent cycles
 
 ---
 
-### Requirement: Municipality probe before full crawl
-Before queueing all service codes for a municipality, the worker SHALL run a probe phase: test 3-5 representative service codes (from different groups). If ALL probe calls return 404/error, the municipality SHALL be marked as "sem_dados_adn" and skipped entirely. This prevents wasting thousands of requests on municipalities that are technically conveniados but have no parametrization data in the ADN. Only municipalities that pass the probe (at least 1 successful response) SHALL have their full service code list enqueued.
+### Requirement: Municipality validation before full crawl
+Before queueing all service codes for a municipality, the worker SHALL validate the municipality using a two-step process: (1) check convênio via `GET /parametrizacao/{municipio}/convenio`, (2) discover services via CNC `GET /cnc/consulta/cad/{municipio}`. A municipality is eligible for crawling if EITHER the convênio check succeeds OR the CNC returns services. This ensures municipalities that may have data without formal convênio are not missed.
 
-#### Scenario: Probe succeeds
-- **WHEN** the worker probes municipality 3106200 with 5 representative service codes
-- **AND** at least 1 probe returns HTTP 200 with data
-- **THEN** the municipality passes the probe and its full service code list is enqueued for processing
+#### Scenario: Municipality with convênio and CNC data
+- **WHEN** the worker checks municipality 3106200
+- **AND** the convênio endpoint returns HTTP 200
+- **AND** the CNC endpoint returns a list of services
+- **THEN** the municipality passes validation and its CNC-discovered services are enqueued for processing
 
-#### Scenario: Probe fails completely
-- **WHEN** the worker probes a municipality with 5 representative service codes
-- **AND** all 5 return 404 or error
-- **THEN** the municipality is marked as "sem_dados_adn" and skipped — no further service codes are tested
+#### Scenario: Municipality without convênio but with CNC data
+- **WHEN** the worker checks a municipality
+- **AND** the convênio endpoint returns 404
+- **AND** the CNC endpoint returns a list of services
+- **THEN** the municipality passes validation and its CNC-discovered services are enqueued
 
-#### Scenario: Probe representative codes
-- **WHEN** the worker selects probe service codes
-- **THEN** it SHALL use codes from different groups (e.g., 01.01.01.001, 07.02.01.001, 14.01.01.001, 17.01.01.001, 25.01.01.001) to maximize coverage across the LC 116 table
+#### Scenario: Municipality fails both checks
+- **WHEN** the worker checks a municipality
+- **AND** the convênio endpoint returns 404 or error
+- **AND** the CNC endpoint returns 404 or empty
+- **THEN** the municipality is marked as "sem_dados" and skipped — no further service codes are tested
 
 #### Scenario: Municipality skip persists across cycles
-- **WHEN** a municipality was marked as "sem_dados_adn" in a previous cycle
+- **WHEN** a municipality was marked as "sem_dados" in a previous cycle
 - **THEN** it is skipped in subsequent cycles unless a force reprocess is triggered
 
 ---

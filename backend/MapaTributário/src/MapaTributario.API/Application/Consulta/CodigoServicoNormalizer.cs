@@ -62,6 +62,32 @@ public static partial class CodigoServicoNormalizer
     }
 
     /// <summary>
+    /// Normaliza um codigo parcial ou completo para uso como prefixo de busca.
+    /// Aceita 2, 4 ou 6 digitos (com ou sem pontos).
+    /// Ex: "01" -> "01", "01.01" -> "0101", "01.01.00" -> "010100"
+    /// </summary>
+    public static string NormalizarPrefixo(string codigo)
+    {
+        if (string.IsNullOrWhiteSpace(codigo))
+        {
+            return string.Empty;
+        }
+
+        var limpo = codigo.Replace(".", "");
+        if (limpo.Length != 2 && limpo.Length != 4 && limpo.Length != 6)
+        {
+            return string.Empty;
+        }
+
+        if (!limpo.All(char.IsDigit))
+        {
+            return string.Empty;
+        }
+
+        return limpo;
+    }
+
+    /// <summary>
     /// Valida se o codigo esta em formato aceito (com ou sem pontos, 6 digitos).
     /// </summary>
     public static bool EhValido(string codigo)

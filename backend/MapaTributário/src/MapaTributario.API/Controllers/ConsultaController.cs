@@ -1,6 +1,7 @@
 using FluentValidation;
 using MapaTributario.API.Application.Consulta;
 using MapaTributario.API.Application.Consulta.Contracts;
+using MapaTributario.API.Application.Errors;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,9 +15,9 @@ namespace MapaTributario.API.Controllers;
 [Authorize]
 public class ConsultaController : ControllerBase
 {
-    private readonly ConsultaService _consultaService;
+    private readonly IConsultaService _consultaService;
 
-    public ConsultaController(ConsultaService consultaService)
+    public ConsultaController(IConsultaService consultaService)
     {
         _consultaService = consultaService;
     }
@@ -89,13 +90,12 @@ public class ConsultaController : ControllerBase
         var result = await _consultaService.ListarAliquotasPorMunicipioAsync(codigoIbge, queryParams);
         if (result.IsFailed)
         {
-            var errorMessage = result.Errors.First().Message;
-            if (errorMessage.Contains("não encontrado"))
+            if (result.Errors.OfType<NotFoundError>().Any())
             {
-                return NotFound(new { erro = errorMessage });
+                return NotFound(new { erro = result.Errors.First().Message });
             }
 
-            return BadRequest(new { erro = errorMessage });
+            return BadRequest(new { erro = result.Errors.First().Message });
         }
 
         return Ok(result.Value);

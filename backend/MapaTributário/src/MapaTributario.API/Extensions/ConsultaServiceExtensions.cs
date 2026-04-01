@@ -18,7 +18,7 @@ public static class ConsultaServiceExtensions
         services.AddSingleton<IAliquotaRepository, AliquotaRepository>();
 
         // Application services
-        services.AddScoped<ConsultaService>();
+        services.AddScoped<IConsultaService, ConsultaService>();
 
         // Seed services
         services.AddTransient<IbgeSeedService>();

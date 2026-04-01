@@ -1,5 +1,6 @@
 using MapaTributario.API.Application.Consulta;
 using MapaTributario.API.Application.Consulta.Contracts;
+using MapaTributario.API.Application.Errors;
 using MapaTributario.API.Domain.Entities;
 using MapaTributario.API.Domain.Interfaces;
 using Moq;
@@ -80,13 +81,14 @@ public class ConsultaServiceTests
     }
 
     [Fact]
-    public async Task ListarMunicipiosPorUf_UfInvalida_RetornaFalha()
+    public async Task ListarMunicipiosPorUf_UfInvalida_RetornaNotFoundError()
     {
         _estadoRepository.Setup(r => r.GetBySiglaAsync("XX")).ReturnsAsync((Estado?)null);
 
         var result = await _sut.ListarMunicipiosPorUfAsync("XX");
 
         result.IsFailed.ShouldBeTrue();
+        result.Errors.OfType<NotFoundError>().ShouldNotBeEmpty();
         result.Errors.First().Message.ShouldContain("XX");
         result.Errors.First().Message.ShouldContain("não encontrada");
     }
@@ -133,7 +135,7 @@ public class ConsultaServiceTests
     }
 
     [Fact]
-    public async Task ListarAliquotasPorMunicipio_MunicipioInexistente_RetornaFalha()
+    public async Task ListarAliquotasPorMunicipio_MunicipioInexistente_RetornaNotFoundError()
     {
         _municipioRepository.Setup(r => r.GetByCodigoIbgeAsync("9999999")).ReturnsAsync((Municipio?)null);
 
@@ -141,6 +143,7 @@ public class ConsultaServiceTests
         var result = await _sut.ListarAliquotasPorMunicipioAsync("9999999", queryParams);
 
         result.IsFailed.ShouldBeTrue();
+        result.Errors.OfType<NotFoundError>().ShouldNotBeEmpty();
         result.Errors.First().Message.ShouldContain("não encontrado");
     }
 
@@ -166,7 +169,7 @@ public class ConsultaServiceTests
     }
 
     [Fact]
-    public async Task ListarAliquotasPorMunicipio_CodigoServicoInvalido_RetornaFalha()
+    public async Task ListarAliquotasPorMunicipio_CodigoServicoInvalido_RetornaValidationError()
     {
         var municipio = Municipio.Create("3550308", "São Paulo", "SP");
         _municipioRepository.Setup(r => r.GetByCodigoIbgeAsync("3550308")).ReturnsAsync(municipio);
@@ -175,7 +178,51 @@ public class ConsultaServiceTests
         var result = await _sut.ListarAliquotasPorMunicipioAsync("3550308", queryParams);
 
         result.IsFailed.ShouldBeTrue();
+        result.Errors.OfType<ValidationError>().ShouldNotBeEmpty();
         result.Errors.First().Message.ShouldContain("formato inválido");
+    }
+
+    [Fact]
+    public async Task ListarAliquotasPorMunicipio_ComFiltroPrefixoCodigoServico_NormalizaPrefixo()
+    {
+        var municipio = Municipio.Create("3550308", "São Paulo", "SP");
+        _municipioRepository.Setup(r => r.GetByCodigoIbgeAsync("3550308")).ReturnsAsync(municipio);
+
+        var aliquotas = new List<Aliquota>
+        {
+            Aliquota.Create("3550308", "São Paulo", "010100", "01.01.00", "Análise e desenvolvimento", 2.0m, "2024-01", "NFS-e"),
+            Aliquota.Create("3550308", "São Paulo", "010200", "01.02.00", "Programação", 3.0m, "2024-01", "NFS-e")
+        };
+        _aliquotaRepository.Setup(r => r.GetByMunicipioAsync(
+            "3550308", 1, 20, "01", null, null, null, null))
+            .ReturnsAsync((aliquotas as IReadOnlyList<Aliquota>, 2L));
+
+        var queryParams = new AliquotaQueryParams { CodigoServico = "01" };
+        var result = await _sut.ListarAliquotasPorMunicipioAsync("3550308", queryParams);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.Items.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task ListarAliquotasPorMunicipio_ComFiltroPrefixo4Digitos_NormalizaPrefixo()
+    {
+        var municipio = Municipio.Create("3550308", "São Paulo", "SP");
+        _municipioRepository.Setup(r => r.GetByCodigoIbgeAsync("3550308")).ReturnsAsync(municipio);
+
+        var aliquotas = new List<Aliquota>
+        {
+            Aliquota.Create("3550308", "São Paulo", "010100", "01.01.00", "Análise e desenvolvimento", 2.0m, "2024-01", "NFS-e")
+        };
+        _aliquotaRepository.Setup(r => r.GetByMunicipioAsync(
+            "3550308", 1, 20, "0101", null, null, null, null))
+            .ReturnsAsync((aliquotas as IReadOnlyList<Aliquota>, 1L));
+
+        var queryParams = new AliquotaQueryParams { CodigoServico = "01.01" };
+        var result = await _sut.ListarAliquotasPorMunicipioAsync("3550308", queryParams);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.Items.Count.ShouldBe(1);
     }
 
     [Fact]
@@ -243,18 +290,19 @@ public class ConsultaServiceTests
     }
 
     [Fact]
-    public async Task ObterDetalheAliquota_MunicipioInexistente_RetornaFalha()
+    public async Task ObterDetalheAliquota_MunicipioInexistente_RetornaNotFoundError()
     {
         _municipioRepository.Setup(r => r.GetByCodigoIbgeAsync("9999999")).ReturnsAsync((Municipio?)null);
 
         var result = await _sut.ObterDetalheAliquotaAsync("9999999", "01.01.00");
 
         result.IsFailed.ShouldBeTrue();
+        result.Errors.OfType<NotFoundError>().ShouldNotBeEmpty();
         result.Errors.First().Message.ShouldContain("não encontrado");
     }
 
     [Fact]
-    public async Task ObterDetalheAliquota_AliquotaInexistente_RetornaFalha()
+    public async Task ObterDetalheAliquota_AliquotaInexistente_RetornaNotFoundError()
     {
         var municipio = Municipio.Create("3550308", "São Paulo", "SP");
         _municipioRepository.Setup(r => r.GetByCodigoIbgeAsync("3550308")).ReturnsAsync(municipio);
@@ -263,11 +311,12 @@ public class ConsultaServiceTests
         var result = await _sut.ObterDetalheAliquotaAsync("3550308", "99.00.00");
 
         result.IsFailed.ShouldBeTrue();
+        result.Errors.OfType<NotFoundError>().ShouldNotBeEmpty();
         result.Errors.First().Message.ShouldContain("não encontrada");
     }
 
     [Fact]
-    public async Task ObterDetalheAliquota_CodigoServicoInvalido_RetornaFalha()
+    public async Task ObterDetalheAliquota_CodigoServicoInvalido_RetornaValidationError()
     {
         var municipio = Municipio.Create("3550308", "São Paulo", "SP");
         _municipioRepository.Setup(r => r.GetByCodigoIbgeAsync("3550308")).ReturnsAsync(municipio);
@@ -275,6 +324,7 @@ public class ConsultaServiceTests
         var result = await _sut.ObterDetalheAliquotaAsync("3550308", "abc");
 
         result.IsFailed.ShouldBeTrue();
+        result.Errors.OfType<ValidationError>().ShouldNotBeEmpty();
         result.Errors.First().Message.ShouldContain("formato inválido");
     }
 

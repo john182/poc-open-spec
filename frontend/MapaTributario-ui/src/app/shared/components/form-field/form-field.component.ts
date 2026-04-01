@@ -10,9 +10,9 @@ import { MENSAGENS_VALIDACAO } from '../../utils/mensagens-validacao';
 })
 export class FormFieldComponent {
   rotulo = input.required<string>();
+  inputId = input<string>('');
   controle = input.required<AbstractControl | null>();
   mensagensErro = input<Record<string, string>>({});
-  inputId = input<string>();
 
   errosAtivos(): string[] {
     const ctrl = this.controle();

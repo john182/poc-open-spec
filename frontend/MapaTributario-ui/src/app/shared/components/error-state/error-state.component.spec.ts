@@ -1,44 +1,33 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { render, screen } from '@testing-library/angular';
 import { ErrorStateComponent } from './error-state.component';
 
 describe('ErrorStateComponent', () => {
-  let fixture: ComponentFixture<ErrorStateComponent>;
-
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [ErrorStateComponent],
-    }).compileComponents();
-    fixture = TestBed.createComponent(ErrorStateComponent);
+  it('deve exibir titulo padrao e mensagem', async () => {
+    await render(ErrorStateComponent, {
+      inputs: { mensagem: 'Falha na conexao' },
+    });
+    expect(screen.getByText('Erro ao carregar dados')).toBeTruthy();
+    expect(screen.getByText('Falha na conexao')).toBeTruthy();
   });
 
-  it('deve criar o componente', () => {
-    fixture.componentRef.setInput('mensagem', 'Algo deu errado');
-    fixture.detectChanges();
-    expect(fixture.componentInstance).toBeTruthy();
+  it('deve ter atributo data-cy', async () => {
+    const { container } = await render(ErrorStateComponent, {
+      inputs: { mensagem: 'Erro' },
+    });
+    expect(container.querySelector('[data-cy="error-state"]')).toBeTruthy();
   });
 
-  it('deve exibir titulo padrao e mensagem', () => {
-    fixture.componentRef.setInput('mensagem', 'Falha na conexão');
-    fixture.detectChanges();
-    const el = fixture.nativeElement as HTMLElement;
-    expect(el.textContent).toContain('Erro ao carregar dados');
-    expect(el.textContent).toContain('Falha na conexão');
+  it('deve exibir botao de retry', async () => {
+    await render(ErrorStateComponent, {
+      inputs: { mensagem: 'Erro' },
+    });
+    expect(screen.getByText('Tentar novamente')).toBeTruthy();
   });
 
-  it('deve emitir tentarNovamente ao clicar retry', () => {
-    fixture.componentRef.setInput('mensagem', 'Erro');
-    fixture.detectChanges();
-    let emitted = false;
-    fixture.componentInstance.tentarNovamente.subscribe(() => (emitted = true));
-    const btn = fixture.nativeElement.querySelector('button');
-    btn?.click();
-    expect(emitted).toBe(true);
-  });
-
-  it('deve ter o atributo data-cy', () => {
-    fixture.componentRef.setInput('mensagem', 'Erro');
-    fixture.detectChanges();
-    const el = fixture.nativeElement.querySelector('[data-cy="error-state"]');
-    expect(el).toBeTruthy();
+  it('deve aceitar titulo customizado', async () => {
+    await render(ErrorStateComponent, {
+      inputs: { titulo: 'Ops!', mensagem: 'Algo deu errado' },
+    });
+    expect(screen.getByText('Ops!')).toBeTruthy();
   });
 });

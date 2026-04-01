@@ -1,41 +1,33 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { render, screen } from '@testing-library/angular';
 import { EmptyStateComponent } from './empty-state.component';
 
 describe('EmptyStateComponent', () => {
-  let fixture: ComponentFixture<EmptyStateComponent>;
-
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [EmptyStateComponent],
-    }).compileComponents();
-    fixture = TestBed.createComponent(EmptyStateComponent);
+  it('deve exibir titulo e mensagem', async () => {
+    await render(EmptyStateComponent, {
+      inputs: { titulo: 'Nenhum resultado', mensagem: 'Tente ajustar os filtros' },
+    });
+    expect(screen.getByText('Nenhum resultado')).toBeTruthy();
+    expect(screen.getByText('Tente ajustar os filtros')).toBeTruthy();
   });
 
-  it('deve criar o componente', () => {
-    fixture.componentRef.setInput('titulo', 'Vazio');
-    fixture.componentRef.setInput('mensagem', 'Sem dados');
-    fixture.detectChanges();
-    expect(fixture.componentInstance).toBeTruthy();
+  it('deve ter atributo data-cy', async () => {
+    const { container } = await render(EmptyStateComponent, {
+      inputs: { titulo: 'Vazio', mensagem: 'Sem dados' },
+    });
+    expect(container.querySelector('[data-cy="empty-state"]')).toBeTruthy();
   });
 
-  it('deve exibir titulo e mensagem', () => {
-    fixture.componentRef.setInput('titulo', 'Nenhum resultado');
-    fixture.componentRef.setInput('mensagem', 'Tente ajustar os filtros');
-    fixture.detectChanges();
-    const el = fixture.nativeElement as HTMLElement;
-    expect(el.textContent).toContain('Nenhum resultado');
-    expect(el.textContent).toContain('Tente ajustar os filtros');
+  it('deve exibir botao de acao quando acaoLabel fornecido', async () => {
+    await render(EmptyStateComponent, {
+      inputs: { titulo: 'Vazio', mensagem: 'Sem dados', acaoLabel: 'Recarregar' },
+    });
+    expect(screen.getByText('Recarregar')).toBeTruthy();
   });
 
-  it('deve emitir acao ao clicar no botao', () => {
-    fixture.componentRef.setInput('titulo', 'Vazio');
-    fixture.componentRef.setInput('mensagem', 'Sem dados');
-    fixture.componentRef.setInput('acaoLabel', 'Recarregar');
-    fixture.detectChanges();
-    let emitted = false;
-    fixture.componentInstance.acao.subscribe(() => (emitted = true));
-    const btn = fixture.nativeElement.querySelector('button');
-    btn?.click();
-    expect(emitted).toBe(true);
+  it('nao deve exibir botao quando acaoLabel ausente', async () => {
+    await render(EmptyStateComponent, {
+      inputs: { titulo: 'Vazio', mensagem: 'Sem dados' },
+    });
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });

@@ -218,6 +218,37 @@ public class ConsultaControllerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GET_AliquotasPorMunicipio_FiltroPrefixoCodigoServico_RetornaMultiplos()
+    {
+        var response = await _client.GetAsync("/api/v1/municipios/3550308/aliquotas?codigoServico=01");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var paginado = await response.Content.ReadFromJsonAsync<PaginatedResponse<AliquotaResponse>>();
+        paginado.ShouldNotBeNull();
+        paginado.Items.Count.ShouldBe(3); // 010100, 010200, 010300 all start with "01"
+    }
+
+    [Fact]
+    public async Task GET_AliquotasPorMunicipio_FiltroPrefixo4Digitos_RetornaFiltrado()
+    {
+        var response = await _client.GetAsync("/api/v1/municipios/3550308/aliquotas?codigoServico=01.01");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var paginado = await response.Content.ReadFromJsonAsync<PaginatedResponse<AliquotaResponse>>();
+        paginado.ShouldNotBeNull();
+        paginado.Items.Count.ShouldBe(1);
+        paginado.Items[0].CodigoServicoFormatado.ShouldBe("01.01.00");
+    }
+
+    [Fact]
+    public async Task GET_AliquotasPorMunicipio_CodigoServicoInvalido_Retorna400()
+    {
+        var response = await _client.GetAsync("/api/v1/municipios/3550308/aliquotas?codigoServico=abc");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task GET_AliquotasPorMunicipio_FiltroDescricao_Funciona()
     {
         var response = await _client.GetAsync("/api/v1/municipios/3550308/aliquotas?descricao=Programa");

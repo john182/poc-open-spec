@@ -118,4 +118,52 @@ public class CodigoServicoNormalizerTests
         var resultado = CodigoServicoNormalizer.EhValido(entrada!);
         resultado.ShouldBe(esperado);
     }
+
+    // --- NormalizarPrefixo ---
+
+    [Theory]
+    [InlineData("01", "01")]
+    [InlineData("14", "14")]
+    public void NormalizarPrefixo_Grupo2Digitos_RetornaDigitos(string entrada, string esperado)
+    {
+        var resultado = CodigoServicoNormalizer.NormalizarPrefixo(entrada);
+        resultado.ShouldBe(esperado);
+    }
+
+    [Theory]
+    [InlineData("01.01", "0101")]
+    [InlineData("0101", "0101")]
+    [InlineData("14.01", "1401")]
+    public void NormalizarPrefixo_SubItem4Digitos_RetornaDigitos(string entrada, string esperado)
+    {
+        var resultado = CodigoServicoNormalizer.NormalizarPrefixo(entrada);
+        resultado.ShouldBe(esperado);
+    }
+
+    [Theory]
+    [InlineData("01.01.00", "010100")]
+    [InlineData("010100", "010100")]
+    [InlineData("14.01.00", "140100")]
+    public void NormalizarPrefixo_CodigoCompleto6Digitos_RetornaDigitos(string entrada, string esperado)
+    {
+        var resultado = CodigoServicoNormalizer.NormalizarPrefixo(entrada);
+        resultado.ShouldBe(esperado);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("  ")]
+    [InlineData("abc")]
+    [InlineData("1")]
+    [InlineData("123")]
+    [InlineData("12345")]
+    [InlineData("1234567")]
+    [InlineData("0A")]
+    [InlineData("01.0A")]
+    public void NormalizarPrefixo_FormatoInvalido_RetornaVazio(string? entrada)
+    {
+        var resultado = CodigoServicoNormalizer.NormalizarPrefixo(entrada!);
+        resultado.ShouldBe(string.Empty);
+    }
 }

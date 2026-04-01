@@ -44,7 +44,15 @@ public class AliquotaRepository : IAliquotaRepository
 
         if (!string.IsNullOrWhiteSpace(codigoServico))
         {
-            filter &= filterBuilder.Eq(a => a.CodigoServico, codigoServico);
+            if (codigoServico.Length < 6)
+            {
+                var escapedPrefix = Regex.Escape(codigoServico);
+                filter &= filterBuilder.Regex(a => a.CodigoServico, new MongoDB.Bson.BsonRegularExpression($"^{escapedPrefix}"));
+            }
+            else
+            {
+                filter &= filterBuilder.Eq(a => a.CodigoServico, codigoServico);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(descricao))

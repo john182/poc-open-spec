@@ -54,6 +54,34 @@ public class CrawlerServiceTests
             _logger.Object);
     }
 
+    #region Helpers
+
+    /// <summary>
+    /// Cria ConvenioNfseResponse ativo (aderenteAmbienteNacional = 1).
+    /// </summary>
+    private static ConvenioNfseResponse CriarConvenioAtivo() => new()
+    {
+        ParametrosConvenio = new ParametrosConvenio { AderenteAmbienteNacional = 1 },
+        Mensagem = "Parâmetros do convênio recuperados com sucesso."
+    };
+
+    /// <summary>
+    /// Cria AliquotaNfseResponse com uma alíquota vigente para o código de serviço informado.
+    /// </summary>
+    private static AliquotaNfseResponse CriarAliquotaResponse(string codigoServico, decimal aliquota) => new()
+    {
+        Aliquotas = new Dictionary<string, List<AliquotaItem>>
+        {
+            [codigoServico] = new List<AliquotaItem>
+            {
+                new() { Incidencia = "SIM", Aliq = aliquota, DtIni = DateTime.UtcNow.AddYears(-1), DtFim = null }
+            }
+        },
+        Mensagem = "Alíquotas recuperadas com sucesso."
+    };
+
+    #endregion
+
     [Fact]
     public async Task ExecutarAsync_QuandoJaEmExecucao_LancaException()
     {
@@ -94,11 +122,11 @@ public class CrawlerServiceTests
             .ReturnsAsync(municipio);
 
         _nfseClient.Setup(c => c.GetConvenioAsync("3106200", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ConvenioNfseResponse { Ativo = true });
+            .ReturnsAsync(CriarConvenioAtivo());
 
         // Probe: at least one returns data
         _nfseClient.Setup(c => c.GetAliquotaAsync("3106200", "01.01.01", It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AliquotaNfseResponse { Aliquota = 2.0m, CodigoServico = "01.01.01", DescricaoServico = "Servico teste" });
+            .ReturnsAsync(CriarAliquotaResponse("01.01.01.000", 2.0m));
 
         Servico servico = Servico.Create("01.01.01", "Servico teste", "01", "01", "01");
         _servicoRepo.Setup(r => r.GetAllAsync())
@@ -123,7 +151,7 @@ public class CrawlerServiceTests
             });
 
         _nfseClient.Setup(c => c.GetAliquotaAsync("3106200", "01.01.01", It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AliquotaNfseResponse { Aliquota = 2.0m, CodigoServico = "01.01.01", DescricaoServico = "Servico teste" });
+            .ReturnsAsync(CriarAliquotaResponse("01.01.01.000", 2.0m));
 
         _aliquotaRepo.Setup(r => r.UpsertAsync(It.IsAny<Aliquota>())).Returns(Task.CompletedTask);
 
@@ -148,12 +176,12 @@ public class CrawlerServiceTests
             .ReturnsAsync(new List<Municipio>());
 
         _nfseClient.Setup(c => c.GetConvenioAsync("1100205", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ConvenioNfseResponse { Ativo = true });
+            .ReturnsAsync(CriarConvenioAtivo());
         _nfseClient.Setup(c => c.GetConvenioAsync("1302603", It.IsAny<CancellationToken>()))
             .ReturnsAsync((ConvenioNfseResponse?)null);
 
         // Act
-        List<Municipio> result = await _sut.FaseConvenioAsync(CancellationToken.None);
+        List<Municipio> result = await _sut.FaseConvenioAsync(null, CancellationToken.None);
 
         // Assert
         result.Count.ShouldBe(1);
@@ -170,7 +198,7 @@ public class CrawlerServiceTests
 
         // mun1: at least 1 probe returns data
         _nfseClient.Setup(c => c.GetAliquotaAsync("3106200", "01.01.01", competencia, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AliquotaNfseResponse { Aliquota = 2.0m, CodigoServico = "01.01.01", DescricaoServico = "Teste" });
+            .ReturnsAsync(CriarAliquotaResponse("01.01.01.000", 2.0m));
 
         // mun2: all probes return null
         _nfseClient.Setup(c => c.GetAliquotaAsync("1302603", It.IsAny<string>(), competencia, It.IsAny<CancellationToken>()))
@@ -244,10 +272,10 @@ public class CrawlerServiceTests
         // Arrange
         FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", "2026-04-01", "exec1");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
-        Dictionary<string, int> misses = new();
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
         _nfseClient.Setup(c => c.GetAliquotaAsync("3106200", "01.01.01", "2026-04-01", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AliquotaNfseResponse { Aliquota = 5.0m, CodigoServico = "01.01.01", DescricaoServico = "Teste" });
+            .ReturnsAsync(CriarAliquotaResponse("01.01.01.000", 5.0m));
 
         Municipio mun = Municipio.Create("3106200", "Belo Horizonte", "MG");
         _municipioRepo.Setup(r => r.GetByCodigoIbgeAsync("3106200")).ReturnsAsync(mun);
@@ -268,7 +296,7 @@ public class CrawlerServiceTests
         // Arrange
         FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", "2026-04-01", "exec1");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
-        Dictionary<string, int> misses = new();
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
         _nfseClient.Setup(c => c.GetAliquotaAsync("3106200", "01.01.01", "2026-04-01", It.IsAny<CancellationToken>()))
             .ReturnsAsync((AliquotaNfseResponse?)null);
@@ -287,7 +315,7 @@ public class CrawlerServiceTests
         // Arrange
         FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", "2026-04-01", "exec1");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
-        Dictionary<string, int> misses = new();
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
         _nfseClient.Setup(c => c.GetAliquotaAsync("3106200", "01.01.01", "2026-04-01", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("Server error", null, System.Net.HttpStatusCode.InternalServerError));
@@ -307,7 +335,7 @@ public class CrawlerServiceTests
         // Arrange
         FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", "2026-04-01", "exec1");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
-        Dictionary<string, int> misses = new();
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
         _nfseClient.Setup(c => c.GetAliquotaAsync("3106200", "01.01.01", "2026-04-01", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("Forbidden", null, System.Net.HttpStatusCode.Forbidden));
@@ -464,4 +492,232 @@ public class CrawlerServiceTests
         // Assert
         _nfseClient.Verify(c => c.GetAliquotaAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task ExtrairESalvarAliquotasAsync_ComMultiplasAliquotas_SalvaTodas()
+    {
+        // Arrange
+        AliquotaNfseResponse response = new()
+        {
+            Aliquotas = new Dictionary<string, List<AliquotaItem>>
+            {
+                ["01.01.01.000"] = new List<AliquotaItem>
+                {
+                    new() { Incidencia = "SIM", Aliq = 5.0m, DtIni = DateTime.UtcNow.AddYears(-1), DtFim = null },
+                    new() { Incidencia = "SIM", Aliq = 3.0m, DtIni = DateTime.UtcNow.AddYears(-2), DtFim = DateTime.UtcNow.AddYears(-1) }
+                }
+            },
+            Mensagem = "ok"
+        };
+
+        _aliquotaRepo.Setup(r => r.UpsertAsync(It.IsAny<Aliquota>())).Returns(Task.CompletedTask);
+
+        // Act
+        int count = await _sut.ExtrairESalvarAliquotasAsync(
+            response, "3106200", "Belo Horizonte", "01.01.01", "2026-04-01");
+
+        // Assert — only 1 vigente (the one with DtFim = null), the expired one is skipped
+        count.ShouldBe(1);
+        _aliquotaRepo.Verify(r => r.UpsertAsync(It.IsAny<Aliquota>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExtrairESalvarAliquotasAsync_SemAliquotas_RetornaZero()
+    {
+        // Arrange
+        AliquotaNfseResponse response = new()
+        {
+            Aliquotas = null,
+            Mensagem = "ok"
+        };
+
+        // Act
+        int count = await _sut.ExtrairESalvarAliquotasAsync(
+            response, "3106200", "Belo Horizonte", "01.01.01", "2026-04-01");
+
+        // Assert
+        count.ShouldBe(0);
+    }
+
+    [Fact]
+    public void NfseApiClient_FormatarCodigoServico_FormataCorretamente()
+    {
+        // 6 digits → adds .000
+        NfseApiClient.FormatarCodigoServico("01.01.01").ShouldBe("01.01.01.000");
+        NfseApiClient.FormatarCodigoServico("01.01.00").ShouldBe("01.01.00.000");
+        NfseApiClient.FormatarCodigoServico("010101").ShouldBe("01.01.01.000");
+
+        // 9 digits → formats with dots
+        NfseApiClient.FormatarCodigoServico("010101000").ShouldBe("01.01.01.000");
+        NfseApiClient.FormatarCodigoServico("01.01.01.000").ShouldBe("01.01.01.000");
+        NfseApiClient.FormatarCodigoServico("010101001").ShouldBe("01.01.01.001");
+    }
+
+    #region Detalhamento Iteration Tests
+
+    [Theory]
+    [InlineData("01.01.00", true)]   // Seed code with placeholder detalhamento
+    [InlineData("010100", true)]     // Same without dots
+    [InlineData("07.02.00", true)]   // Another seed code
+    [InlineData("01.01.01", false)]  // Already has valid detalhamento
+    [InlineData("010101", false)]    // Same without dots
+    [InlineData("07.02.01", false)]  // Already has valid detalhamento
+    [InlineData("14.01.03", false)]  // Detalhamento 03
+    public void NeedsDetalhamentoIteration_DetectsCorrectly(string codigoServico, bool expected)
+    {
+        CrawlerService.NeedsDetalhamentoIteration(codigoServico).ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData("01.01.00", "01", "01")]
+    [InlineData("07.02.00", "07", "02")]
+    [InlineData("14.01.00", "14", "01")]
+    [InlineData("010100", "01", "01")]
+    public void ExtrairItemSubitem_ExtractsCorrectly(string codigoServico, string expectedItem, string expectedSubitem)
+    {
+        (string item, string subitem) = CrawlerService.ExtrairItemSubitem(codigoServico);
+        item.ShouldBe(expectedItem);
+        subitem.ShouldBe(expectedSubitem);
+    }
+
+    [Fact]
+    public async Task ProcessarItemAsync_ComCodigoSeed00_UsaIteracaoDetalhamento()
+    {
+        // Arrange — seed code "01.01.00" should trigger iteration
+        FilaProcessamento item = FilaProcessamento.Create("2800308", "01.01.00", "2026-04-01", "exec1");
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
+
+        Municipio mun = Municipio.Create("2800308", "Aracaju", "SE");
+        _municipioRepo.Setup(r => r.GetByCodigoIbgeAsync("2800308")).ReturnsAsync(mun);
+        _aliquotaRepo.Setup(r => r.UpsertAsync(It.IsAny<Aliquota>())).Returns(Task.CompletedTask);
+
+        // Detalhamento 01 → has data
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", "01.01.01.000", "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CriarAliquotaResponse("01.01.01.000", 5.0m));
+
+        // Detalhamento 02 → has data
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", "01.01.02.000", "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CriarAliquotaResponse("01.01.02.000", 3.0m));
+
+        // Detalhamento 03, 04, 05 → null (3 consecutive misses → stops)
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", "01.01.03.000", "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AliquotaNfseResponse?)null);
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", "01.01.04.000", "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AliquotaNfseResponse?)null);
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", "01.01.05.000", "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AliquotaNfseResponse?)null);
+
+        // Desdobramentos for detalhamento 01 → 001 has data, 002 and 003 return null
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", "01.01.01.001", "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AliquotaNfseResponse?)null);
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", "01.01.01.002", "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AliquotaNfseResponse?)null);
+
+        // Desdobramentos for detalhamento 02 → all null
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", "01.01.02.001", "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AliquotaNfseResponse?)null);
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", "01.01.02.002", "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AliquotaNfseResponse?)null);
+
+        // Act
+        await _sut.ProcessarItemAsync(item, execucao, "2026-04-01", misses, CancellationToken.None);
+
+        // Assert — should have called GetAliquotaAsync for det 01, 02, 03, 04, 05 (stops at 05 after 3 consecutive misses from 03/04/05)
+        // Plus desdobramentos for det 01 and 02
+        execucao.Processados.ShouldBe(1);
+        _aliquotaRepo.Verify(r => r.UpsertAsync(It.IsAny<Aliquota>()), Times.Exactly(2)); // 01.01.01.000 and 01.01.02.000
+        misses.GetValueOrDefault("01.01.00").ShouldBe(0); // Found data, so reset
+    }
+
+    [Fact]
+    public async Task ProcessarItemAsync_ComCodigoSeed00_SemDadosNenhumDetalhamento_IncrementaMisses()
+    {
+        // Arrange — seed code "07.02.00", all detalhamentos return null
+        FilaProcessamento item = FilaProcessamento.Create("2800308", "07.02.00", "2026-04-01", "exec1");
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
+
+        Municipio mun = Municipio.Create("2800308", "Aracaju", "SE");
+        _municipioRepo.Setup(r => r.GetByCodigoIbgeAsync("2800308")).ReturnsAsync(mun);
+
+        // All detalhamentos return null
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", It.IsAny<string>(), "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AliquotaNfseResponse?)null);
+
+        // Act
+        await _sut.ProcessarItemAsync(item, execucao, "2026-04-01", misses, CancellationToken.None);
+
+        // Assert — no data found, group miss incremented
+        execucao.Processados.ShouldBe(1);
+        _aliquotaRepo.Verify(r => r.UpsertAsync(It.IsAny<Aliquota>()), Times.Never);
+        misses["07.02.00"].ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task ProcessarItemAsync_ComCodigoNaoSeed_UsaFluxoDireto()
+    {
+        // Arrange — code "01.01.01" has detalhamento 01 (not 00), so direct path
+        FilaProcessamento item = FilaProcessamento.Create("2800308", "01.01.01", "2026-04-01", "exec1");
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
+
+        Municipio mun = Municipio.Create("2800308", "Aracaju", "SE");
+        _municipioRepo.Setup(r => r.GetByCodigoIbgeAsync("2800308")).ReturnsAsync(mun);
+        _aliquotaRepo.Setup(r => r.UpsertAsync(It.IsAny<Aliquota>())).Returns(Task.CompletedTask);
+
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", "01.01.01", "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CriarAliquotaResponse("01.01.01.000", 5.0m));
+
+        // Act
+        await _sut.ProcessarItemAsync(item, execucao, "2026-04-01", misses, CancellationToken.None);
+
+        // Assert — direct path, single API call
+        execucao.Processados.ShouldBe(1);
+        _aliquotaRepo.Verify(r => r.UpsertAsync(It.IsAny<Aliquota>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessarItemComIteracaoAsync_ComDesdobramentos_SalvaTodos()
+    {
+        // Arrange — seed code "01.01.00", detalhamento 01 has desdobramentos 000 and 001
+        FilaProcessamento item = FilaProcessamento.Create("2800308", "01.01.00", "2026-04-01", "exec1");
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
+
+        Municipio mun = Municipio.Create("2800308", "Aracaju", "SE");
+        _municipioRepo.Setup(r => r.GetByCodigoIbgeAsync("2800308")).ReturnsAsync(mun);
+        _aliquotaRepo.Setup(r => r.UpsertAsync(It.IsAny<Aliquota>())).Returns(Task.CompletedTask);
+
+        // Detalhamento 01, desdobramento 000 → data
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", "01.01.01.000", "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CriarAliquotaResponse("01.01.01.000", 5.0m));
+
+        // Detalhamento 01, desdobramento 001 → data
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", "01.01.01.001", "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CriarAliquotaResponse("01.01.01.001", 4.0m));
+
+        // Detalhamento 01, desdobramento 002, 003 → null (2 consecutive → stops desdobramento)
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", "01.01.01.002", "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AliquotaNfseResponse?)null);
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", "01.01.01.003", "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AliquotaNfseResponse?)null);
+
+        // Detalhamento 02, 03, 04 → null (3 consecutive → stops detalhamento)
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", "01.01.02.000", "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AliquotaNfseResponse?)null);
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", "01.01.03.000", "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AliquotaNfseResponse?)null);
+        _nfseClient.Setup(c => c.GetAliquotaAsync("2800308", "01.01.04.000", "2026-04-01", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AliquotaNfseResponse?)null);
+
+        // Act
+        await _sut.ProcessarItemAsync(item, execucao, "2026-04-01", misses, CancellationToken.None);
+
+        // Assert — 2 aliquotas saved (01.01.01.000 and 01.01.01.001)
+        execucao.Processados.ShouldBe(1);
+        _aliquotaRepo.Verify(r => r.UpsertAsync(It.IsAny<Aliquota>()), Times.Exactly(2));
+    }
+
+    #endregion
 }

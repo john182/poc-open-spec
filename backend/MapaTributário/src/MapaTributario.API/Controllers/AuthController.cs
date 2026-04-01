@@ -1,4 +1,3 @@
-using FluentResults;
 using FluentValidation;
 using MapaTributario.API.Application.Auth;
 using MapaTributario.API.Application.Auth.Contracts;
@@ -26,11 +25,8 @@ public class AuthController : ControllerBase
         [FromBody] RegisterRequest request,
         [FromServices] IValidator<RegisterRequest> validator)
     {
-        var validation = await validator.ValidateAsync(request);
-        if (!validation.IsValid)
-        {
-            return BadRequest(new { erro = "Validação falhou", detalhes = validation.Errors.Select(e => e.ErrorMessage).ToArray() });
-        }
+        var validationError = await ValidateRequestAsync(request, validator);
+        if (validationError is not null) return validationError;
 
         var result = await _registerUser.ExecuteAsync(request);
         return result.IsSuccess
@@ -43,11 +39,8 @@ public class AuthController : ControllerBase
         [FromBody] LoginRequest request,
         [FromServices] IValidator<LoginRequest> validator)
     {
-        var validation = await validator.ValidateAsync(request);
-        if (!validation.IsValid)
-        {
-            return BadRequest(new { erro = "Validação falhou", detalhes = validation.Errors.Select(e => e.ErrorMessage).ToArray() });
-        }
+        var validationError = await ValidateRequestAsync(request, validator);
+        if (validationError is not null) return validationError;
 
         var result = await _loginUser.ExecuteAsync(request);
         return result.IsSuccess
@@ -60,15 +53,22 @@ public class AuthController : ControllerBase
         [FromBody] RefreshRequest request,
         [FromServices] IValidator<RefreshRequest> validator)
     {
-        var validation = await validator.ValidateAsync(request);
-        if (!validation.IsValid)
-        {
-            return BadRequest(new { erro = "Validação falhou", detalhes = validation.Errors.Select(e => e.ErrorMessage).ToArray() });
-        }
+        var validationError = await ValidateRequestAsync(request, validator);
+        if (validationError is not null) return validationError;
 
         var result = await _refreshToken.ExecuteAsync(request);
         return result.IsSuccess
             ? Ok(result.Value)
             : Unauthorized(new { erro = result.Errors.First().Message });
+    }
+
+    private static async Task<BadRequestObjectResult?> ValidateRequestAsync<T>(T request, IValidator<T> validator)
+    {
+        var validation = await validator.ValidateAsync(request);
+        if (!validation.IsValid)
+        {
+            return new BadRequestObjectResult(new { erro = "Validação falhou", detalhes = validation.Errors.Select(e => e.ErrorMessage).ToArray() });
+        }
+        return null;
     }
 }

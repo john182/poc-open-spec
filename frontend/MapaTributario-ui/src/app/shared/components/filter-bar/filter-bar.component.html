@@ -1,0 +1,16 @@
+<div class="filter-bar" data-cy="filter-bar">
+  @for (filtro of filtros(); track filtro.chave) {
+    <div class="filter-item">
+      <label [for]="'filtro-' + filtro.chave">{{ filtro.rotulo }}</label>
+      <input
+        pInputText
+        [id]="'filtro-' + filtro.chave"
+        [type]="filtro.tipo"
+        [placeholder]="filtro.placeholder || ''"
+        [ngModel]="valores[filtro.chave] ?? ''"
+        (ngModelChange)="onValorMudou(filtro.chave, $event)"
+      />
+    </div>
+  }
+  <p-button label="Limpar" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="onLimpar()" />
+</div>

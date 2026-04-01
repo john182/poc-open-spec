@@ -1,0 +1,8 @@
+<div class="empty-container" data-cy="empty-state">
+  <i class="empty-icon" [ngClass]="icone() || 'pi pi-inbox'"></i>
+  <h3>{{ titulo() }}</h3>
+  <p>{{ mensagem() }}</p>
+  @if (acaoLabel()) {
+    <p-button [label]="acaoLabel()!" (onClick)="acao.emit()" severity="secondary" />
+  }
+</div>

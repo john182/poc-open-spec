@@ -1,0 +1,12 @@
+<div class="layout-wrapper" [ngClass]="containerClass()" data-cy="app-layout">
+  <app-topbar />
+  <app-sidebar />
+  <div class="layout-main-container">
+    <div class="layout-main">
+      <router-outlet />
+    </div>
+    <app-footer />
+  </div>
+  <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+  <div class="layout-mask" (click)="layoutService.hideSidebar()"></div>
+</div>

@@ -1,0 +1,6 @@
+<div class="page-header" data-cy="page-header">
+  <h1>{{ titulo() }}</h1>
+  @if (migalhas().length > 0) {
+    <p-breadcrumb [model]="migalhas()" [home]="home" />
+  }
+</div>

@@ -1,0 +1,17 @@
+<ul class="layout-menu" data-cy="app-menu">
+  @for (item of model; track item.label) {
+    <li class="layout-root-menuitem">
+      <div class="layout-menuitem-root-text">{{ item.label }}</div>
+      <ul>
+        @for (child of item.items; track child.label) {
+          <li>
+            <a [routerLink]="child.routerLink" routerLinkActive="active-route">
+              <i class="layout-menuitem-icon" [ngClass]="child.icon"></i>
+              <span class="layout-menuitem-text">{{ child.label }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    </li>
+  }
+</ul>

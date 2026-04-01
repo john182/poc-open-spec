@@ -272,7 +272,7 @@ public class CrawlerServiceTests
         // Arrange
         FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", "2026-04-01", "exec1");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
-        Dictionary<string, int> misses = new();
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
         _nfseClient.Setup(c => c.GetAliquotaAsync("3106200", "01.01.01", "2026-04-01", It.IsAny<CancellationToken>()))
             .ReturnsAsync(CriarAliquotaResponse("01.01.01.000", 5.0m));
@@ -296,7 +296,7 @@ public class CrawlerServiceTests
         // Arrange
         FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", "2026-04-01", "exec1");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
-        Dictionary<string, int> misses = new();
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
         _nfseClient.Setup(c => c.GetAliquotaAsync("3106200", "01.01.01", "2026-04-01", It.IsAny<CancellationToken>()))
             .ReturnsAsync((AliquotaNfseResponse?)null);
@@ -315,7 +315,7 @@ public class CrawlerServiceTests
         // Arrange
         FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", "2026-04-01", "exec1");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
-        Dictionary<string, int> misses = new();
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
         _nfseClient.Setup(c => c.GetAliquotaAsync("3106200", "01.01.01", "2026-04-01", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("Server error", null, System.Net.HttpStatusCode.InternalServerError));
@@ -335,7 +335,7 @@ public class CrawlerServiceTests
         // Arrange
         FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", "2026-04-01", "exec1");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
-        Dictionary<string, int> misses = new();
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
         _nfseClient.Setup(c => c.GetAliquotaAsync("3106200", "01.01.01", "2026-04-01", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("Forbidden", null, System.Net.HttpStatusCode.Forbidden));
@@ -586,7 +586,7 @@ public class CrawlerServiceTests
         // Arrange — seed code "01.01.00" should trigger iteration
         FilaProcessamento item = FilaProcessamento.Create("2800308", "01.01.00", "2026-04-01", "exec1");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
-        Dictionary<string, int> misses = new();
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
         Municipio mun = Municipio.Create("2800308", "Aracaju", "SE");
         _municipioRepo.Setup(r => r.GetByCodigoIbgeAsync("2800308")).ReturnsAsync(mun);
@@ -636,7 +636,7 @@ public class CrawlerServiceTests
         // Arrange — seed code "07.02.00", all detalhamentos return null
         FilaProcessamento item = FilaProcessamento.Create("2800308", "07.02.00", "2026-04-01", "exec1");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
-        Dictionary<string, int> misses = new();
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
         Municipio mun = Municipio.Create("2800308", "Aracaju", "SE");
         _municipioRepo.Setup(r => r.GetByCodigoIbgeAsync("2800308")).ReturnsAsync(mun);
@@ -660,7 +660,7 @@ public class CrawlerServiceTests
         // Arrange — code "01.01.01" has detalhamento 01 (not 00), so direct path
         FilaProcessamento item = FilaProcessamento.Create("2800308", "01.01.01", "2026-04-01", "exec1");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
-        Dictionary<string, int> misses = new();
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
         Municipio mun = Municipio.Create("2800308", "Aracaju", "SE");
         _municipioRepo.Setup(r => r.GetByCodigoIbgeAsync("2800308")).ReturnsAsync(mun);
@@ -683,7 +683,7 @@ public class CrawlerServiceTests
         // Arrange — seed code "01.01.00", detalhamento 01 has desdobramentos 000 and 001
         FilaProcessamento item = FilaProcessamento.Create("2800308", "01.01.00", "2026-04-01", "exec1");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
-        Dictionary<string, int> misses = new();
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
         Municipio mun = Municipio.Create("2800308", "Aracaju", "SE");
         _municipioRepo.Setup(r => r.GetByCodigoIbgeAsync("2800308")).ReturnsAsync(mun);

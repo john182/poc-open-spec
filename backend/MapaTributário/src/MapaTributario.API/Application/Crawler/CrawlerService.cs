@@ -31,8 +31,9 @@ public class CrawlerService : ICrawlerService
     private const int BatchSize = 50;
     private const int MaxDesdobramento = 20;
     private const int MaxDetalhamento = 99;
-    private const int MaxConsecutiveDetalhamentoMisses = 3;
+    private const int MaxConsecutiveDetalhamentoMisses = 2;
     private const int MaxConsecutiveDesdobramentoMisses = 2;
+    private const int MaxParallelItems = 10;
 
     public CrawlerService(
         IExecucaoCrawlerRepository execucaoRepository,
@@ -355,10 +356,11 @@ public class CrawlerService : ICrawlerService
         string competencia,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Phase 3: Processing work queue");
+        _logger.LogInformation("Phase 3: Processing work queue with {Parallelism} parallel workers", MaxParallelItems);
 
-        // Track consecutive misses for early-stop per group (XX.XX.XX)
-        Dictionary<string, int> consecutiveMissesByGroup = new();
+        // Track consecutive misses for early-stop per group (XX.XX.XX) — thread-safe
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> consecutiveMissesByGroup = new();
+        SemaphoreSlim semaphore = new(MaxParallelItems, MaxParallelItems);
 
         while (true)
         {
@@ -383,6 +385,8 @@ public class CrawlerService : ICrawlerService
                 break;
             }
 
+            List<Task> tasks = new(batch.Count);
+
             foreach (FilaProcessamento item in batch)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -402,9 +406,22 @@ public class CrawlerService : ICrawlerService
                     continue;
                 }
 
-                await ProcessarItemAsync(item, execucao, competencia, consecutiveMissesByGroup, cancellationToken);
+                await semaphore.WaitAsync(cancellationToken);
+
+                tasks.Add(Task.Run(async () =>
+                {
+                    try
+                    {
+                        await ProcessarItemAsync(item, execucao, competencia, consecutiveMissesByGroup, cancellationToken);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                }, cancellationToken));
             }
 
+            await Task.WhenAll(tasks);
             await _execucaoRepository.UpdateAsync(execucao);
         }
     }
@@ -413,7 +430,7 @@ public class CrawlerService : ICrawlerService
         FilaProcessamento item,
         ExecucaoCrawler execucao,
         string competencia,
-        Dictionary<string, int> consecutiveMissesByGroup,
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> consecutiveMissesByGroup,
         CancellationToken cancellationToken)
     {
         item.MarcarProcessando();
@@ -485,7 +502,7 @@ public class CrawlerService : ICrawlerService
         FilaProcessamento item,
         ExecucaoCrawler execucao,
         string competencia,
-        Dictionary<string, int> consecutiveMissesByGroup,
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> consecutiveMissesByGroup,
         CancellationToken cancellationToken)
     {
         await _rateLimiter.WaitAsync(cancellationToken);
@@ -523,14 +540,7 @@ public class CrawlerService : ICrawlerService
         }
         else
         {
-            if (consecutiveMissesByGroup.ContainsKey(group))
-            {
-                consecutiveMissesByGroup[group]++;
-            }
-            else
-            {
-                consecutiveMissesByGroup[group] = 1;
-            }
+            consecutiveMissesByGroup.AddOrUpdate(group, 1, (_, old) => old + 1);
 
             item.MarcarConcluido();
             await _filaRepository.UpdateStatusAsync(item);
@@ -548,7 +558,7 @@ public class CrawlerService : ICrawlerService
         FilaProcessamento item,
         ExecucaoCrawler execucao,
         string competencia,
-        Dictionary<string, int> consecutiveMissesByGroup,
+        System.Collections.Concurrent.ConcurrentDictionary<string, int> consecutiveMissesByGroup,
         CancellationToken cancellationToken)
     {
         // Extract base: "01.01.00" → item="01", subitem="01"
@@ -668,14 +678,7 @@ public class CrawlerService : ICrawlerService
         }
         else
         {
-            if (consecutiveMissesByGroup.ContainsKey(group))
-            {
-                consecutiveMissesByGroup[group]++;
-            }
-            else
-            {
-                consecutiveMissesByGroup[group] = 1;
-            }
+            consecutiveMissesByGroup.AddOrUpdate(group, 1, (_, old) => old + 1);
         }
 
         _logger.LogDebug(

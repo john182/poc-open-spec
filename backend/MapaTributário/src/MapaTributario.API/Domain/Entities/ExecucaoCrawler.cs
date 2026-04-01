@@ -9,8 +9,13 @@ public class ExecucaoCrawler
     public TipoExecucao Tipo { get; private set; }
     public int TotalMunicipios { get; private set; }
     public int TotalServicos { get; private set; }
-    public int Processados { get; private set; }
-    public int Erros { get; private set; }
+
+    private int _processados;
+    public int Processados { get => _processados; private set => _processados = value; }
+
+    private int _erros;
+    public int Erros { get => _erros; private set => _erros = value; }
+
     public List<string> DetalhesErro { get; private set; } = new();
 
     private ExecucaoCrawler() { }
@@ -38,12 +43,17 @@ public class ExecucaoCrawler
         TotalServicos = totalServicos;
     }
 
-    public void IncrementarProcessados() => Processados++;
+    private readonly object _lock = new();
+
+    public void IncrementarProcessados() => Interlocked.Increment(ref _processados);
 
     public void IncrementarErros(string detalhe)
     {
-        Erros++;
-        DetalhesErro.Add(detalhe);
+        Interlocked.Increment(ref _erros);
+        lock (_lock)
+        {
+            DetalhesErro.Add(detalhe);
+        }
     }
 
     public void Finalizar(StatusExecucao status)

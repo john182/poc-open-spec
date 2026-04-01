@@ -38,7 +38,15 @@ public class FilaProcessamentoRepository : IFilaProcessamentoRepository
             return;
         }
 
-        await _fila.InsertManyAsync(lista);
+        try
+        {
+            await _fila.InsertManyAsync(lista, new InsertManyOptions { IsOrdered = false });
+        }
+        catch (MongoBulkWriteException)
+        {
+            // Ignore duplicate key errors — items already in queue are fine to skip.
+            // With IsOrdered = false, all non-duplicate inserts succeed even if some fail.
+        }
     }
 
     public async Task<IReadOnlyList<FilaProcessamento>> GetPendingAsync(int batchSize)

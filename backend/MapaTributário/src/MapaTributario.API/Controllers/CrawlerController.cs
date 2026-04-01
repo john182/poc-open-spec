@@ -35,6 +35,7 @@ public class CrawlerController : ControllerBase
         }
 
         bool forcar = request?.ForcarReprocessamento ?? false;
+        List<string>? ufs = request?.Ufs;
 
         // Fire-and-forget with a new scope (CrawlerService is Scoped)
         _ = Task.Run(async () =>
@@ -43,7 +44,7 @@ public class CrawlerController : ControllerBase
             ICrawlerService crawlerService = scope.ServiceProvider.GetRequiredService<ICrawlerService>();
             try
             {
-                await crawlerService.ExecutarAsync(Domain.Entities.TipoExecucao.Manual, forcar);
+                await crawlerService.ExecutarAsync(Domain.Entities.TipoExecucao.Manual, forcar, ufs);
             }
             catch (Exception)
             {

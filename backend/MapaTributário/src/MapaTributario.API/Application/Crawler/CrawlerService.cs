@@ -60,6 +60,7 @@ public class CrawlerService : ICrawlerService
     public async Task<ExecucaoCrawler> ExecutarAsync(
         TipoExecucao tipo,
         bool forcarReprocessamento = false,
+        IReadOnlyList<string>? filtroUfs = null,
         CancellationToken cancellationToken = default)
     {
         if (!_executionGuard.TryAcquire())
@@ -82,7 +83,7 @@ public class CrawlerService : ICrawlerService
             string competencia = GetCompetenciaAtual();
 
             // Phase 1: Discover active municipalities via convenio endpoint
-            List<Municipio> municipiosAtivos = await FaseConvenioAsync(cancellationToken);
+            List<Municipio> municipiosAtivos = await FaseConvenioAsync(filtroUfs, cancellationToken);
 
             if (municipiosAtivos.Count == 0)
             {
@@ -149,20 +150,29 @@ public class CrawlerService : ICrawlerService
         }
     }
 
-    internal async Task<List<Municipio>> FaseConvenioAsync(CancellationToken cancellationToken)
+    internal async Task<List<Municipio>> FaseConvenioAsync(
+        IReadOnlyList<string>? filtroUfs,
+        CancellationToken cancellationToken)
     {
         _logger.LogInformation("Phase 1: Discovering municipalities via convenio endpoint");
 
-        // For now, get all municipalities from database
-        // In production this would filter by state/capital for MVP phases
         List<Municipio> todos = new();
-        string[] ufs = new[]
+        string[] todasUfs = new[]
         {
             "AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT",
             "PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"
         };
 
-        foreach (string uf in ufs)
+        IEnumerable<string> ufsParaProcessar = filtroUfs is { Count: > 0 }
+            ? filtroUfs.Select(u => u.ToUpperInvariant()).Where(u => todasUfs.Contains(u))
+            : todasUfs;
+
+        if (filtroUfs is { Count: > 0 })
+        {
+            _logger.LogInformation("Filtering execution to UFs: {Ufs}", string.Join(", ", ufsParaProcessar));
+        }
+
+        foreach (string uf in ufsParaProcessar)
         {
             IReadOnlyList<Municipio> porUf = await _municipioRepository.GetByUfAsync(uf);
             todos.AddRange(porUf);

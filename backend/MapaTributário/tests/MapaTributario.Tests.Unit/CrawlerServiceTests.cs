@@ -153,7 +153,7 @@ public class CrawlerServiceTests
             .ReturnsAsync((ConvenioNfseResponse?)null);
 
         // Act
-        List<Municipio> result = await _sut.FaseConvenioAsync(CancellationToken.None);
+        List<Municipio> result = await _sut.FaseConvenioAsync(null, CancellationToken.None);
 
         // Assert
         result.Count.ShouldBe(1);

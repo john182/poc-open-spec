@@ -31,6 +31,7 @@ export class AuthService {
 
   private readonly _isAuthenticated = signal(this._hasValidToken());
   private readonly _userName = signal(this._loadUserName());
+  private _refreshInProgress = false;
 
   readonly isAuthenticated = this._isAuthenticated.asReadonly();
   readonly userName = this._userName.asReadonly();
@@ -84,6 +85,14 @@ export class AuthService {
 
   getRefreshToken(): string | null {
     return this._getItem('refreshToken');
+  }
+
+  get isRefreshInProgress(): boolean {
+    return this._refreshInProgress;
+  }
+
+  set isRefreshInProgress(value: boolean) {
+    this._refreshInProgress = value;
   }
 
   private _handleAuthSuccess(authResponse: AuthResponse): void {

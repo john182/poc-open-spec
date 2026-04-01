@@ -3,8 +3,6 @@ import { inject } from '@angular/core';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 
-let isRefreshing = false;
-
 export const jwtInterceptor: HttpInterceptorFn = (request: HttpRequest<unknown>, next: HttpHandlerFn) => {
   const authService = inject(AuthService);
 
@@ -19,18 +17,18 @@ export const jwtInterceptor: HttpInterceptorFn = (request: HttpRequest<unknown>,
 
   return next(authenticatedRequest).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401 && !isRefreshing) {
-        isRefreshing = true;
+      if (error.status === 401 && !authService.isRefreshInProgress) {
+        authService.isRefreshInProgress = true;
         return authService.refresh().pipe(
           switchMap(refreshResponse => {
-            isRefreshing = false;
+            authService.isRefreshInProgress = false;
             const retryRequest = request.clone({
               setHeaders: { Authorization: `Bearer ${refreshResponse.accessToken}` },
             });
             return next(retryRequest);
           }),
           catchError(refreshError => {
-            isRefreshing = false;
+            authService.isRefreshInProgress = false;
             authService.logout();
             return throwError(() => refreshError);
           }),

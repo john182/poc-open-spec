@@ -1,8 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Security.Cryptography.X509Certificates;
 using MapaTributario.API.Infrastructure.External.Contracts;
-using Microsoft.Extensions.Options;
 
 namespace MapaTributario.API.Infrastructure.External;
 
@@ -79,18 +77,4 @@ public class NfseApiClient : INfseApiClient
         }
     }
 
-    public static HttpMessageHandler CreateHandler(NfseApiClientOptions options)
-    {
-        HttpClientHandler handler = new HttpClientHandler();
-
-        if (!string.IsNullOrEmpty(options.CertificatePath) && File.Exists(options.CertificatePath))
-        {
-            X509Certificate2 certificate = string.IsNullOrEmpty(options.CertificatePassword)
-                ? X509CertificateLoader.LoadPkcs12FromFile(options.CertificatePath, null)
-                : X509CertificateLoader.LoadPkcs12FromFile(options.CertificatePath, options.CertificatePassword);
-            handler.ClientCertificates.Add(certificate);
-        }
-
-        return handler;
-    }
 }

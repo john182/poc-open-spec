@@ -66,10 +66,14 @@ public class FilaProcessamentoRepository : IFilaProcessamentoRepository
 
     public async Task<Dictionary<StatusFila, long>> CountByStatusAsync()
     {
-        List<FilaProcessamento> all = await _fila.Find(_ => true).ToListAsync();
-        return all
-            .GroupBy(f => f.Status)
-            .ToDictionary(g => g.Key, g => (long)g.Count());
+        var pipeline = _fila.Aggregate()
+            .Group(
+                f => f.Status,
+                g => new { Status = g.Key, Count = g.Count() });
+
+        var results = await pipeline.ToListAsync();
+
+        return results.ToDictionary(r => r.Status, r => (long)r.Count);
     }
 
     public async Task<FilaProcessamento?> GetByMunicipioAndServicoAsync(

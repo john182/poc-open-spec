@@ -6,15 +6,18 @@ namespace MapaTributario.API.Worker;
 public class CrawlerBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly ICrawlerExecutionGuard _executionGuard;
     private readonly ILogger<CrawlerBackgroundService> _logger;
     private readonly string _cronSchedule;
 
     public CrawlerBackgroundService(
         IServiceProvider serviceProvider,
+        ICrawlerExecutionGuard executionGuard,
         ILogger<CrawlerBackgroundService> logger,
         IConfiguration configuration)
     {
         _serviceProvider = serviceProvider;
+        _executionGuard = executionGuard;
         _logger = logger;
         _cronSchedule = configuration["Crawler:CronSchedule"] ?? "0 2 * * *";
     }
@@ -49,14 +52,14 @@ public class CrawlerBackgroundService : BackgroundService
 
         try
         {
-            using IServiceScope scope = _serviceProvider.CreateScope();
-            ICrawlerService crawlerService = scope.ServiceProvider.GetRequiredService<ICrawlerService>();
-
-            if (crawlerService.EmExecucao)
+            if (_executionGuard.IsRunning)
             {
                 _logger.LogWarning("Crawler is already running. Skipping scheduled execution");
                 return;
             }
+
+            using IServiceScope scope = _serviceProvider.CreateScope();
+            ICrawlerService crawlerService = scope.ServiceProvider.GetRequiredService<ICrawlerService>();
 
             await crawlerService.ExecutarAsync(TipoExecucao.Agendado, cancellationToken: stoppingToken);
         }

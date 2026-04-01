@@ -12,6 +12,7 @@ namespace MapaTributario.Tests.Unit;
 public class CrawlerBackgroundServiceTests
 {
     private readonly Mock<IServiceProvider> _serviceProvider = new();
+    private readonly Mock<ICrawlerExecutionGuard> _executionGuard = new();
     private readonly Mock<ILogger<CrawlerBackgroundService>> _logger = new();
     private readonly Mock<ICrawlerService> _crawlerService = new();
 
@@ -38,7 +39,7 @@ public class CrawlerBackgroundServiceTests
         _serviceProvider.Setup(s => s.GetService(typeof(IServiceScopeFactory)))
             .Returns(scopeFactory.Object);
 
-        return new CrawlerBackgroundService(_serviceProvider.Object, _logger.Object, configuration);
+        return new CrawlerBackgroundService(_serviceProvider.Object, _executionGuard.Object, _logger.Object, configuration);
     }
 
     [Fact]
@@ -67,7 +68,7 @@ public class CrawlerBackgroundServiceTests
     public async Task ExecuteScheduledRunAsync_QuandoCrawlerNaoRodando_ExecutaCrawler()
     {
         CrawlerBackgroundService sut = CreateSut();
-        _crawlerService.Setup(c => c.EmExecucao).Returns(false);
+        _executionGuard.Setup(g => g.IsRunning).Returns(false);
         _crawlerService.Setup(c => c.ExecutarAsync(TipoExecucao.Agendado, false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(ExecucaoCrawler.Create(TipoExecucao.Agendado));
 
@@ -81,7 +82,7 @@ public class CrawlerBackgroundServiceTests
     public async Task ExecuteScheduledRunAsync_QuandoCrawlerJaRodando_NaoExecuta()
     {
         CrawlerBackgroundService sut = CreateSut();
-        _crawlerService.Setup(c => c.EmExecucao).Returns(true);
+        _executionGuard.Setup(g => g.IsRunning).Returns(true);
 
         await sut.ExecuteScheduledRunAsync(CancellationToken.None);
 
@@ -93,7 +94,7 @@ public class CrawlerBackgroundServiceTests
     public async Task ExecuteScheduledRunAsync_ComExcecao_NaoLancaException()
     {
         CrawlerBackgroundService sut = CreateSut();
-        _crawlerService.Setup(c => c.EmExecucao).Returns(false);
+        _executionGuard.Setup(g => g.IsRunning).Returns(false);
         _crawlerService.Setup(c => c.ExecutarAsync(It.IsAny<TipoExecucao>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database error"));
 

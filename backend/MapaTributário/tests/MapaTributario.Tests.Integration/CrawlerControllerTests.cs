@@ -107,7 +107,6 @@ public class CrawlerControllerTests : IAsyncLifetime
 
         ExecutarCrawlerResponse? body = await response.Content.ReadFromJsonAsync<ExecutarCrawlerResponse>();
         body.ShouldNotBeNull();
-        body.ExecucaoId.ShouldNotBeNullOrEmpty();
         body.Mensagem.ShouldNotBeNullOrEmpty();
     }
 

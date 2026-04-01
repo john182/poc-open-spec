@@ -1,6 +1,7 @@
 using System.Security.Cryptography.X509Certificates;
 using MapaTributario.API.Application.Crawler;
 using MapaTributario.API.Domain.Interfaces;
+using MapaTributario.API.Infrastructure;
 using MapaTributario.API.Infrastructure.External;
 using MapaTributario.API.Infrastructure.Repository;
 using MapaTributario.API.Infrastructure.Repository.Mongo;
@@ -55,6 +56,12 @@ public static class CrawlerServiceExtensions
             return new CertificateProtection(logger, rateLimiter, batchSize, batchPause, dailyBudget);
         });
 
+        // Certificate store (Singleton — manages PFX in-memory)
+        services.AddSingleton<ICertificadoStore, CertificadoStore>();
+
+        // Crawler execution guard (Singleton — atomic concurrency control)
+        services.AddSingleton<ICrawlerExecutionGuard, CrawlerExecutionGuard>();
+
         // NFS-e API Client
         NfseApiClientOptions nfseOptions = new NfseApiClientOptions();
         configuration.GetSection(NfseApiClientOptions.SectionName).Bind(nfseOptions);
@@ -64,10 +71,19 @@ public static class CrawlerServiceExtensions
             client.BaseAddress = new Uri(nfseOptions.BaseUrl);
             client.Timeout = TimeSpan.FromSeconds(nfseOptions.TimeoutSeconds);
         })
-        .ConfigurePrimaryHttpMessageHandler(() =>
+        .ConfigurePrimaryHttpMessageHandler(sp =>
         {
+            ICertificadoStore certificadoStore = sp.GetRequiredService<ICertificadoStore>();
             HttpClientHandler handler = new HttpClientHandler();
-            if (!string.IsNullOrEmpty(nfseOptions.CertificatePath) && File.Exists(nfseOptions.CertificatePath))
+
+            // Priority 1: certificate from ICertificadoStore (uploaded via API)
+            X509Certificate2? dynamicCert = certificadoStore.GetCertificate();
+            if (dynamicCert is not null)
+            {
+                handler.ClientCertificates.Add(dynamicCert);
+            }
+            // Priority 2: fallback to static file from appsettings
+            else if (!string.IsNullOrEmpty(nfseOptions.CertificatePath) && File.Exists(nfseOptions.CertificatePath))
             {
                 X509Certificate2 certificate = string.IsNullOrEmpty(nfseOptions.CertificatePassword)
                     ? X509CertificateLoader.LoadPkcs12FromFile(nfseOptions.CertificatePath, null)
@@ -78,7 +94,7 @@ public static class CrawlerServiceExtensions
             return handler;
         });
 
-        // Crawler service
+        // Crawler service (Scoped — has scoped dependencies like repositories)
         services.AddScoped<ICrawlerService, CrawlerService>();
 
         // Background service

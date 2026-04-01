@@ -17,9 +17,8 @@ public class CrawlerService : ICrawlerService
     private readonly IRateLimiter _rateLimiter;
     private readonly ICircuitBreaker _circuitBreaker;
     private readonly ICertificateProtection _certificateProtection;
+    private readonly ICrawlerExecutionGuard _executionGuard;
     private readonly ILogger<CrawlerService> _logger;
-
-    private volatile bool _emExecucao;
 
     private static readonly string[] ProbeServiceCodes = new[]
     {
@@ -40,6 +39,7 @@ public class CrawlerService : ICrawlerService
         IRateLimiter rateLimiter,
         ICircuitBreaker circuitBreaker,
         ICertificateProtection certificateProtection,
+        ICrawlerExecutionGuard executionGuard,
         ILogger<CrawlerService> logger)
     {
         _execucaoRepository = execucaoRepository;
@@ -51,22 +51,22 @@ public class CrawlerService : ICrawlerService
         _rateLimiter = rateLimiter;
         _circuitBreaker = circuitBreaker;
         _certificateProtection = certificateProtection;
+        _executionGuard = executionGuard;
         _logger = logger;
     }
 
-    public bool EmExecucao => _emExecucao;
+    public bool EmExecucao => _executionGuard.IsRunning;
 
     public async Task<ExecucaoCrawler> ExecutarAsync(
         TipoExecucao tipo,
         bool forcarReprocessamento = false,
         CancellationToken cancellationToken = default)
     {
-        if (_emExecucao)
+        if (!_executionGuard.TryAcquire())
         {
             throw new InvalidOperationException("Uma execucao ja esta em andamento");
         }
 
-        _emExecucao = true;
         _certificateProtection.Reset();
         _circuitBreaker.Reset();
 
@@ -145,7 +145,7 @@ public class CrawlerService : ICrawlerService
         }
         finally
         {
-            _emExecucao = false;
+            _executionGuard.Release();
         }
     }
 

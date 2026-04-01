@@ -1,0 +1,51 @@
+.layout-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  height: 4rem;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 997;
+  background: var(--color-surface-0);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.layout-topbar-logo-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.layout-topbar-logo {
+  text-decoration: none;
+  color: var(--color-text-primary);
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.layout-topbar-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: var(--color-surface-100);
+  }
+}
+
+.layout-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

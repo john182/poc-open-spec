@@ -1,0 +1,9 @@
+<div class="form-field">
+  <label>{{ rotulo() }}</label>
+  <ng-content />
+  @if (controle()?.invalid && controle()?.dirty) {
+    @for (erro of errosAtivos(); track erro) {
+      <small class="erro-mensagem">{{ erro }}</small>
+    }
+  }
+</div>

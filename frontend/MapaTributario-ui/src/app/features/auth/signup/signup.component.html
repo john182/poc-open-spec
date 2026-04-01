@@ -1,0 +1,32 @@
+<div class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-screen overflow-hidden" data-cy="signup-page">
+  <div class="flex flex-col items-center justify-center">
+    <div style="border-radius: 56px; padding: 0.3rem; background: linear-gradient(180deg, var(--primary-color) 10%, rgba(33, 150, 243, 0) 30%)">
+      <div class="w-full bg-surface-0 dark:bg-surface-900 py-20 px-8 sm:px-20" style="border-radius: 53px">
+        <div class="text-center mb-8">
+          <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Criar Conta</div>
+          <span class="text-muted-color font-medium">Preencha os dados para se cadastrar</span>
+        </div>
+
+        <div>
+          <label for="nome" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Nome</label>
+          <input pInputText id="nome" type="text" placeholder="Seu nome" class="w-full md:w-120 mb-8" [(ngModel)]="nome" />
+
+          <label for="email" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Email</label>
+          <input pInputText id="email" type="text" placeholder="Seu email" class="w-full md:w-120 mb-8" [(ngModel)]="email" />
+
+          <label for="senha" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Senha</label>
+          <p-password id="senha" [(ngModel)]="senha" placeholder="Sua senha" [toggleMask]="true" styleClass="mb-4" [fluid]="true" [feedback]="false" />
+
+          <label for="confirmar" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Confirmar Senha</label>
+          <p-password id="confirmar" [(ngModel)]="confirmarSenha" placeholder="Confirme a senha" [toggleMask]="true" styleClass="mb-8" [fluid]="true" [feedback]="false" />
+
+          <p-button label="Criar Conta" styleClass="w-full" routerLink="/" />
+          <div class="text-center mt-4">
+            <span class="text-muted-color">Já tem conta? </span>
+            <a routerLink="/auth/login" class="text-primary font-medium cursor-pointer">Entrar</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

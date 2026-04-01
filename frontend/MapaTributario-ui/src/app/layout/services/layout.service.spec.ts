@@ -32,8 +32,9 @@ describe('LayoutService', () => {
   it('deve fechar menu mobile', () => {
     service.layoutState.update((s) => ({ ...s, mobileMenuActive: true }));
     expect(service.isSidebarActive()).toBe(true);
-    service.closeMobileMenu();
+    service.hideSidebar();
     expect(service.layoutState().mobileMenuActive).toBe(false);
+    expect(service.layoutState().overlayMenuActive).toBe(false);
   });
 
   it('deve toggle menu overlay', () => {
@@ -67,5 +68,17 @@ describe('LayoutService', () => {
   it('isSidebarActive quando overlay ativo', () => {
     service.layoutState.update((s) => ({ ...s, overlayMenuActive: true }));
     expect(service.isSidebarActive()).toBe(true);
+  });
+
+  it('hideSidebar deve fechar overlay e mobile', () => {
+    service.layoutState.update((s) => ({ ...s, overlayMenuActive: true, mobileMenuActive: true }));
+    service.hideSidebar();
+    expect(service.layoutState().overlayMenuActive).toBe(false);
+    expect(service.layoutState().mobileMenuActive).toBe(false);
+  });
+
+  it('isOverlay deve retornar true quando menuMode overlay', () => {
+    service.layoutConfig.update((c) => ({ ...c, menuMode: 'overlay' }));
+    expect(service.isOverlay()).toBe(true);
   });
 });

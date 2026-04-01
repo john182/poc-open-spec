@@ -1,17 +1,20 @@
 import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { PasswordModule } from 'primeng/password';
+import { CheckboxModule } from 'primeng/checkbox';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [RouterLink],
-  template: `
-    <div class="auth-page" data-cy="login-page">
-      <h1>Entrar</h1>
-      <p>Página de login — será implementada na PBI #7</p>
-      <a routerLink="/auth/signup">Criar conta</a>
-    </div>
-  `,
-  styles: [`.auth-page { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }`],
+  imports: [FormsModule, RouterModule, ButtonModule, InputTextModule, PasswordModule, CheckboxModule],
+  templateUrl: './login.component.html',
+  styleUrl: './login.component.scss',
 })
-export class LoginComponent {}
+export class LoginComponent {
+  email = '';
+  senha = '';
+  lembrar = false;
+}

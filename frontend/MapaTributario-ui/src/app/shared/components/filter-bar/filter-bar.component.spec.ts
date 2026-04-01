@@ -41,8 +41,8 @@ describe('FilterBarComponent', () => {
       { chave: 'nome', rotulo: 'Nome', tipo: 'text' },
     ]);
     fixture.detectChanges();
-    let valores: Record<string, string> = {};
-    fixture.componentInstance.filtroMudou.subscribe((v: Record<string, string>) => (valores = v));
+    let valores: Record<string, string | number> = {};
+    fixture.componentInstance.filtroMudou.subscribe((v: Record<string, string | number>) => (valores = v));
     fixture.componentInstance.onValorMudou('nome', 'teste');
     expect(valores['nome']).toBe('teste');
   });

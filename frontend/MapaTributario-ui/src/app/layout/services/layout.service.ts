@@ -1,4 +1,5 @@
-import { Injectable, signal, computed, effect } from '@angular/core';
+import { Injectable, signal, computed, effect, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser, DOCUMENT } from '@angular/common';
 
 export interface LayoutConfig {
   darkTheme: boolean;
@@ -13,6 +14,9 @@ interface LayoutState {
 
 @Injectable({ providedIn: 'root' })
 export class LayoutService {
+  private _platformId = inject(PLATFORM_ID);
+  private _document = inject(DOCUMENT);
+
   layoutConfig = signal<LayoutConfig>({
     darkTheme: false,
     menuMode: 'static',
@@ -60,19 +64,29 @@ export class LayoutService {
     this.layoutConfig.update((c) => ({ ...c, darkTheme: !c.darkTheme }));
   }
 
-  closeMobileMenu(): void {
-    this.layoutState.update((s) => ({ ...s, mobileMenuActive: false }));
+  hideSidebar(): void {
+    this.layoutState.update((s) => ({
+      ...s,
+      overlayMenuActive: false,
+      mobileMenuActive: false,
+    }));
   }
 
   isDesktop(): boolean {
+    if (!isPlatformBrowser(this._platformId)) {
+      return true;
+    }
     return window.innerWidth > 991;
   }
 
   private applyDarkMode(dark: boolean): void {
+    if (!isPlatformBrowser(this._platformId)) {
+      return;
+    }
     if (dark) {
-      document.documentElement.classList.add('app-dark');
+      this._document.documentElement.classList.add('app-dark');
     } else {
-      document.documentElement.classList.remove('app-dark');
+      this._document.documentElement.classList.remove('app-dark');
     }
   }
 }

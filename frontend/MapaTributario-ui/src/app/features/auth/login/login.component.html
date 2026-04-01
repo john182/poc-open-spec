@@ -1,0 +1,32 @@
+<div class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-screen overflow-hidden" data-cy="login-page">
+  <div class="flex flex-col items-center justify-center">
+    <div style="border-radius: 56px; padding: 0.3rem; background: linear-gradient(180deg, var(--primary-color) 10%, rgba(33, 150, 243, 0) 30%)">
+      <div class="w-full bg-surface-0 dark:bg-surface-900 py-20 px-8 sm:px-20" style="border-radius: 53px">
+        <div class="text-center mb-8">
+          <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Mapa Tributário</div>
+          <span class="text-muted-color font-medium">Entre para continuar</span>
+        </div>
+
+        <div>
+          <label for="email" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Email</label>
+          <input pInputText id="email" type="text" placeholder="Seu email" class="w-full md:w-120 mb-8" [(ngModel)]="email" />
+
+          <label for="senha" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Senha</label>
+          <p-password id="senha" [(ngModel)]="senha" placeholder="Sua senha" [toggleMask]="true" styleClass="mb-4" [fluid]="true" [feedback]="false" />
+
+          <div class="flex items-center justify-between mt-2 mb-8 gap-8">
+            <div class="flex items-center">
+              <p-checkbox [(ngModel)]="lembrar" id="lembrar" binary class="mr-2" />
+              <label for="lembrar">Lembrar-me</label>
+            </div>
+          </div>
+          <p-button label="Entrar" styleClass="w-full" routerLink="/" />
+          <div class="text-center mt-4">
+            <span class="text-muted-color">Não tem conta? </span>
+            <a routerLink="/auth/signup" class="text-primary font-medium cursor-pointer">Criar conta</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

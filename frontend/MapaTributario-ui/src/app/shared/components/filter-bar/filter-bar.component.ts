@@ -14,37 +14,23 @@ export interface FiltroConfig {
   selector: 'app-filter-bar',
   standalone: true,
   imports: [FormsModule, InputTextModule, ButtonModule],
-  template: `
-    <div class="filter-bar" data-cy="filter-bar">
-      @for (filtro of filtros(); track filtro.chave) {
-        <div class="filter-item">
-          <label>{{ filtro.rotulo }}</label>
-          <input
-            pInputText
-            [type]="filtro.tipo"
-            [placeholder]="filtro.placeholder || ''"
-            [ngModel]="valores[filtro.chave] || ''"
-            (ngModelChange)="onValorMudou(filtro.chave, $event)"
-          />
-        </div>
-      }
-      <p-button label="Limpar" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="onLimpar()" />
-    </div>
-  `,
-  styles: [`
-    .filter-bar { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; }
-    .filter-item { display: flex; flex-direction: column; gap: 0.25rem; }
-    .filter-item label { font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted); }
-  `],
+  templateUrl: './filter-bar.component.html',
+  styleUrl: './filter-bar.component.scss',
 })
 export class FilterBarComponent {
   filtros = input.required<FiltroConfig[]>();
-  filtroMudou = output<Record<string, string>>();
+  filtroMudou = output<Record<string, string | number>>();
   limpar = output<void>();
-  valores: Record<string, string> = {};
+  valores: Record<string, string | number> = {};
 
   onValorMudou(chave: string, valor: string): void {
-    this.valores[chave] = valor;
+    const filtro = this.filtros().find((f) => f.chave === chave);
+    if (filtro?.tipo === 'number' && valor !== '') {
+      const numero = Number(valor);
+      this.valores[chave] = Number.isNaN(numero) ? valor : numero;
+    } else {
+      this.valores[chave] = valor;
+    }
     this.filtroMudou.emit({ ...this.valores });
   }
 

@@ -1,0 +1,3 @@
+.filter-bar { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; }
+.filter-item { display: flex; flex-direction: column; gap: 0.25rem; }
+.filter-item label { font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted); }

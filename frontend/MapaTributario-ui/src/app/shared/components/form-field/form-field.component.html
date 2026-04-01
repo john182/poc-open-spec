@@ -1,5 +1,5 @@
 <div class="form-field">
-  <label>{{ rotulo() }}</label>
+  <label [attr.for]="inputId()">{{ rotulo() }}</label>
   <ng-content />
   @if (controle()?.invalid && controle()?.dirty) {
     @for (erro of errosAtivos(); track erro) {

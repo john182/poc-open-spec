@@ -12,6 +12,7 @@ export class FormFieldComponent {
   rotulo = input.required<string>();
   controle = input.required<AbstractControl | null>();
   mensagensErro = input<Record<string, string>>({});
+  inputId = input<string>();
 
   errosAtivos(): string[] {
     const ctrl = this.controle();

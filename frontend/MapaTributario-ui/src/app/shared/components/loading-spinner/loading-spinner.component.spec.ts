@@ -15,7 +15,7 @@ describe('LoadingSpinnerComponent', () => {
   });
 
   it('nao deve exibir mensagem quando nao fornecida', async () => {
-    await render(LoadingSpinnerComponent);
-    expect(screen.queryByText('Carregando')).toBeNull();
+    const { container } = await render(LoadingSpinnerComponent);
+    expect(container.querySelector('.loading-message')).toBeNull();
   });
 });

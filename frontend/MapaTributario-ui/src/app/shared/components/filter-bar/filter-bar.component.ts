@@ -23,10 +23,10 @@ export class FilterBarComponent {
   limpar = output<void>();
   valores: Record<string, string | number> = {};
 
-  onValorMudou(chave: string, valor: string): void {
+  onValorMudou(chave: string, valor: string | number): void {
     const filtro = this.filtros().find((f) => f.chave === chave);
     if (filtro?.tipo === 'number' && valor !== '') {
-      const numero = Number(valor);
+      const numero = typeof valor === 'number' ? valor : Number(valor);
       this.valores[chave] = Number.isNaN(numero) ? valor : numero;
     } else {
       this.valores[chave] = valor;

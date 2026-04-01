@@ -28,9 +28,12 @@ describe('AppMenuComponent', () => {
     expect(container.querySelector('.layout-menuitem-root-text')).toBeTruthy();
   });
 
-  it('deve usar classe layout-menuitem-icon no icone', async () => {
+  it('deve preservar classe layout-menuitem-icon junto com icone dinamico', async () => {
     const { container } = await render(AppMenuComponent);
-    expect(container.querySelector('.layout-menuitem-icon')).toBeTruthy();
+    const icon = container.querySelector('.layout-menuitem-icon') as HTMLElement;
+    expect(icon).toBeTruthy();
+    expect(icon.classList.contains('pi')).toBe(true);
+    expect(icon.classList.contains('pi-map')).toBe(true);
   });
 
   it('deve usar classe layout-menuitem-text no label', async () => {

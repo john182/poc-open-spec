@@ -12,13 +12,20 @@ describe('AppTopbarComponent', () => {
     expect(screen.getByText('Mapa Tributário')).toBeTruthy();
   });
 
-  it('deve ter botao de menu toggle', async () => {
+  it('deve ter botao de menu toggle com acessibilidade', async () => {
     const { container } = await render(AppTopbarComponent);
-    expect(container.querySelector('.layout-menu-button')).toBeTruthy();
+    const btn = container.querySelector('.layout-menu-button') as HTMLButtonElement;
+    expect(btn).toBeTruthy();
+    expect(btn.getAttribute('type')).toBe('button');
+    expect(btn.getAttribute('aria-label')).toBe('Alternar menu');
   });
 
-  it('deve ter botao de dark mode', async () => {
+  it('deve ter botao de dark mode com acessibilidade', async () => {
     const { container } = await render(AppTopbarComponent);
-    expect(container.querySelector('.pi-moon') || container.querySelector('.pi-sun')).toBeTruthy();
+    const btn = container.querySelector('.layout-config-menu button') as HTMLButtonElement;
+    expect(btn).toBeTruthy();
+    expect(btn.getAttribute('type')).toBe('button');
+    expect(btn.getAttribute('aria-label')).toBeTruthy();
+    expect(btn.hasAttribute('aria-pressed')).toBe(true);
   });
 });

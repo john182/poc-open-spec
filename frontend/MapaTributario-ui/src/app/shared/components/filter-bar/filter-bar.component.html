@@ -7,7 +7,7 @@
         [id]="'filtro-' + filtro.chave"
         [type]="filtro.tipo"
         [placeholder]="filtro.placeholder || ''"
-        [ngModel]="valores[filtro.chave] !== undefined ? valores[filtro.chave] : ''"
+        [ngModel]="valores[filtro.chave] ?? ''"
         (ngModelChange)="onValorMudou(filtro.chave, $event)"
       />
     </div>

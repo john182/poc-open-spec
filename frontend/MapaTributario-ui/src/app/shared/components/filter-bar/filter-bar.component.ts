@@ -21,7 +21,7 @@ export class FilterBarComponent {
   filtros = input.required<FiltroConfig[]>();
   filtroMudou = output<Record<string, string | number>>();
   limpar = output<void>();
-  valores: Record<string, string | number> = {};
+  valores: Record<string, string | number | undefined> = {};
 
   onValorMudou(chave: string, valor: string | number): void {
     const filtro = this.filtros().find((f) => f.chave === chave);
@@ -31,7 +31,11 @@ export class FilterBarComponent {
     } else {
       this.valores[chave] = valor;
     }
-    this.filtroMudou.emit({ ...this.valores });
+    const definidos: Record<string, string | number> = {};
+    for (const [k, v] of Object.entries(this.valores)) {
+      if (v !== undefined) definidos[k] = v;
+    }
+    this.filtroMudou.emit(definidos);
   }
 
   onLimpar(): void {

@@ -6,7 +6,7 @@
         @for (child of item.items; track child.label) {
           <li>
             <a [routerLink]="child.routerLink" routerLinkActive="active-route">
-              <i [class]="child.icon" class="layout-menuitem-icon"></i>
+              <i class="layout-menuitem-icon" [ngClass]="child.icon"></i>
               <span class="layout-menuitem-text">{{ child.label }}</span>
             </a>
           </li>

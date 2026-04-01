@@ -34,7 +34,7 @@ public class AliquotaItem
     public string? Incidencia { get; set; }
 
     [JsonPropertyName("Aliq")]
-    public decimal Aliq { get; set; }
+    public decimal? Aliq { get; set; }
 
     [JsonPropertyName("DtIni")]
     public DateTime? DtIni { get; set; }

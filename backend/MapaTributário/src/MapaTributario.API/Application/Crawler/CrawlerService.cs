@@ -30,6 +30,9 @@ public class CrawlerService : ICrawlerService
     private const int EarlyStopThreshold = 9;
     private const int BatchSize = 50;
     private const int MaxDesdobramento = 20;
+    private const int MaxDetalhamento = 99;
+    private const int MaxConsecutiveDetalhamentoMisses = 3;
+    private const int MaxConsecutiveDesdobramentoMisses = 2;
 
     public CrawlerService(
         IExecucaoCrawlerRepository execucaoRepository,
@@ -418,59 +421,20 @@ public class CrawlerService : ICrawlerService
 
         try
         {
-            await _rateLimiter.WaitAsync(cancellationToken);
-            await _circuitBreaker.WaitIfOpenAsync(cancellationToken);
+            // Determine if this seed code needs detalhamento iteration.
+            // Seed codes have format "XX.XX.00" — the "00" detalhamento is a placeholder.
+            // We iterate detalhamento 01, 02, 03... and for each, desdobramento 000, 001, 002... until 404.
+            bool needsIteration = NeedsDetalhamentoIteration(item.CodigoServico);
 
-            // The base service code from seed (e.g., "01.01.00") is used.
-            // NfseApiClient.FormatarCodigoServico converts it to "01.01.00.000" for the API call.
-            Stopwatch sw = Stopwatch.StartNew();
-            AliquotaNfseResponse? result =
-                await _nfseApiClient.GetAliquotaAsync(
-                    item.CodigoMunicipio, item.CodigoServico, competencia, cancellationToken);
-            sw.Stop();
-
-            _certificateProtection.OnResponseReceived(result != null ? 200 : 404, sw.Elapsed.TotalSeconds);
-            _circuitBreaker.RecordSuccess();
-            await _certificateProtection.OnItemProcessedAsync(cancellationToken);
-
-            string group = ExtractGroup(item.CodigoServico);
-
-            if (result is not null && result.TemDados)
+            if (needsIteration)
             {
-                // Reset consecutive misses for this group
-                consecutiveMissesByGroup[group] = 0;
-
-                // Get municipality name for upsert
-                Municipio? municipio = await _municipioRepository.GetByCodigoIbgeAsync(item.CodigoMunicipio);
-                string nomeMunicipio = municipio?.Nome ?? item.CodigoMunicipio;
-
-                // Extract aliquotas from the dictionary response
-                int aliquotasSalvas = await ExtrairESalvarAliquotasAsync(
-                    result, item.CodigoMunicipio, nomeMunicipio, item.CodigoServico, competencia);
-
-                _logger.LogDebug(
-                    "Saved {Count} aliquotas for municipality {Municipio}, service {Servico}",
-                    aliquotasSalvas, item.CodigoMunicipio, item.CodigoServico);
-
-                item.MarcarConcluido();
-                await _filaRepository.UpdateStatusAsync(item);
-                execucao.IncrementarProcessados();
+                await ProcessarItemComIteracaoAsync(
+                    item, execucao, competencia, consecutiveMissesByGroup, cancellationToken);
             }
             else
             {
-                // 404 or empty - no data (not an error)
-                if (consecutiveMissesByGroup.ContainsKey(group))
-                {
-                    consecutiveMissesByGroup[group]++;
-                }
-                else
-                {
-                    consecutiveMissesByGroup[group] = 1;
-                }
-
-                item.MarcarConcluido();
-                await _filaRepository.UpdateStatusAsync(item);
-                execucao.IncrementarProcessados();
+                await ProcessarItemDiretoAsync(
+                    item, execucao, competencia, consecutiveMissesByGroup, cancellationToken);
             }
         }
         catch (HttpRequestException ex)
@@ -488,7 +452,7 @@ public class CrawlerService : ICrawlerService
             }
             else
             {
-                item.MarcarErro(ex.Message, 0); // Force max retries reached
+                item.MarcarErro(ex.Message, 0);
                 execucao.IncrementarErros(
                     $"Municipio={item.CodigoMunicipio}, Servico={item.CodigoServico}: {ex.Message}");
             }
@@ -497,7 +461,6 @@ public class CrawlerService : ICrawlerService
         }
         catch (TaskCanceledException)
         {
-            // Timeout
             if (item.PodeRetentar(MaxRetries))
             {
                 item.MarcarErro("Timeout", MaxRetries);
@@ -512,6 +475,244 @@ public class CrawlerService : ICrawlerService
             await _filaRepository.UpdateStatusAsync(item);
             _circuitBreaker.RecordFailure();
         }
+    }
+
+    /// <summary>
+    /// Processa um item que NÃO precisa de iteração de detalhamento (já tem código completo).
+    /// Usado quando o código de serviço já tem detalhamento válido (ex: "01.01.01").
+    /// </summary>
+    internal async Task ProcessarItemDiretoAsync(
+        FilaProcessamento item,
+        ExecucaoCrawler execucao,
+        string competencia,
+        Dictionary<string, int> consecutiveMissesByGroup,
+        CancellationToken cancellationToken)
+    {
+        await _rateLimiter.WaitAsync(cancellationToken);
+        await _circuitBreaker.WaitIfOpenAsync(cancellationToken);
+
+        Stopwatch sw = Stopwatch.StartNew();
+        AliquotaNfseResponse? result =
+            await _nfseApiClient.GetAliquotaAsync(
+                item.CodigoMunicipio, item.CodigoServico, competencia, cancellationToken);
+        sw.Stop();
+
+        _certificateProtection.OnResponseReceived(result != null ? 200 : 404, sw.Elapsed.TotalSeconds);
+        _circuitBreaker.RecordSuccess();
+        await _certificateProtection.OnItemProcessedAsync(cancellationToken);
+
+        string group = ExtractGroup(item.CodigoServico);
+
+        if (result is not null && result.TemDados)
+        {
+            consecutiveMissesByGroup[group] = 0;
+
+            Municipio? municipio = await _municipioRepository.GetByCodigoIbgeAsync(item.CodigoMunicipio);
+            string nomeMunicipio = municipio?.Nome ?? item.CodigoMunicipio;
+
+            int aliquotasSalvas = await ExtrairESalvarAliquotasAsync(
+                result, item.CodigoMunicipio, nomeMunicipio, item.CodigoServico, competencia);
+
+            _logger.LogDebug(
+                "Saved {Count} aliquotas for municipality {Municipio}, service {Servico}",
+                aliquotasSalvas, item.CodigoMunicipio, item.CodigoServico);
+
+            item.MarcarConcluido();
+            await _filaRepository.UpdateStatusAsync(item);
+            execucao.IncrementarProcessados();
+        }
+        else
+        {
+            if (consecutiveMissesByGroup.ContainsKey(group))
+            {
+                consecutiveMissesByGroup[group]++;
+            }
+            else
+            {
+                consecutiveMissesByGroup[group] = 1;
+            }
+
+            item.MarcarConcluido();
+            await _filaRepository.UpdateStatusAsync(item);
+            execucao.IncrementarProcessados();
+        }
+    }
+
+    /// <summary>
+    /// Processa um item de seed que precisa de iteração de detalhamento.
+    /// Seed codes têm formato "XX.XX.00" — o "00" é placeholder.
+    /// Itera detalhamento 01, 02, 03... com desdobramento 000 para cada.
+    /// Para quando encontra MaxConsecutiveDetalhamentoMisses 404s consecutivos.
+    /// </summary>
+    internal async Task ProcessarItemComIteracaoAsync(
+        FilaProcessamento item,
+        ExecucaoCrawler execucao,
+        string competencia,
+        Dictionary<string, int> consecutiveMissesByGroup,
+        CancellationToken cancellationToken)
+    {
+        // Extract base: "01.01.00" → item="01", subitem="01"
+        (string itemPart, string subitemPart) = ExtrairItemSubitem(item.CodigoServico);
+
+        Municipio? municipio = await _municipioRepository.GetByCodigoIbgeAsync(item.CodigoMunicipio);
+        string nomeMunicipio = municipio?.Nome ?? item.CodigoMunicipio;
+
+        int totalAliquotasSalvas = 0;
+        int consecutiveDetalhamentoMisses = 0;
+
+        for (int det = 1; det <= MaxDetalhamento; det++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (_certificateProtection.ShouldHalt || _certificateProtection.BudgetExhausted)
+            {
+                break;
+            }
+
+            if (consecutiveDetalhamentoMisses >= MaxConsecutiveDetalhamentoMisses)
+            {
+                _logger.LogDebug(
+                    "Stopping detalhamento iteration for {Item}.{Subitem} at {Det:D2} after {Misses} consecutive misses",
+                    itemPart, subitemPart, det, consecutiveDetalhamentoMisses);
+                break;
+            }
+
+            // Try desdobramento 000 first (most common)
+            string codigoDetalhamento = $"{itemPart}.{subitemPart}.{det:D2}";
+            string codigoCompleto = $"{codigoDetalhamento}.000";
+
+            await _rateLimiter.WaitAsync(cancellationToken);
+            await _circuitBreaker.WaitIfOpenAsync(cancellationToken);
+
+            Stopwatch sw = Stopwatch.StartNew();
+            AliquotaNfseResponse? result =
+                await _nfseApiClient.GetAliquotaAsync(
+                    item.CodigoMunicipio, codigoCompleto, competencia, cancellationToken);
+            sw.Stop();
+
+            _certificateProtection.OnResponseReceived(result != null ? 200 : 404, sw.Elapsed.TotalSeconds);
+            _circuitBreaker.RecordSuccess();
+            await _certificateProtection.OnItemProcessedAsync(cancellationToken);
+
+            if (result is null || !result.TemDados)
+            {
+                consecutiveDetalhamentoMisses++;
+                continue;
+            }
+
+            // Found data! Reset consecutive misses and save
+            consecutiveDetalhamentoMisses = 0;
+
+            int saved = await ExtrairESalvarAliquotasAsync(
+                result, item.CodigoMunicipio, nomeMunicipio, item.CodigoServico, competencia);
+            totalAliquotasSalvas += saved;
+
+            _logger.LogDebug(
+                "Found {Count} aliquotas for {Municipio} service {Codigo}",
+                saved, item.CodigoMunicipio, codigoCompleto);
+
+            // Now iterate desdobramentos 001, 002, ... for this detalhamento
+            int consecutiveDesdobramentoMisses = 0;
+
+            for (int desdobramento = 1; desdobramento <= MaxDesdobramento; desdobramento++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (_certificateProtection.ShouldHalt || _certificateProtection.BudgetExhausted)
+                {
+                    break;
+                }
+
+                if (consecutiveDesdobramentoMisses >= MaxConsecutiveDesdobramentoMisses)
+                {
+                    break;
+                }
+
+                string codigoDesdobramento = $"{codigoDetalhamento}.{desdobramento:D3}";
+
+                await _rateLimiter.WaitAsync(cancellationToken);
+                await _circuitBreaker.WaitIfOpenAsync(cancellationToken);
+
+                Stopwatch swDesdobramento = Stopwatch.StartNew();
+                AliquotaNfseResponse? resultDesdobramento =
+                    await _nfseApiClient.GetAliquotaAsync(
+                        item.CodigoMunicipio, codigoDesdobramento, competencia, cancellationToken);
+                swDesdobramento.Stop();
+
+                _certificateProtection.OnResponseReceived(resultDesdobramento != null ? 200 : 404, swDesdobramento.Elapsed.TotalSeconds);
+                _circuitBreaker.RecordSuccess();
+                await _certificateProtection.OnItemProcessedAsync(cancellationToken);
+
+                if (resultDesdobramento is null || !resultDesdobramento.TemDados)
+                {
+                    consecutiveDesdobramentoMisses++;
+                    continue;
+                }
+
+                consecutiveDesdobramentoMisses = 0;
+                int savedDesdobramento = await ExtrairESalvarAliquotasAsync(
+                    resultDesdobramento, item.CodigoMunicipio, nomeMunicipio, item.CodigoServico, competencia);
+                totalAliquotasSalvas += savedDesdobramento;
+
+                _logger.LogDebug(
+                    "Found {Count} aliquotas for {Municipio} service {Codigo}",
+                    savedDesdobramento, item.CodigoMunicipio, codigoDesdobramento);
+            }
+        }
+
+        // Update group tracking
+        string group = ExtractGroup(item.CodigoServico);
+        if (totalAliquotasSalvas > 0)
+        {
+            consecutiveMissesByGroup[group] = 0;
+        }
+        else
+        {
+            if (consecutiveMissesByGroup.ContainsKey(group))
+            {
+                consecutiveMissesByGroup[group]++;
+            }
+            else
+            {
+                consecutiveMissesByGroup[group] = 1;
+            }
+        }
+
+        _logger.LogDebug(
+            "Detalhamento iteration for {Municipio}/{CodigoServico}: saved {Total} aliquotas",
+            item.CodigoMunicipio, item.CodigoServico, totalAliquotasSalvas);
+
+        item.MarcarConcluido();
+        await _filaRepository.UpdateStatusAsync(item);
+        execucao.IncrementarProcessados();
+    }
+
+    /// <summary>
+    /// Determina se o código de serviço precisa de iteração de detalhamento.
+    /// Códigos com detalhamento "00" (seed placeholder) precisam de iteração.
+    /// Exemplo: "01.01.00" → true, "01.01.01" → false
+    /// </summary>
+    internal static bool NeedsDetalhamentoIteration(string codigoServico)
+    {
+        string clean = codigoServico.Replace(".", "");
+
+        // Deve ter pelo menos 6 dígitos: item(2) + subitem(2) + detalhamento(2)
+        if (clean.Length < 6) return false;
+
+        // Se o detalhamento (posições 4-5) for "00", precisa de iteração
+        string detalhamento = clean[4..6];
+        return detalhamento == "00";
+    }
+
+    /// <summary>
+    /// Extrai item e subitem do código de serviço.
+    /// "01.01.00" → ("01", "01")
+    /// "010100" → ("01", "01")
+    /// </summary>
+    internal static (string Item, string Subitem) ExtrairItemSubitem(string codigoServico)
+    {
+        string clean = codigoServico.Replace(".", "");
+        return (clean[..2], clean[2..4]);
     }
 
     /// <summary>
@@ -540,8 +741,8 @@ public class CrawlerService : ICrawlerService
 
             foreach (AliquotaItem aliquotaItem in entry.Value)
             {
-                // Only save current (vigente) aliquotas
-                if (!aliquotaItem.Vigente)
+                // Only save current (vigente) aliquotas with a valid Aliq value
+                if (!aliquotaItem.Vigente || !aliquotaItem.Aliq.HasValue)
                 {
                     continue;
                 }
@@ -552,7 +753,7 @@ public class CrawlerService : ICrawlerService
                     codigoServicoBase,
                     FormatServiceCode(codigoServicoApi),
                     string.Empty, // API doesn't return description per aliquota
-                    aliquotaItem.Aliq,
+                    aliquotaItem.Aliq.Value,
                     competencia,
                     "API NFS-e Nacional");
 

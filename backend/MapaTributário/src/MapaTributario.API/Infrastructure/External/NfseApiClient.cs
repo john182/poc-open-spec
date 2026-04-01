@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using MapaTributario.API.Infrastructure.External.Contracts;
 
 namespace MapaTributario.API.Infrastructure.External;
@@ -58,6 +59,13 @@ public class NfseApiClient : INfseApiClient
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(
+                "Failed to deserialize aliquota response for {CodigoMunicipio}/{CodigoServico}: {Message}",
+                codigoMunicipio, codigoServico, ex.Message);
             return null;
         }
     }

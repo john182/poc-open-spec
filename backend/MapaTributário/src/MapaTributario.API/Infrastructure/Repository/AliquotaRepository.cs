@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using MapaTributario.API.Domain.Entities;
 using MapaTributario.API.Domain.Interfaces;
 using MongoDB.Driver;
@@ -48,7 +49,8 @@ public class AliquotaRepository : IAliquotaRepository
 
         if (!string.IsNullOrWhiteSpace(descricao))
         {
-            filter &= filterBuilder.Regex(a => a.DescricaoServico, new MongoDB.Bson.BsonRegularExpression(descricao, "i"));
+            var escapedDescricao = Regex.Escape(descricao);
+            filter &= filterBuilder.Regex(a => a.DescricaoServico, new MongoDB.Bson.BsonRegularExpression(escapedDescricao, "i"));
         }
 
         if (aliquotaMin.HasValue)

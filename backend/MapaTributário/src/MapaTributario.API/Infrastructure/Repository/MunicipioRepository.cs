@@ -11,13 +11,6 @@ public class MunicipioRepository : IMunicipioRepository
     public MunicipioRepository(IMongoDatabase database)
     {
         _municipios = database.GetCollection<Municipio>("municipios");
-
-        var codigoIndex = Builders<Municipio>.IndexKeys.Ascending(m => m.CodigoIbge);
-        _municipios.Indexes.CreateOne(
-            new CreateIndexModel<Municipio>(codigoIndex, new CreateIndexOptions { Unique = true }));
-
-        var ufIndex = Builders<Municipio>.IndexKeys.Ascending(m => m.SiglaEstado);
-        _municipios.Indexes.CreateOne(new CreateIndexModel<Municipio>(ufIndex));
     }
 
     public async Task<IReadOnlyList<Municipio>> GetByUfAsync(string siglaEstado)

@@ -10,7 +10,7 @@ public class ExecucaoCrawlerRepository : IExecucaoCrawlerRepository
 
     public ExecucaoCrawlerRepository(IMongoDatabase database)
     {
-        _execucoes = database.GetCollection<ExecucaoCrawler>("execucoes_crawler");
+        _execucoes = database.GetCollection<ExecucaoCrawler>("execucoesCrawler");
     }
 
     public async Task<ExecucaoCrawler> CreateAsync(ExecucaoCrawler execucao)

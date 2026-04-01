@@ -10,24 +10,7 @@ public class FilaProcessamentoRepository : IFilaProcessamentoRepository
 
     public FilaProcessamentoRepository(IMongoDatabase database)
     {
-        _fila = database.GetCollection<FilaProcessamento>("fila_processamento");
-
-        var uniqueIndex = Builders<FilaProcessamento>.IndexKeys
-            .Ascending(f => f.CodigoMunicipio)
-            .Ascending(f => f.CodigoServico)
-            .Ascending(f => f.Competencia);
-        _fila.Indexes.CreateOne(new CreateIndexModel<FilaProcessamento>(
-            uniqueIndex,
-            new CreateIndexOptions { Unique = true }));
-
-        var statusIndex = Builders<FilaProcessamento>.IndexKeys
-            .Ascending(f => f.Status)
-            .Ascending(f => f.ProximaTentativa);
-        _fila.Indexes.CreateOne(new CreateIndexModel<FilaProcessamento>(statusIndex));
-
-        var execucaoIndex = Builders<FilaProcessamento>.IndexKeys
-            .Ascending(f => f.ExecucaoId);
-        _fila.Indexes.CreateOne(new CreateIndexModel<FilaProcessamento>(execucaoIndex));
+        _fila = database.GetCollection<FilaProcessamento>("filaProcessamento");
     }
 
     public async Task InsertManyAsync(IEnumerable<FilaProcessamento> itens)

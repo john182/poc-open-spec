@@ -11,10 +11,6 @@ public class EstadoRepository : IEstadoRepository
     public EstadoRepository(IMongoDatabase database)
     {
         _estados = database.GetCollection<Estado>("estados");
-
-        var indexKeys = Builders<Estado>.IndexKeys.Ascending(e => e.Sigla);
-        var indexOptions = new CreateIndexOptions { Unique = true };
-        _estados.Indexes.CreateOne(new CreateIndexModel<Estado>(indexKeys, indexOptions));
     }
 
     public async Task<IReadOnlyList<Estado>> GetAllAsync()

@@ -57,7 +57,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 // Consulta services (PBI #4)
-// builder.Services.AddConsultaServices(builder.Configuration);
+builder.Services.AddConsultaServices(builder.Configuration);
 
 // Crawler services (PBI #5)
 // builder.Services.AddCrawlerServices(builder.Configuration);
@@ -67,6 +67,9 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+// Run seeds (idempotent)
+await app.RunConsultaSeedsAsync();
 
 app.UseMiddleware<ErrorHandlingMiddleware>();
 

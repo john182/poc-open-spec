@@ -7,6 +7,12 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <None Include="..\..\..\..\context\municipios.json" Link="context\municipios.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
         <PackageReference Include="FluentResults" Version="4.0.0" />
         <PackageReference Include="FluentValidation" Version="12.1.1" />

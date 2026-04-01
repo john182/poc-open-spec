@@ -1,0 +1,13 @@
+<div class="brazil-map-container" data-cy="brazil-map">
+  <svg viewBox="0 0 816 876" class="brazil-map-svg">
+    @for (estado of estados; track estado.sigla) {
+      <g class="estado-group"
+         [attr.data-uf]="estado.sigla"
+         [class.selecionado]="ufSelecionada() === estado.sigla"
+         (click)="onEstadoClick(estado.sigla)">
+        <path [attr.d]="estado.path" class="estado-path" />
+        <title>{{ estado.nome }} ({{ estado.sigla }})</title>
+      </g>
+    }
+  </svg>
+</div>

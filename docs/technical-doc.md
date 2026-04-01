@@ -64,7 +64,7 @@ graph TB
     end
 
     FE -->|HTTPS| NGINX
-    NGINX -->|"proxy /api/* -> backend:8080"| API
+    NGINX -->|"proxy /api/* -> backend:5000"| API
     API -->|MongoDB Driver| DB
     WK -->|MongoDB Driver| DB
     WK -->|"HTTPS + PFX mTLS"| NFSE
@@ -90,7 +90,7 @@ graph TB
 | **Autenticacao** | JWT (RFC 7519) | - | Stateless; bem suportado pelo ASP.NET Core; access + refresh tokens |
 | **Hash de Senhas** | bcrypt | - | Padrao da industria; work factor configuravel; resistente a ataques de forca bruta |
 | **Logs** | Microsoft.Extensions.Logging | built-in | ILogger nativo do .NET; logs estruturados em JSON; configuravel via appsettings |
-| **Documentacao API** | OpenAPI | 3.0 | Documentacao viva gerada a partir do codigo; endpoint em `/openapi/v1.json` |
+| **Documentacao API** | OpenAPI | 3.0 | Endpoint JSON bruto em `/openapi/v1.json` (apenas em Development); sem Swagger UI; gerado automaticamente pelo ASP.NET Core `AddOpenApi()` |
 | **Testes Backend** | xUnit | latest | Padrao .NET; suporte a injecao de dependencia e paralelismo |
 | **Testes Frontend** | Vitest | 4.x | Rapido; ja configurado no projeto Angular |
 | **E2E Tests** | Cypress | 13.x | DX excelente para testes de UI; seletores estaveis; bom suporte a SPA |
@@ -135,39 +135,39 @@ erDiagram
     FILA_PROCESSAMENTO }|--|| SERVICOS : "referencia"
 
     ESTADOS {
-        int codigo PK
-        string nome
+        ObjectId _id PK
         string sigla UK
+        string nome
         string regiao
     }
 
     MUNICIPIOS {
-        int codigoIbge PK
+        ObjectId _id PK
+        string codigoIbge UK
         string nome
-        int codigoEstado FK
-        string siglaEstado
-        bool ativo
-        datetime atualizadoEm
+        string siglaEstado FK
     }
 
     SERVICOS {
-        string codigo PK
-        string codigoFormatado
+        ObjectId _id PK
+        string codigoTribNac UK
         string descricao
-        string subitem
         string item
-        bool ativo
+        string subitem
+        string desdobramento
     }
 
     ALIQUOTAS {
         ObjectId _id PK
-        int codigoMunicipio FK
+        string codigoMunicipio FK
+        string nomeMunicipio
         string codigoServico FK
-        string competencia
-        decimal aliquota
+        string codigoServicoFormatado
         string descricaoServico
+        string competencia
+        decimal valorAliquota
         datetime coletadoEm
-        ObjectId fonteExecucaoId FK
+        string fonte
     }
 
     EXECUCOES_CRAWLER {
@@ -180,19 +180,21 @@ erDiagram
         int totalServicos
         int processados
         int erros
-        array detalhesErro
+        string[] detalhesErro
     }
 
     FILA_PROCESSAMENTO {
         ObjectId _id PK
-        int codigoMunicipio FK
+        string codigoMunicipio FK
         string codigoServico FK
         string competencia
         string status
         int tentativas
         string ultimoErro
         datetime proximaTentativa
-        ObjectId execucaoId FK
+        string execucaoId FK
+        datetime criadoEm
+        datetime atualizadoEm
     }
 
     USERS {
@@ -202,8 +204,6 @@ erDiagram
         string nome
         datetime dataCriacao
         bool ativo
-        string refreshToken
-        datetime refreshTokenExpiry
     }
 ```
 
@@ -215,13 +215,12 @@ Armazena os 27 estados brasileiros. Dados estaticos carregados via seed.
 
 | Campo | Tipo | Descricao | Exemplo |
 |-------|------|-----------|---------|
-| `codigo` | int | Codigo IBGE do estado (PK) | `31` |
+| `_id` | ObjectId | Identificador interno do MongoDB | - |
+| `sigla` | string | Sigla do estado (UF, 2 chars, unique) | `"MG"` |
 | `nome` | string | Nome completo do estado | `"Minas Gerais"` |
-| `sigla` | string | Sigla do estado (UF, 2 chars) | `"MG"` |
 | `regiao` | string | Regiao geografica | `"Sudeste"` |
 
 **Indices:**
-- `{ codigo: 1 }` - unique
 - `{ sigla: 1 }` - unique (busca por UF nos endpoints)
 
 ---
@@ -232,18 +231,14 @@ Armazena todos os municipios brasileiros (~5.570). Dados carregados via seed IBG
 
 | Campo | Tipo | Descricao | Exemplo |
 |-------|------|-----------|---------|
-| `codigoIbge` | int | Codigo IBGE do municipio (PK, 7 digitos) | `3106200` |
+| `_id` | ObjectId | Identificador interno do MongoDB | - |
+| `codigoIbge` | string | Codigo IBGE do municipio (7 digitos) | `"3106200"` |
 | `nome` | string | Nome do municipio | `"Belo Horizonte"` |
-| `codigoEstado` | int | Codigo IBGE do estado (FK) | `31` |
-| `siglaEstado` | string | Sigla do estado | `"MG"` |
-| `ativo` | bool | Se o municipio possui convenio NFS-e ativo | `true` |
-| `atualizadoEm` | datetime | Ultima verificacao de convenio | `2026-03-15T02:00:00Z` |
+| `siglaEstado` | string | Sigla do estado (FK para estados) | `"MG"` |
 
 **Indices:**
 - `{ codigoIbge: 1 }` - unique
-- `{ codigoEstado: 1, nome: 1 }` - busca por estado + ordenacao por nome
-- `{ siglaEstado: 1 }` - filtro por UF
-- `{ ativo: 1 }` - filtro para worker (apenas municipios ativos)
+- `{ siglaEstado: 1, nome: 1 }` - busca por estado + ordenacao por nome
 
 ---
 
@@ -253,16 +248,16 @@ Codigos de servico da LC 116/2003. Dados carregados via seed.
 
 | Campo | Tipo | Descricao | Exemplo |
 |-------|------|-----------|---------|
-| `codigo` | string | Codigo numerico sem pontos (PK) | `"010101001"` |
-| `codigoFormatado` | string | Codigo com pontos para exibicao | `"01.01.01.001"` |
+| `_id` | ObjectId | Identificador interno do MongoDB | - |
+| `codigoTribNac` | string | Codigo tributacao nacional (unique) | `"010101001"` |
 | `descricao` | string | Descricao do servico | `"Analise e desenvolvimento de sistemas"` |
-| `subitem` | string | Subitem na lista LC 116 | `"01.01"` |
 | `item` | string | Item na lista LC 116 | `"01"` |
-| `ativo` | bool | Se o servico esta ativo na lista | `true` |
+| `subitem` | string | Subitem na lista LC 116 | `"01.01"` |
+| `desdobramento` | string | Desdobramento do servico | `"01.001"` |
 
 **Indices:**
-- `{ codigo: 1 }` - unique
-- `{ subitem: 1 }` - busca por subitem
+- `{ codigoTribNac: 1 }` - unique
+- `{ item: 1 }` - busca por item
 - `{ descricao: "text" }` - busca textual por descricao
 
 ---
@@ -274,14 +269,15 @@ Colecao principal com dados consolidados de aliquotas. Escrita pelo worker, lida
 | Campo | Tipo | Descricao | Exemplo |
 |-------|------|-----------|---------|
 | `_id` | ObjectId | Identificador interno do MongoDB | - |
-| `codigoMunicipio` | int | Codigo IBGE do municipio (FK) | `3106200` |
+| `codigoMunicipio` | string | Codigo IBGE do municipio (FK) | `"3106200"` |
+| `nomeMunicipio` | string | Nome do municipio (denormalizado) | `"Belo Horizonte"` |
 | `codigoServico` | string | Codigo do servico sem pontos (FK) | `"010101001"` |
-| `competencia` | string | Competencia no formato `YYYYMM` | `"202603"` |
-| `aliquota` | decimal | Percentual da aliquota | `3.00` |
+| `codigoServicoFormatado` | string | Codigo do servico com pontos | `"01.01.01.001"` |
 | `descricaoServico` | string | Descricao do servico (denormalizado) | `"Analise e desenvolvimento de sistemas"` |
+| `competencia` | string | Competencia no formato `YYYYMM` | `"202603"` |
+| `valorAliquota` | decimal | Percentual da aliquota | `3.00` |
 | `coletadoEm` | datetime | Timestamp da coleta | `2026-03-15T02:35:12Z` |
-| `fonteExecucaoId` | ObjectId | ID da execucao do crawler que coletou (FK) | - |
-| `dadosBrutos` | object | Resposta original da API NFS-e (opcional, para auditoria) | `{ ... }` |
+| `fonte` | string | Identificador da fonte que coletou o dado | `"execucao-660f1a2b"` |
 
 **Indices:**
 - `{ codigoMunicipio: 1, codigoServico: 1, competencia: 1 }` - **unique compound** (chave natural)
@@ -301,16 +297,13 @@ Historico de execucoes do worker/crawler.
 | `_id` | ObjectId | Identificador da execucao | - |
 | `inicio` | datetime | Timestamp de inicio | `2026-03-15T02:00:00Z` |
 | `fim` | datetime | Timestamp de finalizacao (null se em andamento) | `2026-03-15T04:23:45Z` |
-| `status` | string | `em_andamento`, `concluido`, `falha_parcial`, `falha` | `"concluido"` |
-| `tipo` | string | `agendado` ou `manual` | `"agendado"` |
-| `competencia` | string | Competencia processada | `"202603"` |
+| `status` | string | `EmAndamento`, `Concluido`, `FalhaParcial`, `Falha` | `"Concluido"` |
+| `tipo` | string | `Agendado` ou `Manual` | `"Agendado"` |
 | `totalMunicipios` | int | Total de municipios na fila | `45` |
 | `totalServicos` | int | Total de combinacoes municipio+servico | `2700` |
 | `processados` | int | Itens processados com sucesso | `2650` |
 | `erros` | int | Itens com erro | `50` |
-| `detalhesErro` | array | Lista de erros relevantes | `[{ municipio: "3106200", servico: "010101001", erro: "timeout", tentativas: 3 }]` |
-| `circuitBreakerAtivado` | bool | Se o circuit breaker foi ativado | `false` |
-| `duracaoSegundos` | int | Duracao total em segundos | `8625` |
+| `detalhesErro` | string[] | Lista de mensagens de erro | `["Timeout municipio 3106200 servico 010101001 apos 3 tentativas"]` |
 
 **Indices:**
 - `{ inicio: -1 }` - ordenacao para historico (mais recente primeiro)
@@ -325,16 +318,16 @@ Fila de trabalho do worker. Permite retomada e reprocessamento.
 | Campo | Tipo | Descricao | Exemplo |
 |-------|------|-----------|---------|
 | `_id` | ObjectId | Identificador do item na fila | - |
-| `codigoMunicipio` | int | Codigo IBGE do municipio | `3106200` |
+| `codigoMunicipio` | string | Codigo IBGE do municipio | `"3106200"` |
 | `codigoServico` | string | Codigo do servico sem pontos | `"010101001"` |
 | `competencia` | string | Competencia alvo | `"202603"` |
-| `status` | string | `pendente`, `processando`, `concluido`, `erro` | `"pendente"` |
+| `status` | string | `Pendente`, `Processando`, `Concluido`, `Erro` | `"Pendente"` |
 | `tentativas` | int | Numero de tentativas realizadas | `0` |
 | `ultimoErro` | string | Descricao do ultimo erro (null se sem erro) | `"Connection timeout"` |
 | `proximaTentativa` | datetime | Quando tentar novamente (null se concluido) | `2026-03-15T02:01:30Z` |
-| `execucaoId` | ObjectId | ID da execucao a que pertence | - |
+| `execucaoId` | string | ID da execucao a que pertence | `"665f1a2b..."` |
 | `criadoEm` | datetime | Quando o item foi adicionado a fila | `2026-03-15T02:00:00Z` |
-| `processadoEm` | datetime | Quando o item foi processado com sucesso | `2026-03-15T02:00:45Z` |
+| `atualizadoEm` | datetime | Ultima atualizacao do item | `2026-03-15T02:00:45Z` |
 
 **Indices:**
 - `{ status: 1, proximaTentativa: 1 }` - busca de itens prontos para processamento
@@ -355,12 +348,11 @@ Usuarios autenticados da aplicacao.
 | `nome` | string | Nome completo | `"Ana Silva"` |
 | `dataCriacao` | datetime | Data de criacao da conta | `2026-03-10T14:00:00Z` |
 | `ativo` | bool | Se a conta esta ativa | `true` |
-| `refreshToken` | string | Token de refresh atual (hash) | `"abc123..."` |
-| `refreshTokenExpiry` | datetime | Expiracao do refresh token | `2026-03-17T14:00:00Z` |
 
 **Indices:**
 - `{ email: 1 }` - unique (login e validacao de unicidade)
-- `{ refreshToken: 1 }` - busca para validacao de refresh
+
+> **Nota:** O refresh token e implementado como um JWT assinado (com claims do usuario e expiracao propria), sem armazenamento no banco. A validacao ocorre verificando a assinatura e os claims do token.
 
 ---
 
@@ -654,13 +646,16 @@ flowchart TD
 
 | Rota | Componente | Guard | Layout | Descricao |
 |------|-----------|-------|--------|-----------|
-| `/auth/login` | LoginComponent | - | Sem layout | Tela de login |
-| `/auth/signup` | SignupComponent | - | Sem layout | Tela de cadastro |
-| `/consulta` | MapaComponent | - | AppLayout | Mapa do Brasil |
-| `/consulta/estado/:uf` | EstadoComponent | - | AppLayout | Municipios do estado |
-| `/consulta/municipio/:codigoIbge` | MunicipioComponent | - | AppLayout | Aliquotas do municipio |
+| `/auth/login` | LoginComponent | guestGuard | Sem layout | Tela de login |
+| `/auth/signup` | SignupComponent | guestGuard | Sem layout | Tela de cadastro |
+| `/consulta` | ConsultaMapaComponent | - | AppLayout | Mapa do Brasil |
+| `/consulta/estado/:uf` | EstadoMunicipiosComponent | - | AppLayout | Municipios do estado |
+| `/consulta/municipio/:codigoIbge` | MunicipioAliquotasComponent | - | AppLayout | Aliquotas do municipio |
+| `/admin/crawler/status` | CrawlerStatusComponent | adminGuard | AppLayout | Status do crawler |
+| `/admin/crawler/certificado` | CrawlerCertificadoComponent | adminGuard | AppLayout | Upload/remocao de certificado PFX |
+| `/admin/crawler/execucoes` | CrawlerExecucoesComponent | adminGuard | AppLayout | Historico de execucoes |
 | `/acesso-negado` | AccessDeniedComponent | - | Sem layout | Erro 403 |
-| `/404` | NotFoundComponent | - | Sem layout | Erro 404 |
+| `/**` | NotFoundComponent | - | Sem layout | Erro 404 |
 | `**` | redirect para `/404` | - | - | Wildcard |
 
 ### 6.3 Estados Visuais
@@ -686,13 +681,9 @@ graph TB
         subgraph "Rede: mapa-tributario-net"
             FE["frontend<br/>build: ./frontend/MapaTributario-ui<br/>image: nginx:alpine<br/>ports: 4200:80<br/>depends_on: backend"]
 
-            BE["backend<br/>build: ./backend/MapaTributario<br/>image: .NET 10 runtime<br/>ports: 5000:8080<br/>depends_on: mongodb<br/>env: JWT_SECRET, MONGO_URI"]
+            BE["backend<br/>build: ./backend/MapaTributario<br/>image: .NET 10 runtime<br/>ports: 5000:5000<br/>depends_on: mongodb<br/>env: JWT_SECRET, MONGO_URI"]
 
             MG["mongodb<br/>image: mongo:7<br/>ports: 27017:27017<br/>volumes: mongo-data:/data/db"]
-        end
-
-        subgraph "Profile: e2e"
-            CY["cypress<br/>build: ./cypress<br/>depends_on: frontend<br/>env: CYPRESS_BASE_URL"]
         end
     end
 
@@ -700,10 +691,9 @@ graph TB
         V1["mongo-data - persistencia de dados"]
     end
 
-    FE -->|"proxy /api/* -> backend:8080"| BE
+    FE -->|"proxy /api/* -> backend:5000"| BE
     BE --> MG
     MG --- V1
-    CY -->|HTTP| FE
 ```
 
 ### 7.2 Dockerfiles
@@ -720,7 +710,7 @@ Stage 1 - Build:
 Stage 2 - Runtime:
   FROM mcr.microsoft.com/dotnet/aspnet:10.0
   COPY --from=build /app/publish .
-  EXPOSE 8080
+  EXPOSE 5000
   ENTRYPOINT ["dotnet", "MapaTributario.Api.dll"]
 ```
 
@@ -749,17 +739,17 @@ server {
     listen 80;
 
     location /api/ {
-        proxy_pass http://backend:8080/api/;
+        proxy_pass http://backend:5000/api/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }
 
     location /openapi {
-        proxy_pass http://backend:8080/openapi;
+        proxy_pass http://backend:5000/openapi;
     }
 
     location /health {
-        proxy_pass http://backend:8080/health;
+        proxy_pass http://backend:5000/health;
     }
 
     location / {
@@ -790,7 +780,7 @@ server {
 services:
   backend:
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -864,33 +854,49 @@ backend/MapaTributario/
 │       │
 │       ├── Application/                   # Camada de Aplicacao
 │       │   ├── Auth/
-│       │   │   ├── AuthService.cs         # Register, Login, Refresh
-│       │   │   └── Validators/
-│       │   │       ├── RegisterRequestValidator.cs
-│       │   │       └── LoginRequestValidator.cs
-│       │   ├── Consulta/
-│       │   │   └── ConsultaService.cs     # Listagem, Filtros, Paginacao
-│       │   ├── Crawler/
-│       │   │   ├── CrawlerService.cs      # Orquestracao do crawler
-│       │   │   └── ICertificadoStore.cs   # Contrato para armazenamento de certificado PFX
-│       │   ├── DTOs/
-│       │   │   ├── Auth/
+│       │   │   ├── LoginUser.cs           # Use case: Login
+│       │   │   ├── RegisterUser.cs        # Use case: Registro
+│       │   │   ├── RefreshToken.cs        # Use case: Renovar token
+│       │   │   ├── Contracts/
 │       │   │   │   ├── RegisterRequest.cs
 │       │   │   │   ├── LoginRequest.cs
 │       │   │   │   ├── RefreshRequest.cs
 │       │   │   │   └── AuthResponse.cs
-│       │   │   ├── Consulta/
-│       │   │   │   ├── EstadoResponse.cs
-│       │   │   │   ├── MunicipioResponse.cs
-│       │   │   │   ├── AliquotaResponse.cs
-│       │   │   │   ├── AliquotaDetalheResponse.cs
-│       │   │   │   └── PaginatedResponse.cs
-│       │   │   └── Crawler/
+│       │   │   └── Validators/
+│       │   │       ├── RegisterRequestValidator.cs
+│       │   │       ├── LoginRequestValidator.cs
+│       │   │       └── RefreshRequestValidator.cs
+│       │   ├── Consulta/
+│       │   │   ├── ConsultaService.cs     # Listagem, Filtros, Paginacao
+│       │   │   ├── IConsultaService.cs    # Interface do servico de consulta
+│       │   │   ├── CodigoServicoNormalizer.cs # Normalizacao de codigo de servico
+│       │   │   └── Contracts/
+│       │   │       ├── EstadoResponse.cs
+│       │   │       ├── MunicipioResponse.cs
+│       │   │       ├── AliquotaResponse.cs
+│       │   │       ├── AliquotaDetalheResponse.cs
+│       │   │       ├── AliquotaQueryParams.cs
+│       │   │       └── PaginatedResponse.cs
+│       │   ├── Crawler/
+│       │   │   ├── CrawlerService.cs      # Orquestracao do crawler
+│       │   │   ├── ICrawlerService.cs     # Interface do servico de crawler
+│       │   │   ├── ICertificadoStore.cs   # Contrato para armazenamento de certificado PFX
+│       │   │   ├── ICertificateProtection.cs # Interface de protecao de certificado
+│       │   │   ├── CertificateProtection.cs  # Implementacao de protecao de certificado
+│       │   │   ├── ICrawlerExecutionGuard.cs # Interface de controle de execucao
+│       │   │   ├── CrawlerExecutionGuard.cs  # Controle de execucao concorrente
+│       │   │   ├── ICircuitBreaker.cs     # Interface do circuit breaker
+│       │   │   ├── CircuitBreaker.cs      # Implementacao do circuit breaker
+│       │   │   ├── IRateLimiter.cs        # Interface do rate limiter
+│       │   │   ├── RateLimiter.cs         # Implementacao do rate limiter
+│       │   │   └── Contracts/
 │       │   │       ├── ExecutarCrawlerRequest.cs
-│       │   │       ├── ExecucaoResponse.cs
-│       │   │       └── StatusCrawlerResponse.cs
-│       │   └── Mappings/
-│       │       └── MappingExtensions.cs   # Entity -> DTO mappings
+│       │   │       ├── ExecutarCrawlerResponse.cs
+│       │   │       ├── StatusCrawlerResponse.cs
+│       │   │       └── CertificadoStatusResponse.cs
+│       │   └── Errors/
+│       │       ├── NotFoundError.cs       # Erro de entidade nao encontrada
+│       │       └── ValidationError.cs     # Erro de validacao
 │       │
 │       ├── Infrastructure/                # Camada de Infraestrutura (adapters)
 │       │   ├── Repository/
@@ -924,11 +930,12 @@ backend/MapaTributario/
 │       ├── Controllers/
 │       │   ├── AuthController.cs
 │       │   ├── ConsultaController.cs      # Endpoints publicos (sem [Authorize])
-│       │   ├── CrawlerController.cs       # Requer JWT + role Admin
+│       │   ├── CrawlerController.cs       # Requer JWT ([Authorize])
+│       │   ├── CertificadoController.cs   # Requer JWT ([Authorize])
 │       │   └── HealthController.cs
 │       ├── Middleware/
 │       │   └── ErrorHandlingMiddleware.cs
-│       ├── Workers/
+│       ├── Worker/
 │       │   └── CrawlerBackgroundService.cs
 │       ├── Extensions/                    # DI por camada
 │       │   ├── InfrastructureServiceExtensions.cs  # AddMapaTributarioInfrastructure()
@@ -956,7 +963,7 @@ backend/MapaTributario/
 - **Projeto unico com separacao por pastas:** As camadas Domain, Application, Infrastructure e API/Host coexistem em um unico projeto (`MapaTributario.API`). A separacao e logica, via pastas e namespaces. Isso simplifica build e deploy sem sacrificar organizacao.
 - **DI por camada:** O `Program.cs` chama `AddMapaTributarioInfrastructure()` (MongoDB, repositorios, auth infra, certificado, seed, API client) e `AddMapaTributarioApplication()` (services, use cases, resiliencia, JWT auth, FluentValidation, background service). Cada extension registra apenas os componentes de sua camada.
 - **Indices centralizados:** A classe `MongoIndexSetup` cria todos os indices de todas as 7 colecoes em um unico ponto, chamado na inicializacao via `app.ApplyMongoIndexesAsync()`. Repositorios nao criam indices em seus construtores.
-- **Endpoints de consulta publicos:** Os endpoints `/api/v1/estados`, `/api/v1/estados/:uf/municipios`, `/api/v1/municipios/:codigoIbge/aliquotas` e `/api/v1/municipios/:codigoIbge/aliquotas/:codigoServico` nao possuem `[Authorize]`. Apenas endpoints do crawler requerem JWT com role Admin.
+- **Endpoints de consulta publicos:** Os endpoints `/api/v1/estados`, `/api/v1/estados/:uf/municipios`, `/api/v1/municipios/:codigoIbge/aliquotas` e `/api/v1/municipios/:codigoIbge/aliquotas/:codigoServico` nao possuem `[Authorize]`. Os endpoints do crawler e certificado exigem JWT (`[Authorize]`), mas sem validacao de role Admin no backend; a restricao por perfil e aplicada pelo frontend.
 
 ### 8.2 Frontend Angular - Feature Modules
 
@@ -1191,6 +1198,34 @@ frontend/MapaTributario-ui/src/app/
 | **Decisao** | 1 PR de release + multiplos micro PRs por trilha (backend, frontend, worker, E2E) |
 | **Alternativas descartadas** | PRs grandes misturando camadas, feature branches longas |
 | **Consequencias** | (+) Revisao focada, integracao gradual. (-) Overhead de gerenciamento. Mitigacao: checkpoints de integracao definidos |
+
+---
+
+## 11. Documentacao OpenAPI
+
+### 11.1 Estado Atual
+
+O backend utiliza o suporte nativo do ASP.NET Core para OpenAPI via `builder.Services.AddOpenApi()` e `app.MapOpenApi()`.
+
+| Aspecto | Estado |
+|---------|--------|
+| **Endpoint** | `/openapi/v1.json` (apenas em ambiente Development) |
+| **Formato** | JSON bruto (OpenAPI 3.0) |
+| **Swagger UI** | Nao disponivel (nao ha `UseSwaggerUI` configurado) |
+| **Metadados da API** | Nao configurados (sem titulo, versao ou descricao customizados) |
+| **Esquema de seguranca JWT** | Nao declarado no spec OpenAPI |
+| **Anotacoes por controller** | `ConsultaController` possui `[ProducesResponseType]` e XML docs; demais controllers (`AuthController`, `CrawlerController`, `CertificadoController`, `HealthController`) nao possuem anotacoes Swagger |
+| **Geracao de XML docs** | Nao habilitada no `.csproj` |
+
+### 11.2 Contratos de Referencia
+
+Os contratos de API estao documentados manualmente em [`docs/api-contracts.md`](./api-contracts.md), que reflete fielmente a implementacao atual dos controllers. Para consultar endpoints, payloads, codigos de resposta e exemplos, utilizar esse documento como referencia primaria.
+
+### 11.3 Limitacoes Conhecidas
+
+- O endpoint `/openapi/v1.json` so esta disponivel em Development; em producao nao ha spec exposta
+- Sem Swagger UI, a exploracao interativa da API depende de ferramentas externas (Postman, curl, etc.)
+- A ausencia de `[ProducesResponseType]` na maioria dos controllers significa que o spec gerado pode nao refletir todos os codigos de resposta possíveis
 
 ---
 

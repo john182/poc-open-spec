@@ -1,0 +1,25 @@
+<app-page-header titulo="Consulta de Alíquotas" />
+
+<div class="consulta-mapa-container" data-cy="consulta-page">
+  @if (carregando()) {
+    <app-loading-spinner mensagem="Carregando estados..." />
+  } @else if (erro()) {
+    <app-error-state [mensagem]="erro()" (tentarNovamente)="tentarNovamente()" />
+  } @else {
+    <p class="instrucao">Selecione um estado no mapa para ver os municípios e alíquotas.</p>
+    <app-brazil-map
+      [ufSelecionada]="ufSelecionada()"
+      (selecionar)="onEstadoSelecionado($event)" />
+
+    <div class="estados-lista">
+      @for (estado of estados(); track estado.sigla) {
+        <a class="estado-link"
+           [attr.data-cy]="'estado-' + estado.sigla"
+           (click)="onEstadoSelecionado(estado.sigla)">
+          <span class="estado-sigla">{{ estado.sigla }}</span>
+          <span class="estado-nome">{{ estado.nome }}</span>
+        </a>
+      }
+    </div>
+  }
+</div>

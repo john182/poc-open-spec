@@ -20,7 +20,12 @@
       "Bash(gh label:*)",
       "Bash(gh issue:*)",
       "Bash(gh api:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(xargs ls:*)",
+      "Bash(find:*)",
+      "Bash(npx ng:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

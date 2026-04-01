@@ -191,10 +191,10 @@ A fila de processamento e persistida na colecao `filaProcessamento` do MongoDB. 
 
 | Campo | Tipo | Descricao |
 |-------|------|-----------|
-| codigoMunicipio | int | Codigo IBGE do municipio |
+| codigoMunicipio | string | Codigo IBGE do municipio |
 | codigoServico | string | Codigo numerico do servico (sem pontos) |
 | competencia | string | Competencia no formato YYYY-MM-01 |
-| status | string | Estado atual: `pendente`, `processando`, `concluido`, `erro` |
+| status | string | Estado atual: `Pendente`, `Processando`, `Concluido`, `Erro` |
 | tentativas | int | Numero de tentativas realizadas |
 | ultimoErro | string ou null | Mensagem do ultimo erro |
 | proximaTentativa | DateTime ou null | Quando o item pode ser retentado |
@@ -516,19 +516,14 @@ Cada ciclo de execucao do worker e registrado na colecao `execucoesCrawler` para
   "_id": "ObjectId",
   "inicio": "2026-03-15T02:00:00Z",
   "fim": "2026-03-15T03:45:22Z",
-  "status": "concluido",
-  "tipo": "agendado",
+  "status": "Concluido",
+  "tipo": "Agendado",
   "totalMunicipios": 27,
   "totalServicos": 598,
   "processados": 16146,
   "erros": 12,
   "detalhesErro": [
-    {
-      "codigoMunicipio": 1302603,
-      "codigoServico": "010101001",
-      "erro": "Timeout apos 30s",
-      "tentativas": 3
-    }
+    "Timeout municipio 1302603 servico 010101001 apos 30s (3 tentativas)"
   ]
 }
 ```
@@ -537,10 +532,10 @@ Cada ciclo de execucao do worker e registrado na colecao `execucoesCrawler` para
 
 | Status | Descricao |
 |--------|-----------|
-| `em_andamento` | Execucao em progresso |
-| `concluido` | Todos os itens processados (com ou sem erros nao retryable) |
-| `falha_parcial` | Execucao concluiu mas ha itens com erro apos max retries |
-| `falha` | Execucao interrompida por falha critica ou parada do worker |
+| `EmAndamento` | Execucao em progresso |
+| `Concluido` | Todos os itens processados (com ou sem erros nao retryable) |
+| `FalhaParcial` | Execucao concluiu mas ha itens com erro apos max retries |
+| `Falha` | Execucao interrompida por falha critica ou parada do worker |
 
 ### Metricas calculadas ao finalizar
 

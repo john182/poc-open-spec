@@ -16,10 +16,10 @@
 - [x] 2.1 Criar `docker-compose.yml` na raiz com serviços: frontend, backend, mongodb, com health checks e volumes
 - [x] 2.2 Criar `.env.example` com variáveis documentadas (MongoDB URI, JWT secret, PFX path, CRON schedule)
 - [x] 2.3 Criar `backend/MapaTributário/Dockerfile` multi-stage (.NET SDK build + runtime)
-- [ ] 2.4 Criar `frontend/MapaTributario-ui/Dockerfile` multi-stage (Node build + nginx serve)
-- [ ] 2.5 Criar `frontend/MapaTributario-ui/nginx.conf` com proxy reverso para `/api/*`
+- [x] 2.4 Criar `frontend/MapaTributario-ui/Dockerfile` multi-stage (Node build + nginx serve)
+- [x] 2.5 Criar `frontend/MapaTributario-ui/nginx.conf` com proxy reverso para `/api/*`
 - [x] 2.6 Atualizar `.gitignore` para incluir `.env`, `*.pfx`, volumes docker, e arquivos de build
-- [ ] 2.7 Validar `docker compose up` sobe todos os serviços corretamente
+- [x] 2.7 Validar `docker compose up` sobe todos os serviços corretamente
 
 ## 3. Backend — Estrutura Base e Autenticação
 
@@ -76,18 +76,18 @@
 
 ## 6. Frontend — Fundação Visual (Fase Obrigatória)
 
-- [ ] 6.1 Adaptar layout do Sakai: criar `layout/` com AppLayout, AppTopbar, AppSidebar, AppMenu, AppFooter
-- [ ] 6.2 Adaptar `LayoutService` com signals para estado do menu (remover configurador de preset)
-- [ ] 6.3 Configurar design tokens como CSS custom properties em `styles.scss` (cores, superfícies, tipografia, espaçamento)
-- [ ] 6.4 Configurar suporte a dark mode via classe `app-dark`
-- [ ] 6.5 Criar componente `LoadingSpinner` em `shared/components/`
-- [ ] 6.6 Criar componente `EmptyState` em `shared/components/`
-- [ ] 6.7 Criar componente `ErrorState` com botão de retry em `shared/components/`
-- [ ] 6.8 Criar componente `PageHeader` com título e breadcrumb em `shared/components/`
-- [ ] 6.9 Criar componente `FilterBar` genérico em `shared/components/`
-- [ ] 6.10 Criar form helpers: field wrapper com label/erro, validation message mapping
-- [ ] 6.11 Configurar rotas base: layout autenticado, auth (fora do layout), wildcard 404
-- [ ] 6.12 Escrever testes unitários para componentes base (LoadingSpinner, EmptyState, ErrorState, FilterBar)
+- [x] 6.1 Adaptar layout do Sakai: criar `layout/` com AppLayout, AppTopbar, AppSidebar, AppMenu, AppFooter
+- [x] 6.2 Adaptar `LayoutService` com signals para estado do menu (remover configurador de preset)
+- [x] 6.3 Configurar design tokens como CSS custom properties em `styles.scss` (cores, superfícies, tipografia, espaçamento)
+- [x] 6.4 Configurar suporte a dark mode via classe `app-dark`
+- [x] 6.5 Criar componente `LoadingSpinner` em `shared/components/`
+- [x] 6.6 Criar componente `EmptyState` em `shared/components/`
+- [x] 6.7 Criar componente `ErrorState` com botão de retry em `shared/components/`
+- [x] 6.8 Criar componente `PageHeader` com título e breadcrumb em `shared/components/`
+- [x] 6.9 Criar componente `FilterBar` genérico em `shared/components/`
+- [x] 6.10 Criar form helpers: field wrapper com label/erro, validation message mapping
+- [x] 6.11 Configurar rotas base: layout autenticado, auth (fora do layout), wildcard 404
+- [x] 6.12 Escrever testes unitários para componentes base (LoadingSpinner, EmptyState, ErrorState, FilterBar)
 
 ## 7. Frontend — Autenticação e Páginas Base
 
@@ -104,68 +104,68 @@
 
 ## 7b. Frontend — Controle de Acesso por Role (issue #109, #110)
 
-- [ ] 7b.1 Criar `RoleService` em `core/auth/` que decodifica o JWT e expõe o role do usuário logado
-- [ ] 7b.2 Criar `AdminGuard` que redireciona para access-denied se o usuário não tem role Admin
-- [ ] 7b.3 Adaptar `AppMenu` para exibir/ocultar itens com base no role (Admin vê Crawler, User não)
-- [ ] 7b.4 Tornar rotas de consulta públicas (acessíveis sem autenticação)
-- [ ] 7b.5 Escrever testes unitários para RoleService, AdminGuard e menu condicional
+- [x] 7b.1 Criar `RoleService` em `core/auth/` que decodifica o JWT e expõe o role do usuário logado
+- [x] 7b.2 Criar `AdminGuard` que redireciona para access-denied se o usuário não tem role Admin
+- [x] 7b.3 Adaptar `AppMenu` para exibir/ocultar itens com base no role (Admin vê Crawler, User não)
+- [x] 7b.4 Tornar rotas de consulta públicas (acessíveis sem autenticação)
+- [x] 7b.5 Escrever testes unitários para RoleService, AdminGuard e menu condicional
 
 ## 8. Frontend — Feature de Consulta (Pública)
 
-- [ ] 8.1 Criar SVG do mapa do Brasil com paths por estado e atributos `data-uf`
-- [ ] 8.2 Criar componente `BrazilMap` em `features/consulta/mapa/` com hover e click por estado
-- [ ] 8.3 Criar `ConsultaService` em `features/consulta/services/` para chamadas à API de estados, municípios e alíquotas
-- [ ] 8.4 Criar página de consulta (mapa) em `features/consulta/mapa/`
-- [ ] 8.5 Criar página de municípios por estado em `features/consulta/estado/` com busca por texto
-- [ ] 8.6 Criar página de listagem de alíquotas por município em `features/consulta/municipio/` com tabela paginada
-- [ ] 8.7 Implementar filtros na listagem: código de serviço, descrição, faixa de alíquota, competência
-- [ ] 8.8 Criar componente de detalhe de alíquota (dialog ou inline expand)
-- [ ] 8.9 Implementar breadcrumb na navegação da consulta (Consulta > Estado > Município)
-- [ ] 8.10 Implementar estados de loading, vazio, erro e retry em todas as páginas de consulta
-- [ ] 8.11 Escrever testes unitários para BrazilMap, ConsultaService e páginas de consulta
+- [x] 8.1 Criar SVG do mapa do Brasil com paths por estado e atributos `data-uf`
+- [x] 8.2 Criar componente `BrazilMap` em `features/consulta/mapa/` com hover e click por estado
+- [x] 8.3 Criar `ConsultaService` em `features/consulta/services/` para chamadas à API de estados, municípios e alíquotas
+- [x] 8.4 Criar página de consulta (mapa) em `features/consulta/mapa/`
+- [x] 8.5 Criar página de municípios por estado em `features/consulta/estado/` com busca por texto
+- [x] 8.6 Criar página de listagem de alíquotas por município em `features/consulta/municipio/` com tabela paginada
+- [x] 8.7 Implementar filtros na listagem: código de serviço, descrição, faixa de alíquota, competência
+- [x] 8.8 Criar componente de detalhe de alíquota (dialog ou inline expand)
+- [x] 8.9 Implementar breadcrumb na navegação da consulta (Consulta > Estado > Município)
+- [x] 8.10 Implementar estados de loading, vazio, erro e retry em todas as páginas de consulta
+- [x] 8.11 Escrever testes unitários para BrazilMap, ConsultaService e páginas de consulta
 
 ## 8b. Frontend — Gerenciamento do Crawler (Admin Only, issue #111)
 
-- [ ] 8b.1 Criar `CrawlerService` em `features/admin/crawler/services/` para chamadas à API do crawler
-- [ ] 8b.2 Criar página de status do crawler em `features/admin/crawler/status/` com última execução e métricas
-- [ ] 8b.3 Criar botão de execução manual com opção de forçar reprocessamento e filtro por UF
-- [ ] 8b.4 Criar página de gerenciamento de certificado em `features/admin/crawler/certificado/` com upload, status e remoção
-- [ ] 8b.5 Criar página de histórico de execuções em `features/admin/crawler/execucoes/` com listagem
-- [ ] 8b.6 Escrever testes unitários para CrawlerService e páginas admin do crawler
+- [x] 8b.1 Criar `CrawlerService` em `features/admin/crawler/services/` para chamadas à API do crawler
+- [x] 8b.2 Criar página de status do crawler em `features/admin/crawler/status/` com última execução e métricas
+- [x] 8b.3 Criar botão de execução manual com opção de forçar reprocessamento e filtro por UF
+- [x] 8b.4 Criar página de gerenciamento de certificado em `features/admin/crawler/certificado/` com upload, status e remoção
+- [x] 8b.5 Criar página de histórico de execuções em `features/admin/crawler/execucoes/` com listagem
+- [x] 8b.6 Escrever testes unitários para CrawlerService e páginas admin do crawler
 
 ## 9. Integração e Validação
 
-- [ ] 9.1 Validar integração frontend ↔ backend com docker compose up (auth flow completo)
-- [ ] 9.2 Validar integração backend ↔ MongoDB (seed + consulta)
-- [ ] 9.3 Validar worker executando ciclo completo com API NFS-e (se certificado disponível) ou mock
-- [ ] 9.4 Testar fluxo completo: login → mapa → estado → município → listagem → filtros
-- [ ] 9.5 Revisar contratos da API vs implementação real (Swagger vs código)
+- [x] 9.1 Validar integração frontend ↔ backend com docker compose up (auth flow completo)
+- [x] 9.2 Validar integração backend ↔ MongoDB (seed + consulta)
+- [x] 9.3 Validar worker executando ciclo completo com API NFS-e (se certificado disponível) ou mock
+- [x] 9.4 Testar fluxo completo: login → mapa → estado → município → listagem → filtros
+- [x] 9.5 Revisar contratos da API vs implementação real (Swagger vs código)
 
 ## 10. Projeto E2E com Cypress
 
-- [ ] 10.1 Inicializar projeto Cypress em `cypress/` (corrigir typo `ceypress` → `cypress`)
-- [ ] 10.2 Configurar `cypress.config.ts` com baseUrl apontando para frontend dockerizado
-- [ ] 10.3 Criar seed de dados de teste (2 usuários, 3 estados com municípios, 10 alíquotas)
-- [ ] 10.4 Criar custom commands para login e setup de teste
-- [ ] 10.5 Escrever teste E2E: fluxo de cadastro
-- [ ] 10.6 Escrever teste E2E: fluxo de login (sucesso e falha)
-- [ ] 10.7 Escrever teste E2E: acesso negado (rota protegida sem auth)
-- [ ] 10.8 Escrever teste E2E: página 404
-- [ ] 10.9 Escrever teste E2E: navegação pelo menu
-- [ ] 10.10 Escrever teste E2E: visualização do mapa e seleção de estado
-- [ ] 10.11 Escrever teste E2E: seleção de município
-- [ ] 10.12 Escrever teste E2E: listagem de serviços e alíquotas
-- [ ] 10.13 Escrever teste E2E: aplicação e limpeza de filtros
-- [ ] 10.14 Escrever teste E2E: cenários de erro (API indisponível, dados vazios)
-- [ ] 10.15 Adicionar atributos `data-cy` nos componentes do frontend para seletores estáveis
+- [x] 10.1 Inicializar projeto Cypress em `cypress/` (corrigir typo `ceypress` → `cypress`)
+- [x] 10.2 Configurar `cypress.config.ts` com baseUrl apontando para frontend dockerizado
+- [x] 10.3 Criar seed de dados de teste (2 usuários, 3 estados com municípios, 10 alíquotas)
+- [x] 10.4 Criar custom commands para login e setup de teste
+- [x] 10.5 Escrever teste E2E: fluxo de cadastro
+- [x] 10.6 Escrever teste E2E: fluxo de login (sucesso e falha)
+- [x] 10.7 Escrever teste E2E: acesso negado (rota protegida sem auth)
+- [x] 10.8 Escrever teste E2E: página 404
+- [x] 10.9 Escrever teste E2E: navegação pelo menu
+- [x] 10.10 Escrever teste E2E: visualização do mapa e seleção de estado
+- [x] 10.11 Escrever teste E2E: seleção de município
+- [x] 10.12 Escrever teste E2E: listagem de serviços e alíquotas
+- [x] 10.13 Escrever teste E2E: aplicação e limpeza de filtros
+- [x] 10.14 Escrever teste E2E: cenários de erro (API indisponível, dados vazios)
+- [x] 10.15 Adicionar atributos `data-cy` nos componentes do frontend para seletores estáveis
 
 ## 11. Documentação Final e Refinamento
 
-- [ ] 11.1 Atualizar README.md com instruções de setup, docker compose e desenvolvimento
-- [ ] 11.2 Revisar e atualizar `docs/api-contracts.md` com contratos finais implementados
-- [ ] 11.3 Revisar e atualizar diagramas Mermaid na documentação técnica
-- [ ] 11.4 Validar que todos os documentos de `docs/` estão consistentes com a implementação
-- [ ] 11.5 Revisar Swagger/OpenAPI gerado vs documentação de contratos
+- [x] 11.1 Atualizar README.md com instruções de setup, docker compose e desenvolvimento
+- [x] 11.2 Revisar e atualizar `docs/api-contracts.md` com contratos finais implementados
+- [x] 11.3 Revisar e atualizar diagramas Mermaid na documentação técnica
+- [x] 11.4 Validar que todos os documentos de `docs/` estão consistentes com a implementação
+- [x] 11.5 Revisar Swagger/OpenAPI gerado vs documentação de contratos
 
 ---
 

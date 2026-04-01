@@ -94,8 +94,7 @@ Cadastra um novo usuario no sistema.
   "detalhes": [
     "O campo email e obrigatorio",
     "A senha deve ter no minimo 8 caracteres"
-  ],
-  "codigo": "VALIDATION_ERROR"
+  ]
 }
 ```
 
@@ -103,8 +102,7 @@ Cadastra um novo usuario no sistema.
 
 ```json
 {
-  "erro": "Email ja cadastrado",
-  "codigo": "EMAIL_ALREADY_EXISTS"
+  "erro": "Email ja cadastrado"
 }
 ```
 
@@ -173,8 +171,7 @@ Autentica um usuario existente.
 
 ```json
 {
-  "erro": "Credenciais invalidas",
-  "codigo": "INVALID_CREDENTIALS"
+  "erro": "Credenciais invalidas"
 }
 ```
 
@@ -232,16 +229,18 @@ Renova o access token usando um refresh token valido.
 ```json
 {
   "accessToken": "string (JWT)",
+  "refreshToken": "string (novo refresh token)",
   "expiresIn": 3600
 }
 ```
+
+> **Nota:** O endpoint de refresh retorna um novo `refreshToken` alem do `accessToken`, implementando rotacao de refresh tokens. O frontend deve substituir ambos os tokens armazenados.
 
 **Response Body (401):**
 
 ```json
 {
-  "erro": "Refresh token invalido ou expirado",
-  "codigo": "INVALID_REFRESH_TOKEN"
+  "erro": "Token invalido"
 }
 ```
 
@@ -264,6 +263,7 @@ Content-Type: application/json
 
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIs...(novo token)",
+  "refreshToken": "dGhpcyBpcyBhIG5vdm8gcmVm...(novo refresh)",
   "expiresIn": 3600
 }
 ```
@@ -295,15 +295,13 @@ Retorna a lista de todos os 27 estados brasileiros.
 ```json
 [
   {
-    "codigo": 31,
-    "nome": "Minas Gerais",
     "sigla": "MG",
+    "nome": "Minas Gerais",
     "regiao": "Sudeste"
   },
   {
-    "codigo": 35,
-    "nome": "Sao Paulo",
     "sigla": "SP",
+    "nome": "Sao Paulo",
     "regiao": "Sudeste"
   }
 ]
@@ -311,10 +309,11 @@ Retorna a lista de todos os 27 estados brasileiros.
 
 | Campo | Tipo | Descricao |
 |-------|------|-----------|
-| codigo | integer | Codigo IBGE do estado |
-| nome | string | Nome completo do estado |
 | sigla | string | Sigla da UF (2 caracteres) |
+| nome | string | Nome completo do estado |
 | regiao | string | Regiao geografica (Norte, Nordeste, Centro-Oeste, Sudeste, Sul) |
+
+> **Nota:** O campo `codigo` (codigo IBGE do estado) nao e exposto no response. A sigla da UF e usada como identificador nos endpoints de consulta.
 
 **Exemplo de requisicao:**
 
@@ -329,9 +328,9 @@ HTTP/1.1 200 OK
 Content-Type: application/json
 
 [
-  { "codigo": 12, "nome": "Acre", "sigla": "AC", "regiao": "Norte" },
-  { "codigo": 27, "nome": "Alagoas", "sigla": "AL", "regiao": "Nordeste" },
-  { "codigo": 13, "nome": "Amazonas", "sigla": "AM", "regiao": "Norte" }
+  { "sigla": "AC", "nome": "Acre", "regiao": "Norte" },
+  { "sigla": "AL", "nome": "Alagoas", "regiao": "Nordeste" },
+  { "sigla": "AM", "nome": "Amazonas", "regiao": "Norte" }
 ]
 ```
 
@@ -375,7 +374,7 @@ Retorna a lista de municipios de um estado especifico.
 
 | Campo | Tipo | Descricao |
 |-------|------|-----------|
-| codigoIbge | integer | Codigo IBGE do municipio (7 digitos) |
+| codigoIbge | string | Codigo IBGE do municipio (7 digitos) |
 | nome | string | Nome do municipio |
 | siglaEstado | string | Sigla da UF a que pertence |
 
@@ -383,8 +382,7 @@ Retorna a lista de municipios de um estado especifico.
 
 ```json
 {
-  "erro": "Estado nao encontrado",
-  "codigo": "STATE_NOT_FOUND"
+  "erro": "Estado nao encontrado"
 }
 ```
 
@@ -406,7 +404,7 @@ Retorna lista paginada de aliquotas de servicos para um municipio.
 
 | Parametro | Tipo | Descricao |
 |-----------|------|-----------|
-| codigoIbge | integer | Codigo IBGE do municipio (7 digitos). Ex: `3106200` |
+| codigoIbge | string | Codigo IBGE do municipio (7 digitos). Ex: `3106200` |
 
 **Query Parameters:**
 
@@ -437,14 +435,14 @@ Retorna lista paginada de aliquotas de servicos para um municipio.
       "codigoServico": "010101001",
       "codigoServicoFormatado": "01.01.01.001",
       "descricaoServico": "Analise e desenvolvimento de sistemas",
-      "aliquota": 2.00,
+      "valorAliquota": 2.00,
       "competencia": "2026-03-01"
     },
     {
       "codigoServico": "010102001",
       "codigoServicoFormatado": "01.01.02.001",
       "descricaoServico": "Programacao",
-      "aliquota": 2.00,
+      "valorAliquota": 2.00,
       "competencia": "2026-03-01"
     }
   ],
@@ -461,7 +459,7 @@ Retorna lista paginada de aliquotas de servicos para um municipio.
 | items[].codigoServico | string | Codigo numerico puro (sem pontos) |
 | items[].codigoServicoFormatado | string | Codigo formatado com pontos (XX.XX.XX.XXX) |
 | items[].descricaoServico | string | Descricao do servico conforme LC 116/2003 |
-| items[].aliquota | decimal | Aliquota de ISS em percentual (ex: 2.00 = 2%) |
+| items[].valorAliquota | decimal | Aliquota de ISS em percentual (ex: 2.00 = 2%) |
 | items[].competencia | string | Competencia no formato YYYY-MM-01 |
 | pagina | integer | Pagina atual |
 | tamanhoPagina | integer | Tamanho da pagina |
@@ -472,12 +470,11 @@ Retorna lista paginada de aliquotas de servicos para um municipio.
 
 ```json
 {
-  "erro": "Parametros invalidos",
+  "erro": "Validacao falhou",
   "detalhes": [
     "tamanhoPagina deve ser entre 1 e 100",
     "aliquotaMin deve ser um numero positivo"
-  ],
-  "codigo": "VALIDATION_ERROR"
+  ]
 }
 ```
 
@@ -505,7 +502,7 @@ Retorna o detalhe de uma aliquota especifica para um servico em um municipio.
 
 | Parametro | Tipo | Descricao |
 |-----------|------|-----------|
-| codigoIbge | integer | Codigo IBGE do municipio (7 digitos) |
+| codigoIbge | string | Codigo IBGE do municipio (7 digitos) |
 | codigoServico | string | Codigo do servico. Aceita formato com pontos (`01.01.01.001`) ou numerico (`010101001`) |
 
 **Respostas:**
@@ -519,12 +516,12 @@ Retorna o detalhe de uma aliquota especifica para um servico em um municipio.
 
 ```json
 {
-  "codigoMunicipio": 3106200,
+  "codigoMunicipio": "3106200",
   "nomeMunicipio": "Belo Horizonte",
   "codigoServico": "010101001",
   "codigoServicoFormatado": "01.01.01.001",
   "descricaoServico": "Analise e desenvolvimento de sistemas",
-  "aliquota": 2.00,
+  "valorAliquota": 2.00,
   "competencia": "2026-03-01",
   "coletadoEm": "2026-03-15T02:34:12Z"
 }
@@ -532,12 +529,12 @@ Retorna o detalhe de uma aliquota especifica para um servico em um municipio.
 
 | Campo | Tipo | Descricao |
 |-------|------|-----------|
-| codigoMunicipio | integer | Codigo IBGE do municipio |
+| codigoMunicipio | string | Codigo IBGE do municipio |
 | nomeMunicipio | string | Nome do municipio |
 | codigoServico | string | Codigo numerico puro |
 | codigoServicoFormatado | string | Codigo formatado com pontos |
 | descricaoServico | string | Descricao do servico |
-| aliquota | decimal | Aliquota de ISS em percentual |
+| valorAliquota | decimal | Aliquota de ISS em percentual |
 | competencia | string | Competencia (YYYY-MM-01) |
 | coletadoEm | string (ISO 8601) | Data/hora em que o dado foi coletado da API NFS-e |
 
@@ -545,8 +542,7 @@ Retorna o detalhe de uma aliquota especifica para um servico em um municipio.
 
 ```json
 {
-  "erro": "Aliquota nao encontrada para este municipio e servico",
-  "codigo": "TAX_RATE_NOT_FOUND"
+  "erro": "Aliquota nao encontrada para este municipio e servico"
 }
 ```
 
@@ -560,7 +556,9 @@ GET /api/v1/municipios/3106200/aliquotas/01.01.01.001 HTTP/1.1
 
 ## Crawler Admin
 
-Endpoints para gerenciamento do worker/crawler. Requerem autenticacao JWT com **role Admin**. Usuarios com role 'User' recebem 403 Forbidden. O frontend NAO deve exibir estes endpoints para usuarios comuns — apenas administradores veem o menu do crawler.
+Endpoints para gerenciamento do worker/crawler. Requerem autenticacao JWT via `[Authorize]`. O frontend exibe estes endpoints apenas para administradores (usuarios cujo email consta na configuracao `Admin:Emails`).
+
+> **Nota:** Atualmente, os endpoints do crawler e certificado exigem apenas `[Authorize]` (qualquer usuario autenticado). A restricao por role Admin e aplicada no frontend. Em versao futura, a validacao de role Admin sera adicionada ao backend.
 
 ---
 
@@ -568,7 +566,7 @@ Endpoints para gerenciamento do worker/crawler. Requerem autenticacao JWT com **
 
 Dispara uma execucao manual do crawler.
 
-**Autenticacao:** JWT Bearer (obrigatorio, role Admin)
+**Autenticacao:** JWT Bearer (obrigatorio)
 
 **Request Body (opcional):**
 
@@ -590,23 +588,24 @@ Dispara uma execucao manual do crawler.
 |--------|-----------|
 | 202 Accepted | Execucao iniciada com sucesso |
 | 401 Unauthorized | Token ausente ou invalido |
-| 403 Forbidden | Usuario nao tem role Admin |
 | 409 Conflict | Ja existe uma execucao em andamento |
 
 **Response Body (202):**
 
 ```json
 {
-  "execucaoId": "660f1a2b3c4d5e6f7a8b9c0d"
+  "execucaoId": null,
+  "mensagem": "Execucao iniciada com sucesso"
 }
 ```
+
+> **Nota:** O campo `execucaoId` e sempre `null` na resposta atual porque a execucao e disparada de forma assincrona (fire-and-forget). O ID da execucao sera criado pelo worker ao iniciar o processamento. Para consultar o status da execucao, use `GET /api/v1/crawler/status`.
 
 **Response Body (409):**
 
 ```json
 {
-  "erro": "Ja existe uma execucao em andamento",
-  "codigo": "EXECUTION_IN_PROGRESS"
+  "erro": "Uma execucao ja esta em andamento"
 }
 ```
 
@@ -629,7 +628,8 @@ HTTP/1.1 202 Accepted
 Content-Type: application/json
 
 {
-  "execucaoId": "660f1a2b3c4d5e6f7a8b9c0d"
+  "execucaoId": null,
+  "mensagem": "Execucao iniciada com sucesso"
 }
 ```
 
@@ -639,7 +639,7 @@ Content-Type: application/json
 
 Retorna o status da execucao mais recente do crawler.
 
-**Autenticacao:** JWT Bearer (obrigatorio, role Admin)
+**Autenticacao:** JWT Bearer (obrigatorio)
 
 **Parametros:** Nenhum
 
@@ -648,9 +648,8 @@ Retorna o status da execucao mais recente do crawler.
 | Status | Descricao |
 |--------|-----------|
 | 200 OK | Status da ultima execucao |
-| 204 No Content | Nenhuma execucao registrada |
+| 404 Not Found | Nenhuma execucao registrada |
 | 401 Unauthorized | Token ausente ou invalido |
-| 403 Forbidden | Usuario nao tem role Admin |
 
 **Response Body (200):**
 
@@ -659,19 +658,15 @@ Retorna o status da execucao mais recente do crawler.
   "id": "660f1a2b3c4d5e6f7a8b9c0d",
   "inicio": "2026-03-15T02:00:00Z",
   "fim": "2026-03-15T03:45:22Z",
-  "status": "concluido",
-  "tipo": "agendado",
+  "status": "Concluido",
+  "tipo": "Agendado",
   "totalMunicipios": 27,
   "totalServicos": 598,
   "processados": 16146,
   "erros": 12,
   "detalhesErro": [
-    {
-      "codigoMunicipio": 1302603,
-      "codigoServico": "010101001",
-      "erro": "Timeout apos 30s",
-      "tentativas": 3
-    }
+    "Timeout apos 30s para municipio 1302603 servico 010101001",
+    "Erro de conexao para municipio 3550308 servico 010102001"
   ]
 }
 ```
@@ -681,13 +676,23 @@ Retorna o status da execucao mais recente do crawler.
 | id | string | Identificador unico da execucao (ObjectId) |
 | inicio | string (ISO 8601) | Data/hora de inicio |
 | fim | string (ISO 8601) ou null | Data/hora de termino (null se em andamento) |
-| status | string | `em_andamento`, `concluido`, `falha_parcial`, `falha` |
-| tipo | string | `agendado` ou `manual` |
+| status | string | `EmAndamento`, `Concluido`, `FalhaParcial`, `Falha` (valor do enum `StatusExecucao.ToString()`) |
+| tipo | string | `Agendado` ou `Manual` (valor do enum `TipoExecucao.ToString()`) |
 | totalMunicipios | integer | Total de municipios processados |
 | totalServicos | integer | Total de codigos de servico distintos processados |
 | processados | integer | Total de itens processados com sucesso |
 | erros | integer | Total de itens com erro |
-| detalhesErro | array | Lista de erros (limitado aos ultimos 100) |
+| detalhesErro | string[] | Lista de mensagens de erro em texto livre |
+
+> **Nota:** O campo `detalhesErro` e uma lista de strings (nao objetos estruturados). Quando nao ha execucoes registradas, o endpoint retorna 404 com `{ "erro": "Nenhuma execucao encontrada" }`.
+
+**Response Body (404):**
+
+```json
+{
+  "erro": "Nenhuma execucao encontrada"
+}
+```
 
 **Exemplo de requisicao:**
 
@@ -702,7 +707,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 Retorna o historico das ultimas 20 execucoes do crawler.
 
-**Autenticacao:** JWT Bearer (obrigatorio, role Admin)
+**Autenticacao:** JWT Bearer (obrigatorio)
 
 **Parametros:** Nenhum
 
@@ -712,7 +717,6 @@ Retorna o historico das ultimas 20 execucoes do crawler.
 |--------|-----------|
 | 200 OK | Lista de execucoes |
 | 401 Unauthorized | Token ausente ou invalido |
-| 403 Forbidden | Usuario nao tem role Admin |
 
 **Response Body (200):**
 
@@ -722,8 +726,8 @@ Retorna o historico das ultimas 20 execucoes do crawler.
     "id": "660f1a2b3c4d5e6f7a8b9c0d",
     "inicio": "2026-03-15T02:00:00Z",
     "fim": "2026-03-15T03:45:22Z",
-    "status": "concluido",
-    "tipo": "agendado",
+    "status": "Concluido",
+    "tipo": "Agendado",
     "totalMunicipios": 27,
     "totalServicos": 598,
     "processados": 16146,
@@ -734,8 +738,8 @@ Retorna o historico das ultimas 20 execucoes do crawler.
     "id": "660e0b1a2c3d4e5f6a7b8c9d",
     "inicio": "2026-03-14T02:00:00Z",
     "fim": "2026-03-14T03:30:10Z",
-    "status": "falha_parcial",
-    "tipo": "agendado",
+    "status": "FalhaParcial",
+    "tipo": "Agendado",
     "totalMunicipios": 27,
     "totalServicos": 598,
     "processados": 15980,
@@ -766,7 +770,7 @@ Endpoints para gerenciamento do certificado digital PFX usado pelo worker para a
 
 Faz upload de um certificado PFX com senha. Substitui o certificado anterior, se existir.
 
-**Autenticacao:** JWT Bearer (obrigatorio, role Admin)
+**Autenticacao:** JWT Bearer (obrigatorio)
 
 **Content-Type:** `multipart/form-data`
 
@@ -774,8 +778,8 @@ Faz upload de um certificado PFX com senha. Substitui o certificado anterior, se
 
 | Campo | Tipo | Descricao |
 |-------|------|-----------|
-| file | file (binary) | Arquivo PFX do certificado digital |
-| password | string | Senha do certificado PFX |
+| arquivo | file (binary) | Arquivo PFX do certificado digital (max 10 MB) |
+| senha | string | Senha do certificado PFX |
 
 **Respostas:**
 
@@ -784,14 +788,12 @@ Faz upload de um certificado PFX com senha. Substitui o certificado anterior, se
 | 200 OK | Certificado carregado com sucesso |
 | 400 Bad Request | Arquivo PFX invalido ou senha incorreta |
 | 401 Unauthorized | Token ausente ou invalido |
-| 403 Forbidden | Usuario nao tem role Admin |
 
 **Response Body (200):**
 
 ```json
 {
-  "hasCertificate": true,
-  "uploadedAt": "2024-01-01T00:00:00Z"
+  "mensagem": "Certificado armazenado com sucesso"
 }
 ```
 
@@ -799,8 +801,7 @@ Faz upload de um certificado PFX com senha. Substitui o certificado anterior, se
 
 ```json
 {
-  "erro": "Arquivo PFX invalido ou senha incorreta",
-  "codigo": "INVALID_CERTIFICATE"
+  "erro": "Arquivo PFX invalido ou senha incorreta"
 }
 ```
 
@@ -812,12 +813,12 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 Content-Type: multipart/form-data; boundary=----FormBoundary
 
 ------FormBoundary
-Content-Disposition: form-data; name="file"; filename="nfse.pfx"
+Content-Disposition: form-data; name="arquivo"; filename="nfse.pfx"
 Content-Type: application/x-pkcs12
 
 (binary data)
 ------FormBoundary
-Content-Disposition: form-data; name="password"
+Content-Disposition: form-data; name="senha"
 
 minhaSenha123
 ------FormBoundary--
@@ -829,7 +830,7 @@ minhaSenha123
 
 Retorna o status do certificado PFX atualmente carregado.
 
-**Autenticacao:** JWT Bearer (obrigatorio, role Admin)
+**Autenticacao:** JWT Bearer (obrigatorio)
 
 **Parametros:** Nenhum
 
@@ -839,7 +840,6 @@ Retorna o status do certificado PFX atualmente carregado.
 |--------|-----------|
 | 200 OK | Status do certificado |
 | 401 Unauthorized | Token ausente ou invalido |
-| 403 Forbidden | Usuario nao tem role Admin |
 
 **Response Body (200 - com certificado):**
 
@@ -872,7 +872,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 Remove o certificado PFX atualmente carregado.
 
-**Autenticacao:** JWT Bearer (obrigatorio, role Admin)
+**Autenticacao:** JWT Bearer (obrigatorio)
 
 **Parametros:** Nenhum
 
@@ -880,9 +880,16 @@ Remove o certificado PFX atualmente carregado.
 
 | Status | Descricao |
 |--------|-----------|
-| 204 No Content | Certificado removido com sucesso |
+| 200 OK | Certificado removido com sucesso |
 | 401 Unauthorized | Token ausente ou invalido |
-| 403 Forbidden | Usuario nao tem role Admin |
+
+**Response Body (200):**
+
+```json
+{
+  "mensagem": "Certificado removido com sucesso"
+}
+```
 
 **Exemplo de requisicao:**
 
@@ -959,8 +966,7 @@ Todas as respostas de erro seguem o formato abaixo:
 ```json
 {
   "erro": "string (descricao legivel do erro)",
-  "detalhes": ["string (opcional, lista de erros especificos)"],
-  "codigo": "string (opcional, codigo de erro programatico)"
+  "detalhes": ["string (opcional, lista de erros especificos)"]
 }
 ```
 
@@ -968,22 +974,23 @@ Todas as respostas de erro seguem o formato abaixo:
 |-------|------|-------------|-----------|
 | erro | string | Sim | Mensagem de erro legivel em portugues |
 | detalhes | string[] | Nao | Lista de detalhes adicionais (ex: erros de validacao por campo) |
-| codigo | string | Nao | Codigo de erro para tratamento programatico no frontend |
+
+> **Nota:** Os controllers nao incluem um campo `codigo` nas respostas de erro. Apenas o middleware global de erro (`ErrorHandlingMiddleware`) retorna um campo `codigo` com o valor `"ERRO_INTERNO"` para erros 500 nao tratados.
+
+### Formato do erro global (500)
+
+```json
+{
+  "erro": "Erro interno do servidor",
+  "codigo": "ERRO_INTERNO"
+}
+```
 
 ### Codigos de erro conhecidos
 
 | Codigo | HTTP Status | Descricao |
 |--------|-------------|-----------|
-| `VALIDATION_ERROR` | 400 | Erro de validacao nos campos da requisicao |
-| `INVALID_CREDENTIALS` | 401 | Email ou senha incorretos |
-| `INVALID_REFRESH_TOKEN` | 401 | Refresh token invalido ou expirado |
-| `UNAUTHORIZED` | 401 | Token JWT ausente ou invalido |
-| `EMAIL_ALREADY_EXISTS` | 409 | Email ja cadastrado |
-| `STATE_NOT_FOUND` | 404 | UF nao encontrada |
-| `MUNICIPALITY_NOT_FOUND` | 404 | Municipio nao encontrado |
-| `TAX_RATE_NOT_FOUND` | 404 | Aliquota nao encontrada |
-| `EXECUTION_IN_PROGRESS` | 409 | Ja existe execucao do crawler em andamento |
-| `INTERNAL_ERROR` | 500 | Erro interno nao esperado |
+| `ERRO_INTERNO` | 500 | Erro interno nao esperado (unico codigo retornado pelo sistema) |
 
 ---
 

@@ -1,0 +1,82 @@
+<app-page-header titulo="Certificado Digital" [migalhas]="migalhas" />
+
+<div class="crawler-certificado-container" data-cy="crawler-certificado">
+  @if (carregando()) {
+    <app-loading-spinner mensagem="Carregando status do certificado..." />
+  } @else if (erro()) {
+    <app-error-state [mensagem]="erro()" (tentarNovamente)="tentarNovamente()" />
+  } @else {
+    <!-- Status atual -->
+    <div class="secao" data-cy="certificado-status">
+      <h3>Status do certificado</h3>
+      <div class="status-card">
+        @if (statusCertificado()?.hasCertificate) {
+          <p-tag value="Ativo" severity="success" />
+          <span class="status-detalhe">
+            Enviado em: {{ statusCertificado()!.uploadedAt | date:'dd/MM/yyyy HH:mm' }}
+          </span>
+          <p-button
+            label="Remover certificado"
+            icon="pi pi-trash"
+            severity="danger"
+            [outlined]="true"
+            data-cy="btn-remover-certificado"
+            [loading]="removendo()"
+            (onClick)="removerCertificado()" />
+        } @else {
+          <p-tag value="Não configurado" severity="warn" />
+          <span class="status-detalhe">Nenhum certificado PFX carregado.</span>
+        }
+      </div>
+    </div>
+
+    <!-- Upload -->
+    <div class="secao" data-cy="certificado-upload">
+      <h3>Enviar certificado PFX</h3>
+      <div class="upload-form">
+        <p-fileUpload
+          mode="basic"
+          name="arquivo"
+          accept=".pfx"
+          [maxFileSize]="10485760"
+          chooseLabel="Selecionar arquivo PFX"
+          data-cy="input-arquivo-pfx"
+          [auto]="false"
+          (onSelect)="onArquivoSelecionado($event)" />
+
+        @if (arquivoSelecionado()) {
+          <span class="arquivo-selecionado">
+            <i class="pi pi-file"></i> {{ arquivoSelecionado()!.name }}
+          </span>
+        }
+
+        <div class="campo-senha">
+          <label for="senhaCertificado">Senha do certificado</label>
+          <input pInputText id="senhaCertificado" type="password"
+                 data-cy="input-senha-certificado"
+                 placeholder="Senha do PFX"
+                 [ngModel]="senhaCertificado()" (ngModelChange)="senhaCertificado.set($event)" />
+        </div>
+
+        <p-button
+          label="Enviar certificado"
+          icon="pi pi-upload"
+          data-cy="btn-enviar-certificado"
+          [loading]="enviando()"
+          [disabled]="!arquivoSelecionado() || !senhaCertificado()"
+          (onClick)="enviarCertificado()" />
+      </div>
+
+      @if (mensagemUpload()) {
+        <div class="mensagem-sucesso" data-cy="msg-upload-sucesso">
+          <i class="pi pi-check-circle"></i> {{ mensagemUpload() }}
+        </div>
+      }
+      @if (erroUpload()) {
+        <div class="mensagem-erro" data-cy="msg-upload-erro">
+          <i class="pi pi-times-circle"></i> {{ erroUpload() }}
+        </div>
+      }
+    </div>
+  }
+</div>

@@ -1,0 +1,49 @@
+<app-page-header titulo="Histórico de Execuções" [migalhas]="migalhas" />
+
+<div class="crawler-execucoes-container" data-cy="crawler-execucoes">
+  @if (carregando()) {
+    <app-loading-spinner mensagem="Carregando execuções..." />
+  } @else if (erro()) {
+    <app-error-state [mensagem]="erro()" (tentarNovamente)="tentarNovamente()" />
+  } @else if (execucoes().length === 0) {
+    <app-empty-state
+      titulo="Nenhuma execução encontrada"
+      mensagem="O crawler ainda não foi executado." />
+  } @else {
+    <p-table
+      [value]="execucoes()"
+      [paginator]="true"
+      [rows]="10"
+      [rowsPerPageOptions]="[10, 20]"
+      data-cy="tabela-execucoes"
+      styleClass="p-datatable-striped">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Status</th>
+          <th>Tipo</th>
+          <th>Início</th>
+          <th>Fim</th>
+          <th>Municípios</th>
+          <th>Serviços</th>
+          <th>Processados</th>
+          <th>Erros</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-execucao>
+        <tr [attr.data-cy]="'execucao-' + execucao.id">
+          <td>
+            <p-tag [value]="execucao.status"
+                   [severity]="obterSeveridadeStatus(execucao.status)" />
+          </td>
+          <td>{{ execucao.tipo }}</td>
+          <td>{{ execucao.inicio | date:'dd/MM/yyyy HH:mm' }}</td>
+          <td>{{ execucao.fim ? (execucao.fim | date:'dd/MM/yyyy HH:mm') : '—' }}</td>
+          <td>{{ execucao.totalMunicipios }}</td>
+          <td>{{ execucao.totalServicos }}</td>
+          <td>{{ execucao.processados }}</td>
+          <td>{{ execucao.erros }}</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  }
+</div>

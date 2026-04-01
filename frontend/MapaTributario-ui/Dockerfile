@@ -6,6 +6,7 @@ COPY . .
 RUN npx ng build --configuration=production
 
 FROM nginx:alpine
-COPY --from=build /app/dist/mapa-tributario-ui/browser /usr/share/nginx/html
+COPY --from=build /app/dist/MapaTributario-ui/browser /usr/share/nginx/html
+RUN if [ -f /usr/share/nginx/html/index.csr.html ]; then mv /usr/share/nginx/html/index.csr.html /usr/share/nginx/html/index.html; fi
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 4200

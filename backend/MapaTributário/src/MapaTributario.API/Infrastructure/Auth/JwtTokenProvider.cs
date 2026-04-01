@@ -15,8 +15,10 @@ public class JwtTokenProvider : ITokenProvider
     public JwtTokenProvider(IConfiguration configuration)
     {
         _configuration = configuration;
-        _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-            _configuration["JWT:Secret"] ?? "default-dev-secret-change-in-production-32chars"));
+        var secret = _configuration["JWT:Secret"]
+            ?? throw new InvalidOperationException(
+                "JWT secret not configured. Set 'JWT:Secret' in appsettings or 'JWT_SECRET' environment variable.");
+        _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
     }
 
     public int AccessTokenExpirySeconds =>

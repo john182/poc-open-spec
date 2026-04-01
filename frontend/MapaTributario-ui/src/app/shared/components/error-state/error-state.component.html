@@ -1,0 +1,6 @@
+<div class="error-container" data-cy="error-state">
+  <i class="pi pi-exclamation-triangle error-icon"></i>
+  <h3>{{ titulo() }}</h3>
+  <p>{{ mensagem() }}</p>
+  <p-button [label]="tentarNovamenteLabel()" (onClick)="tentarNovamente.emit()" icon="pi pi-refresh" />
+</div>

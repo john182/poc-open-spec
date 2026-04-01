@@ -1,0 +1,36 @@
+Summary
+  Generated on: 31/03/2026 - 20:13:50
+  Coverage date: 31/03/2026 - 20:12:48 - 31/03/2026 - 20:13:22
+  Parser: MultiReport (2x Cobertura)
+  Assemblies: 1
+  Classes: 14
+  Files: 14
+  Line coverage: 97.4%
+  Covered lines: 151
+  Uncovered lines: 4
+  Coverable lines: 155
+  Total lines: 510
+  Branch coverage: 57.1% (8 of 14)
+  Covered branches: 8
+  Total branches: 14
+  Method coverage: 95.6% (22 of 23)
+  Full method coverage: 91.3% (21 of 23)
+  Covered methods: 22
+  Fully covered methods: 21
+  Total methods: 23
+
+MapaTributario.API                                                   97.4%
+  MapaTributario.API.Application.Auth.LoginUser                       100%
+  MapaTributario.API.Application.Auth.RefreshToken                    100%
+  MapaTributario.API.Application.Auth.RegisterUser                    100%
+  MapaTributario.API.Controllers.AuthController                       100%
+  MapaTributario.API.Controllers.HealthController                     100%
+  MapaTributario.API.Domain.Entities.User                            92.3%
+  MapaTributario.API.Infrastructure.Auth.BcryptPasswordHasher         100%
+  MapaTributario.API.Infrastructure.Auth.JwtTokenProvider            93.7%
+  MapaTributario.API.Infrastructure.Repository.Mongo.MongoMappings    100%
+  MapaTributario.API.Infrastructure.Repository.UserRepository         100%
+  MapaTributario.API.Middleware.ErrorHandlingMiddleware               100%
+  MapaTributario.API.Validators.LoginRequestValidator                 100%
+  MapaTributario.API.Validators.RefreshRequestValidator               100%
+  MapaTributario.API.Validators.RegisterRequestValidator              100%

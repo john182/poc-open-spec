@@ -7,25 +7,61 @@
           <span class="text-muted-color font-medium">Preencha os dados para se cadastrar</span>
         </div>
 
-        <div>
+        @if (errorMessage()) {
+          <p-message severity="error" [text]="errorMessage()" styleClass="w-full mb-4" />
+        }
+
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
           <label for="nome" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Nome</label>
-          <input pInputText id="nome" type="text" placeholder="Seu nome" class="w-full md:w-120 mb-8" [(ngModel)]="nome" />
+          <input pInputText id="nome" type="text" placeholder="Seu nome" class="w-full md:w-120 mb-1" formControlName="nome" data-cy="signup-nome" />
+          @if (form.controls.nome.touched && form.controls.nome.errors) {
+            <small class="text-red-500 block mb-4">
+              @if (form.controls.nome.errors['required']) { Nome é obrigatório. }
+              @else if (form.controls.nome.errors['minlength']) { Nome deve ter pelo menos 2 caracteres. }
+            </small>
+          } @else {
+            <div class="mb-8"></div>
+          }
 
           <label for="email" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Email</label>
-          <input pInputText id="email" type="text" placeholder="Seu email" class="w-full md:w-120 mb-8" [(ngModel)]="email" />
+          <input pInputText id="email" type="email" placeholder="Seu email" class="w-full md:w-120 mb-1" formControlName="email" data-cy="signup-email" />
+          @if (form.controls.email.touched && form.controls.email.errors) {
+            <small class="text-red-500 block mb-4">
+              @if (form.controls.email.errors['required']) { Email é obrigatório. }
+              @else if (form.controls.email.errors['email']) { Email inválido. }
+            </small>
+          } @else {
+            <div class="mb-8"></div>
+          }
 
           <label for="senha" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Senha</label>
-          <p-password id="senha" [(ngModel)]="senha" placeholder="Sua senha" [toggleMask]="true" styleClass="mb-4" [fluid]="true" [feedback]="false" />
+          <p-password id="senha" formControlName="senha" placeholder="Sua senha" [toggleMask]="true" styleClass="mb-1" [fluid]="true" [feedback]="false" data-cy="signup-senha" />
+          @if (form.controls.senha.touched && form.controls.senha.errors) {
+            <small class="text-red-500 block mb-4">
+              @if (form.controls.senha.errors['required']) { Senha é obrigatória. }
+              @else if (form.controls.senha.errors['minlength']) { Senha deve ter pelo menos 8 caracteres. }
+            </small>
+          } @else {
+            <div class="mb-4"></div>
+          }
 
           <label for="confirmar" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Confirmar Senha</label>
-          <p-password id="confirmar" [(ngModel)]="confirmarSenha" placeholder="Confirme a senha" [toggleMask]="true" styleClass="mb-8" [fluid]="true" [feedback]="false" />
+          <p-password id="confirmar" formControlName="confirmarSenha" placeholder="Confirme a senha" [toggleMask]="true" styleClass="mb-1" [fluid]="true" [feedback]="false" data-cy="signup-confirmar" />
+          @if (form.controls.confirmarSenha.touched && (form.controls.confirmarSenha.errors || form.errors?.['passwordMismatch'])) {
+            <small class="text-red-500 block mb-4">
+              @if (form.controls.confirmarSenha.errors?.['required']) { Confirmação é obrigatória. }
+              @else if (form.errors?.['passwordMismatch']) { As senhas não coincidem. }
+            </small>
+          } @else {
+            <div class="mb-8"></div>
+          }
 
-          <p-button label="Criar Conta" styleClass="w-full" routerLink="/" />
+          <p-button type="submit" label="Criar Conta" styleClass="w-full" [loading]="loading()" [disabled]="loading()" data-cy="signup-submit" />
           <div class="text-center mt-4">
             <span class="text-muted-color">Já tem conta? </span>
             <a routerLink="/auth/login" class="text-primary font-medium cursor-pointer">Entrar</a>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   </div>

@@ -10,8 +10,17 @@
 
   <div class="layout-topbar-actions">
     <div class="layout-config-menu">
+      @if (authService.userName()) {
+        <div class="layout-topbar-action flex items-center gap-2" data-cy="user-name">
+          <i class="pi pi-user"></i>
+          <span class="text-surface-700 dark:text-surface-200 font-medium">{{ authService.userName() }}</span>
+        </div>
+      }
       <button type="button" class="layout-topbar-action" (click)="toggleDarkMode()" [attr.aria-label]="layoutService.isDarkTheme() ? 'Ativar tema claro' : 'Ativar tema escuro'" [attr.aria-pressed]="layoutService.isDarkTheme()">
         <i [ngClass]="{ 'pi': true, 'pi-moon': layoutService.isDarkTheme(), 'pi-sun': !layoutService.isDarkTheme() }"></i>
+      </button>
+      <button type="button" class="layout-topbar-action" (click)="logout()" aria-label="Sair" data-cy="logout-button">
+        <i class="pi pi-sign-out"></i>
       </button>
     </div>
   </div>

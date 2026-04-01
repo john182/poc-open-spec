@@ -34,11 +34,25 @@ public class ServicoSeedService
     {
         var servicos = new List<Servico>();
 
-        // LC 116/2003 - 40 itens principais com subitens comuns
-        // Formato código tributação nacional: ii.ss.dd (item.subitem.desdobramento)
-
-        AddServicos(servicos, "01", "Serviços de informática e congêneres", new[]
+        foreach (var (item, subitens) in Lc116Data)
         {
+            foreach (var (subitem, descricao) in subitens)
+            {
+                var codigo = $"{item}.{subitem}.00";
+                servicos.Add(Servico.Create(codigo, descricao, item, subitem, "00"));
+            }
+        }
+
+        return servicos;
+    }
+
+    /// <summary>
+    /// Tabela completa da LC 116/2003 — 40 itens com subitens.
+    /// Formato: (item, [(subitem, descricao), ...])
+    /// </summary>
+    private static readonly (string Item, (string Sub, string Desc)[] Subitens)[] Lc116Data =
+    [
+        ("01", [
             ("01", "Análise e desenvolvimento de sistemas"),
             ("02", "Programação"),
             ("03", "Processamento, armazenamento ou hospedagem de dados"),
@@ -47,24 +61,16 @@ public class ServicoSeedService
             ("06", "Assessoria e consultoria em informática"),
             ("07", "Suporte técnico em informática"),
             ("08", "Planejamento, confecção, manutenção de páginas eletrônicas"),
-            ("09", "Disponibilização de conteúdos de áudio, vídeo, imagem e texto")
-        });
-
-        AddServicos(servicos, "02", "Serviços de pesquisas e desenvolvimento de qualquer natureza", new[]
-        {
-            ("01", "Serviços de pesquisas e desenvolvimento de qualquer natureza")
-        });
-
-        AddServicos(servicos, "03", "Serviços prestados mediante locação, cessão de direito de uso e congêneres", new[]
-        {
+            ("09", "Disponibilização de conteúdos de áudio, vídeo, imagem e texto"),
+        ]),
+        ("02", [("01", "Serviços de pesquisas e desenvolvimento de qualquer natureza")]),
+        ("03", [
             ("02", "Cessão de direito de uso de marcas e sinais de propaganda"),
             ("03", "Exploração de salões de festas e outros espaços"),
             ("04", "Locação, sublocação, arrendamento de bens"),
-            ("05", "Cessão de andaimes, palcos e estruturas de uso temporário")
-        });
-
-        AddServicos(servicos, "04", "Serviços de saúde, assistência médica e congêneres", new[]
-        {
+            ("05", "Cessão de andaimes, palcos e estruturas de uso temporário"),
+        ]),
+        ("04", [
             ("01", "Medicina e biomedicina"),
             ("02", "Análises clínicas, patologia e eletricidade médica"),
             ("03", "Hospitais, clínicas, laboratórios, sanatórios e congêneres"),
@@ -87,11 +93,9 @@ public class ServicoSeedService
             ("20", "Planos de medicina de grupo ou individual"),
             ("21", "Outros planos de saúde"),
             ("22", "Outros serviços de saúde"),
-            ("23", "Serviços de saúde prestados em regime de home care")
-        });
-
-        AddServicos(servicos, "05", "Serviços de medicina e assistência veterinária e congêneres", new[]
-        {
+            ("23", "Serviços de saúde prestados em regime de home care"),
+        ]),
+        ("05", [
             ("01", "Medicina veterinária e zootecnia"),
             ("02", "Hospitais, clínicas e ambulatórios veterinários"),
             ("03", "Laboratórios de análise na área veterinária"),
@@ -100,21 +104,17 @@ public class ServicoSeedService
             ("06", "Tosa, banho e embelezamento de animais"),
             ("07", "Guarda, tratamento, amestramento e adestramento"),
             ("08", "Ensino e treinamento de animais"),
-            ("09", "Planos de atendimento e assistência veterinária")
-        });
-
-        AddServicos(servicos, "06", "Serviços de cuidados pessoais, estética, atividades físicas e congêneres", new[]
-        {
+            ("09", "Planos de atendimento e assistência veterinária"),
+        ]),
+        ("06", [
             ("01", "Barbearia, cabeleireiros e congêneres"),
             ("02", "Esteticistas, tratamento de pele e congêneres"),
             ("03", "Banhos, duchas, sauna e massagens"),
             ("04", "Ginástica, dança, esportes e congêneres"),
             ("05", "Centros de emagrecimento, spa e congêneres"),
-            ("06", "Aplicação de tatuagens, piercings e congêneres")
-        });
-
-        AddServicos(servicos, "07", "Serviços relativos a engenharia, arquitetura, geologia, urbanismo, construção civil e congêneres", new[]
-        {
+            ("06", "Aplicação de tatuagens, piercings e congêneres"),
+        ]),
+        ("07", [
             ("01", "Engenharia, agronomia, agrimensura e congêneres"),
             ("02", "Execução de obras de construção civil e hidráulica"),
             ("03", "Elaboração de planos diretores e projetos"),
@@ -136,24 +136,18 @@ public class ServicoSeedService
             ("19", "Pesquisa, perfuração, cimentação e perfilagem de poços"),
             ("20", "Nucleação e bombardeamento de nuvens"),
             ("21", "Serviços de topografia"),
-            ("22", "Serviços de geologia e geotécnica")
-        });
-
-        AddServicos(servicos, "08", "Serviços de educação, ensino, orientação pedagógica e educacional, instrução, treinamento e avaliação pessoal", new[]
-        {
+            ("22", "Serviços de geologia e geotécnica"),
+        ]),
+        ("08", [
             ("01", "Ensino regular pré-escolar, fundamental, médio e superior"),
-            ("02", "Instrução, treinamento, orientação pedagógica, avaliação")
-        });
-
-        AddServicos(servicos, "09", "Serviços relativos a hospedagem, turismo, viagens e congêneres", new[]
-        {
+            ("02", "Instrução, treinamento, orientação pedagógica, avaliação"),
+        ]),
+        ("09", [
             ("01", "Hospedagem em hotéis, apart-hotéis e congêneres"),
             ("02", "Agenciamento, organização e promoção de turismo"),
-            ("03", "Guias de turismo")
-        });
-
-        AddServicos(servicos, "10", "Serviços de intermediação e congêneres", new[]
-        {
+            ("03", "Guias de turismo"),
+        ]),
+        ("10", [
             ("01", "Agenciamento, corretagem de câmbio, seguros e congêneres"),
             ("02", "Agenciamento, corretagem de títulos em geral"),
             ("03", "Agenciamento, corretagem de contratos de arrendamento mercantil"),
@@ -163,19 +157,15 @@ public class ServicoSeedService
             ("07", "Agenciamento de notícias"),
             ("08", "Agenciamento de publicidade e propaganda"),
             ("09", "Representação de qualquer natureza"),
-            ("10", "Distribuição de bens de terceiros")
-        });
-
-        AddServicos(servicos, "11", "Serviços de guarda, estacionamento, armazenamento, vigilância e congêneres", new[]
-        {
+            ("10", "Distribuição de bens de terceiros"),
+        ]),
+        ("11", [
             ("01", "Guarda e estacionamento de veículos"),
             ("02", "Vigilância, segurança ou monitoramento"),
             ("03", "Escolta, inclusive de veículos e cargas"),
-            ("04", "Armazenamento, depósito, carga e descarga")
-        });
-
-        AddServicos(servicos, "12", "Serviços de diversões, lazer, entretenimento e congêneres", new[]
-        {
+            ("04", "Armazenamento, depósito, carga e descarga"),
+        ]),
+        ("12", [
             ("01", "Espetáculos teatrais"),
             ("02", "Exibições cinematográficas"),
             ("03", "Espetáculos circenses"),
@@ -192,20 +182,16 @@ public class ServicoSeedService
             ("14", "Fornecimento de música para ambientes"),
             ("15", "Desfiles de blocos carnavalescos"),
             ("16", "Exibição de filmes e espetáculos"),
-            ("17", "Recreação e animação")
-        });
-
-        AddServicos(servicos, "13", "Serviços relativos a fonografia, fotografia, cinematografia e reprografia", new[]
-        {
+            ("17", "Recreação e animação"),
+        ]),
+        ("13", [
             ("01", "Fonografia"),
             ("02", "Fotografia e cinematografia"),
             ("03", "Reprografia, microfilmagem e digitalização"),
             ("04", "Composição gráfica e fotocomposição"),
-            ("05", "Composição gráfica, inclusive confecção de impressos gráficos")
-        });
-
-        AddServicos(servicos, "14", "Serviços relativos a bens de terceiros", new[]
-        {
+            ("05", "Composição gráfica, inclusive confecção de impressos gráficos"),
+        ]),
+        ("14", [
             ("01", "Lubrificação, limpeza, lustração, revisão de máquinas"),
             ("02", "Assistência técnica"),
             ("03", "Recondicionamento de motores"),
@@ -219,11 +205,9 @@ public class ServicoSeedService
             ("11", "Tapeçaria e reforma de estofamentos"),
             ("12", "Funilaria e lanternagem"),
             ("13", "Carpintaria e serralheria"),
-            ("14", "Guincho intramunicipal, guindaste e içamento")
-        });
-
-        AddServicos(servicos, "15", "Serviços relacionados ao setor bancário ou financeiro", new[]
-        {
+            ("14", "Guincho intramunicipal, guindaste e içamento"),
+        ]),
+        ("15", [
             ("01", "Administração de fundos, consórcio e cartão de crédito"),
             ("02", "Abertura de contas"),
             ("03", "Locação e manutenção de cofres"),
@@ -241,17 +225,13 @@ public class ServicoSeedService
             ("15", "Compensação de cheques e títulos"),
             ("16", "Emissão, fornecimento de documentos bancários"),
             ("17", "Concessão, revisão, retificação de empréstimos"),
-            ("18", "Emissão, concessão, alteração de cartão de crédito")
-        });
-
-        AddServicos(servicos, "16", "Serviços de transporte de natureza municipal", new[]
-        {
+            ("18", "Emissão, concessão, alteração de cartão de crédito"),
+        ]),
+        ("16", [
             ("01", "Serviços de transporte coletivo municipal rodoviário"),
-            ("02", "Outros serviços de transporte de natureza municipal")
-        });
-
-        AddServicos(servicos, "17", "Serviços de apoio técnico, administrativo, jurídico, contábil, comercial e congêneres", new[]
-        {
+            ("02", "Outros serviços de transporte de natureza municipal"),
+        ]),
+        ("17", [
             ("01", "Assessoria ou consultoria de qualquer natureza"),
             ("02", "Datilografia, digitação, estenografia e congêneres"),
             ("03", "Planejamento, coordenação, programação e organização técnica"),
@@ -276,145 +256,40 @@ public class ServicoSeedService
             ("22", "Assessoria, análise, avaliação e informações de risco"),
             ("23", "Apresentação de palestras, conferências e seminários"),
             ("24", "Inserção de textos, desenhos e outros materiais de propaganda"),
-            ("25", "Serviços de investigações particulares, detetives e congêneres")
-        });
-
-        AddServicos(servicos, "18", "Serviços de regulação de sinistros vinculados a contratos de seguros", new[]
-        {
-            ("01", "Serviços de regulação de sinistros")
-        });
-
-        AddServicos(servicos, "19", "Serviços de distribuição e venda de bilhetes e demais produtos de loteria", new[]
-        {
-            ("01", "Serviços de distribuição e venda de bilhetes de loteria")
-        });
-
-        AddServicos(servicos, "20", "Serviços portuários, aeroportuários, ferroportuários, de terminais rodoviários, ferroviários e metroviários", new[]
-        {
+            ("25", "Serviços de investigações particulares, detetives e congêneres"),
+        ]),
+        ("18", [("01", "Serviços de regulação de sinistros")]),
+        ("19", [("01", "Serviços de distribuição e venda de bilhetes de loteria")]),
+        ("20", [
             ("01", "Serviços portuários e ferroportuários"),
             ("02", "Serviços aeroportuários"),
-            ("03", "Serviços de terminais rodoviários, ferroviários e metroviários")
-        });
-
-        AddServicos(servicos, "21", "Serviços de registros públicos, cartorários e notariais", new[]
-        {
-            ("01", "Serviços de registros públicos, cartorários e notariais")
-        });
-
-        AddServicos(servicos, "22", "Serviços de exploração de rodovia", new[]
-        {
-            ("01", "Serviços de exploração de rodovia mediante cobrança de pedágio")
-        });
-
-        AddServicos(servicos, "23", "Serviços de programação e comunicação visual, desenho industrial e congêneres", new[]
-        {
-            ("01", "Serviços de programação e comunicação visual, desenho industrial")
-        });
-
-        AddServicos(servicos, "24", "Serviços de chaveiros, confecção de carimbos, placas, sinalização visual, banners, adesivos e congêneres", new[]
-        {
-            ("01", "Serviços de chaveiros, confecção de carimbos, placas, banners")
-        });
-
-        AddServicos(servicos, "25", "Serviços funerários", new[]
-        {
+            ("03", "Serviços de terminais rodoviários, ferroviários e metroviários"),
+        ]),
+        ("21", [("01", "Serviços de registros públicos, cartorários e notariais")]),
+        ("22", [("01", "Serviços de exploração de rodovia mediante cobrança de pedágio")]),
+        ("23", [("01", "Serviços de programação e comunicação visual, desenho industrial")]),
+        ("24", [("01", "Serviços de chaveiros, confecção de carimbos, placas, banners")]),
+        ("25", [
             ("01", "Funerais, inclusive fornecimento de caixão e urna"),
             ("02", "Cremação de corpos e partes de corpos cadavéricos"),
             ("03", "Planos ou convênio funerários"),
             ("04", "Manutenção e conservação de jazigos e cemitérios"),
-            ("05", "Cessão de uso de espaços em cemitérios para sepultamento")
-        });
-
-        AddServicos(servicos, "26", "Serviços de coleta, remessa ou entrega de correspondências, documentos, objetos, bens ou valores", new[]
-        {
-            ("01", "Serviços de coleta, remessa ou entrega de correspondências e objetos")
-        });
-
-        AddServicos(servicos, "27", "Serviços de assistência social", new[]
-        {
-            ("01", "Serviços de assistência social")
-        });
-
-        AddServicos(servicos, "28", "Serviços de avaliação de bens e serviços de qualquer natureza", new[]
-        {
-            ("01", "Serviços de avaliação de bens e serviços de qualquer natureza")
-        });
-
-        AddServicos(servicos, "29", "Serviços de biblioteconomia", new[]
-        {
-            ("01", "Serviços de biblioteconomia")
-        });
-
-        AddServicos(servicos, "30", "Serviços de biologia, biotecnologia e química", new[]
-        {
-            ("01", "Serviços de biologia, biotecnologia e química")
-        });
-
-        AddServicos(servicos, "31", "Serviços técnicos em edificações, eletrônica, eletrotécnica, mecânica, telecomunicações e congêneres", new[]
-        {
-            ("01", "Serviços técnicos em edificações, eletrônica, eletrotécnica, mecânica e telecomunicações")
-        });
-
-        AddServicos(servicos, "32", "Serviços de desenhos técnicos", new[]
-        {
-            ("01", "Serviços de desenhos técnicos")
-        });
-
-        AddServicos(servicos, "33", "Serviços de desembaraço aduaneiro, comissários, despachantes e congêneres", new[]
-        {
-            ("01", "Serviços de desembaraço aduaneiro, comissários e despachantes")
-        });
-
-        AddServicos(servicos, "34", "Serviços de investigações particulares, detetives e congêneres", new[]
-        {
-            ("01", "Serviços de investigações particulares, detetives e congêneres")
-        });
-
-        AddServicos(servicos, "35", "Serviços de reportagem, assessoria de imprensa, jornalismo e relações públicas", new[]
-        {
-            ("01", "Serviços de reportagem, assessoria de imprensa, jornalismo e relações públicas")
-        });
-
-        AddServicos(servicos, "36", "Serviços de meteorologia", new[]
-        {
-            ("01", "Serviços de meteorologia")
-        });
-
-        AddServicos(servicos, "37", "Serviços de artistas, atletas, modelos e manequins", new[]
-        {
-            ("01", "Serviços de artistas, atletas, modelos e manequins")
-        });
-
-        AddServicos(servicos, "38", "Serviços de museologia", new[]
-        {
-            ("01", "Serviços de museologia")
-        });
-
-        AddServicos(servicos, "39", "Serviços de ourivesaria e lapidação", new[]
-        {
-            ("01", "Serviços de ourivesaria e lapidação de metais preciosos, pedras e afins")
-        });
-
-        AddServicos(servicos, "40", "Serviços relativos a obras de arte sob encomenda", new[]
-        {
-            ("01", "Obras de arte sob encomenda")
-        });
-
-        return servicos;
-    }
-
-    private static void AddServicos(
-        List<Servico> servicos,
-        string item,
-        string descricaoItem,
-        (string subitem, string descricao)[] subitens)
-    {
-        foreach (var (subitem, descricao) in subitens)
-        {
-            // Formato: ii.ss.dd (item.subitem.desdobramento)
-            // Desdobramento 00 = sem desdobramento
-            var codigo = $"{item}.{subitem}.00";
-            servicos.Add(Servico.Create(codigo, descricao, item, subitem, "00"));
-        }
-    }
+            ("05", "Cessão de uso de espaços em cemitérios para sepultamento"),
+        ]),
+        ("26", [("01", "Serviços de coleta, remessa ou entrega de correspondências e objetos")]),
+        ("27", [("01", "Serviços de assistência social")]),
+        ("28", [("01", "Serviços de avaliação de bens e serviços de qualquer natureza")]),
+        ("29", [("01", "Serviços de biblioteconomia")]),
+        ("30", [("01", "Serviços de biologia, biotecnologia e química")]),
+        ("31", [("01", "Serviços técnicos em edificações, eletrônica, eletrotécnica, mecânica e telecomunicações")]),
+        ("32", [("01", "Serviços de desenhos técnicos")]),
+        ("33", [("01", "Serviços de desembaraço aduaneiro, comissários e despachantes")]),
+        ("34", [("01", "Serviços de investigações particulares, detetives e congêneres")]),
+        ("35", [("01", "Serviços de reportagem, assessoria de imprensa, jornalismo e relações públicas")]),
+        ("36", [("01", "Serviços de meteorologia")]),
+        ("37", [("01", "Serviços de artistas, atletas, modelos e manequins")]),
+        ("38", [("01", "Serviços de museologia")]),
+        ("39", [("01", "Serviços de ourivesaria e lapidação de metais preciosos, pedras e afins")]),
+        ("40", [("01", "Obras de arte sob encomenda")]),
+    ];
 }

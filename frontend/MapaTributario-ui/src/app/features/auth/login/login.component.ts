@@ -39,8 +39,8 @@ export class LoginComponent {
     this.loading.set(true);
     this.errorMessage.set('');
 
-    const { email, senha } = this.form.getRawValue();
-    this._authService.login(email, senha).subscribe({
+    const { email, senha, lembrar } = this.form.getRawValue();
+    this._authService.login(email, senha, lembrar).subscribe({
       next: () => {
         this.loading.set(false);
         this._router.navigate(['/']);

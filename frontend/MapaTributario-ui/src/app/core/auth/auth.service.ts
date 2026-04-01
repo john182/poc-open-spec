@@ -35,15 +35,21 @@ export class AuthService {
   readonly isAuthenticated = this._isAuthenticated.asReadonly();
   readonly userName = this._userName.asReadonly();
 
-  login(email: string, senha: string): Observable<AuthResponse> {
+  login(email: string, senha: string, lembrar = false): Observable<AuthResponse> {
     return this._http.post<AuthResponse>(`${this._baseUrl}/login`, { email, senha }).pipe(
-      tap(authResponse => this._handleAuthSuccess(authResponse)),
+      tap(authResponse => {
+        this._setRemember(lembrar);
+        this._handleAuthSuccess(authResponse);
+      }),
     );
   }
 
   register(email: string, nome: string, senha: string): Observable<AuthResponse> {
     return this._http.post<AuthResponse>(`${this._baseUrl}/register`, { email, nome, senha }).pipe(
-      tap(authResponse => this._handleAuthSuccess(authResponse)),
+      tap(authResponse => {
+        this._setRemember(true);
+        this._handleAuthSuccess(authResponse);
+      }),
     );
   }
 
@@ -64,6 +70,9 @@ export class AuthService {
   logout(): void {
     this._removeItem('accessToken');
     this._removeItem('refreshToken');
+    if (isPlatformBrowser(this._platformId)) {
+      localStorage.removeItem('rememberMe');
+    }
     this._isAuthenticated.set(false);
     this._userName.set('');
     this._router.navigate(['/auth/login']);
@@ -124,20 +133,33 @@ export class AuthService {
     return payload?.name || payload?.email || '';
   }
 
+  private _storage(): Storage | null {
+    if (!isPlatformBrowser(this._platformId)) return null;
+    return localStorage.getItem('rememberMe') === 'true' ? localStorage : sessionStorage;
+  }
+
   private _getItem(key: string): string | null {
     if (!isPlatformBrowser(this._platformId)) return null;
-    return localStorage.getItem(key);
+    return localStorage.getItem(key) ?? sessionStorage.getItem(key);
   }
 
   private _setItem(key: string, value: string): void {
-    if (isPlatformBrowser(this._platformId)) {
-      localStorage.setItem(key, value);
+    const storage = this._storage();
+    if (storage) {
+      storage.setItem(key, value);
     }
   }
 
   private _removeItem(key: string): void {
     if (isPlatformBrowser(this._platformId)) {
       localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    }
+  }
+
+  private _setRemember(lembrar: boolean): void {
+    if (isPlatformBrowser(this._platformId)) {
+      localStorage.setItem('rememberMe', String(lembrar));
     }
   }
 }

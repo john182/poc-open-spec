@@ -2,6 +2,7 @@ using System.Diagnostics;
 using MapaTributario.API.Domain.Entities;
 using MapaTributario.API.Domain.Interfaces;
 using MapaTributario.API.Infrastructure.External;
+using MapaTributario.API.Infrastructure.External.Contracts;
 using Microsoft.Extensions.Logging;
 
 namespace MapaTributario.API.Application.Crawler;
@@ -28,6 +29,7 @@ public class CrawlerService : ICrawlerService
     private const int MaxRetries = 3;
     private const int EarlyStopThreshold = 9;
     private const int BatchSize = 50;
+    private const int MaxDesdobramento = 20;
 
     public CrawlerService(
         IExecucaoCrawlerRepository execucaoRepository,
@@ -195,7 +197,7 @@ public class CrawlerService : ICrawlerService
                 await _circuitBreaker.WaitIfOpenAsync(cancellationToken);
 
                 Stopwatch sw = Stopwatch.StartNew();
-                Infrastructure.External.Contracts.ConvenioNfseResponse? convenio =
+                ConvenioNfseResponse? convenio =
                     await _nfseApiClient.GetConvenioAsync(municipio.CodigoIbge, cancellationToken);
                 sw.Stop();
 
@@ -257,7 +259,8 @@ public class CrawlerService : ICrawlerService
                     await _circuitBreaker.WaitIfOpenAsync(cancellationToken);
 
                     Stopwatch sw = Stopwatch.StartNew();
-                    Infrastructure.External.Contracts.AliquotaNfseResponse? result =
+                    // NfseApiClient.FormatarCodigoServico adds ".000" desdobramento automatically
+                    AliquotaNfseResponse? result =
                         await _nfseApiClient.GetAliquotaAsync(
                             municipio.CodigoIbge, probeCode, competencia, cancellationToken);
                     sw.Stop();
@@ -266,7 +269,7 @@ public class CrawlerService : ICrawlerService
                     _circuitBreaker.RecordSuccess();
                     await _certificateProtection.OnItemProcessedAsync(cancellationToken);
 
-                    if (result is not null)
+                    if (result is not null && result.TemDados)
                     {
                         temDados = true;
                         break;
@@ -418,8 +421,10 @@ public class CrawlerService : ICrawlerService
             await _rateLimiter.WaitAsync(cancellationToken);
             await _circuitBreaker.WaitIfOpenAsync(cancellationToken);
 
+            // The base service code from seed (e.g., "01.01.00") is used.
+            // NfseApiClient.FormatarCodigoServico converts it to "01.01.00.000" for the API call.
             Stopwatch sw = Stopwatch.StartNew();
-            Infrastructure.External.Contracts.AliquotaNfseResponse? result =
+            AliquotaNfseResponse? result =
                 await _nfseApiClient.GetAliquotaAsync(
                     item.CodigoMunicipio, item.CodigoServico, competencia, cancellationToken);
             sw.Stop();
@@ -430,7 +435,7 @@ public class CrawlerService : ICrawlerService
 
             string group = ExtractGroup(item.CodigoServico);
 
-            if (result is not null)
+            if (result is not null && result.TemDados)
             {
                 // Reset consecutive misses for this group
                 consecutiveMissesByGroup[group] = 0;
@@ -439,17 +444,13 @@ public class CrawlerService : ICrawlerService
                 Municipio? municipio = await _municipioRepository.GetByCodigoIbgeAsync(item.CodigoMunicipio);
                 string nomeMunicipio = municipio?.Nome ?? item.CodigoMunicipio;
 
-                Aliquota aliquota = Aliquota.Create(
-                    item.CodigoMunicipio,
-                    nomeMunicipio,
-                    item.CodigoServico,
-                    FormatServiceCode(item.CodigoServico),
-                    result.DescricaoServico ?? string.Empty,
-                    result.Aliquota,
-                    competencia,
-                    "API NFS-e Nacional");
+                // Extract aliquotas from the dictionary response
+                int aliquotasSalvas = await ExtrairESalvarAliquotasAsync(
+                    result, item.CodigoMunicipio, nomeMunicipio, item.CodigoServico, competencia);
 
-                await _aliquotaRepository.UpsertAsync(aliquota);
+                _logger.LogDebug(
+                    "Saved {Count} aliquotas for municipality {Municipio}, service {Servico}",
+                    aliquotasSalvas, item.CodigoMunicipio, item.CodigoServico);
 
                 item.MarcarConcluido();
                 await _filaRepository.UpdateStatusAsync(item);
@@ -457,7 +458,7 @@ public class CrawlerService : ICrawlerService
             }
             else
             {
-                // 404 - no data (not an error)
+                // 404 or empty - no data (not an error)
                 if (consecutiveMissesByGroup.ContainsKey(group))
                 {
                     consecutiveMissesByGroup[group]++;
@@ -511,6 +512,56 @@ public class CrawlerService : ICrawlerService
             await _filaRepository.UpdateStatusAsync(item);
             _circuitBreaker.RecordFailure();
         }
+    }
+
+    /// <summary>
+    /// Extrai todas as alíquotas da resposta da API e persiste.
+    /// A resposta contém um dicionário onde a chave é o código do serviço (ex: "01.01.01.000")
+    /// e o valor é uma lista de alíquotas com Incidencia, Aliq, DtIni, DtFim.
+    /// Salva apenas alíquotas vigentes (DtFim null ou futura).
+    /// </summary>
+    internal async Task<int> ExtrairESalvarAliquotasAsync(
+        AliquotaNfseResponse response,
+        string codigoMunicipio,
+        string nomeMunicipio,
+        string codigoServicoBase,
+        string competencia)
+    {
+        if (response.Aliquotas is null || response.Aliquotas.Count == 0)
+        {
+            return 0;
+        }
+
+        int count = 0;
+
+        foreach (KeyValuePair<string, List<AliquotaItem>> entry in response.Aliquotas)
+        {
+            string codigoServicoApi = entry.Key; // e.g., "01.01.01.000"
+
+            foreach (AliquotaItem aliquotaItem in entry.Value)
+            {
+                // Only save current (vigente) aliquotas
+                if (!aliquotaItem.Vigente)
+                {
+                    continue;
+                }
+
+                Aliquota aliquota = Aliquota.Create(
+                    codigoMunicipio,
+                    nomeMunicipio,
+                    codigoServicoBase,
+                    FormatServiceCode(codigoServicoApi),
+                    string.Empty, // API doesn't return description per aliquota
+                    aliquotaItem.Aliq,
+                    competencia,
+                    "API NFS-e Nacional");
+
+                await _aliquotaRepository.UpsertAsync(aliquota);
+                count++;
+            }
+        }
+
+        return count;
     }
 
     internal static string GetCompetenciaAtual()

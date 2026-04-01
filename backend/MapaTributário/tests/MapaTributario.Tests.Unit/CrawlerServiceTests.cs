@@ -54,6 +54,34 @@ public class CrawlerServiceTests
             _logger.Object);
     }
 
+    #region Helpers
+
+    /// <summary>
+    /// Cria ConvenioNfseResponse ativo (aderenteAmbienteNacional = 1).
+    /// </summary>
+    private static ConvenioNfseResponse CriarConvenioAtivo() => new()
+    {
+        ParametrosConvenio = new ParametrosConvenio { AderenteAmbienteNacional = 1 },
+        Mensagem = "Parâmetros do convênio recuperados com sucesso."
+    };
+
+    /// <summary>
+    /// Cria AliquotaNfseResponse com uma alíquota vigente para o código de serviço informado.
+    /// </summary>
+    private static AliquotaNfseResponse CriarAliquotaResponse(string codigoServico, decimal aliquota) => new()
+    {
+        Aliquotas = new Dictionary<string, List<AliquotaItem>>
+        {
+            [codigoServico] = new List<AliquotaItem>
+            {
+                new() { Incidencia = "SIM", Aliq = aliquota, DtIni = DateTime.UtcNow.AddYears(-1), DtFim = null }
+            }
+        },
+        Mensagem = "Alíquotas recuperadas com sucesso."
+    };
+
+    #endregion
+
     [Fact]
     public async Task ExecutarAsync_QuandoJaEmExecucao_LancaException()
     {
@@ -94,11 +122,11 @@ public class CrawlerServiceTests
             .ReturnsAsync(municipio);
 
         _nfseClient.Setup(c => c.GetConvenioAsync("3106200", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ConvenioNfseResponse { Ativo = true });
+            .ReturnsAsync(CriarConvenioAtivo());
 
         // Probe: at least one returns data
         _nfseClient.Setup(c => c.GetAliquotaAsync("3106200", "01.01.01", It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AliquotaNfseResponse { Aliquota = 2.0m, CodigoServico = "01.01.01", DescricaoServico = "Servico teste" });
+            .ReturnsAsync(CriarAliquotaResponse("01.01.01.000", 2.0m));
 
         Servico servico = Servico.Create("01.01.01", "Servico teste", "01", "01", "01");
         _servicoRepo.Setup(r => r.GetAllAsync())
@@ -123,7 +151,7 @@ public class CrawlerServiceTests
             });
 
         _nfseClient.Setup(c => c.GetAliquotaAsync("3106200", "01.01.01", It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AliquotaNfseResponse { Aliquota = 2.0m, CodigoServico = "01.01.01", DescricaoServico = "Servico teste" });
+            .ReturnsAsync(CriarAliquotaResponse("01.01.01.000", 2.0m));
 
         _aliquotaRepo.Setup(r => r.UpsertAsync(It.IsAny<Aliquota>())).Returns(Task.CompletedTask);
 
@@ -148,7 +176,7 @@ public class CrawlerServiceTests
             .ReturnsAsync(new List<Municipio>());
 
         _nfseClient.Setup(c => c.GetConvenioAsync("1100205", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ConvenioNfseResponse { Ativo = true });
+            .ReturnsAsync(CriarConvenioAtivo());
         _nfseClient.Setup(c => c.GetConvenioAsync("1302603", It.IsAny<CancellationToken>()))
             .ReturnsAsync((ConvenioNfseResponse?)null);
 
@@ -170,7 +198,7 @@ public class CrawlerServiceTests
 
         // mun1: at least 1 probe returns data
         _nfseClient.Setup(c => c.GetAliquotaAsync("3106200", "01.01.01", competencia, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AliquotaNfseResponse { Aliquota = 2.0m, CodigoServico = "01.01.01", DescricaoServico = "Teste" });
+            .ReturnsAsync(CriarAliquotaResponse("01.01.01.000", 2.0m));
 
         // mun2: all probes return null
         _nfseClient.Setup(c => c.GetAliquotaAsync("1302603", It.IsAny<string>(), competencia, It.IsAny<CancellationToken>()))
@@ -247,7 +275,7 @@ public class CrawlerServiceTests
         Dictionary<string, int> misses = new();
 
         _nfseClient.Setup(c => c.GetAliquotaAsync("3106200", "01.01.01", "2026-04-01", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AliquotaNfseResponse { Aliquota = 5.0m, CodigoServico = "01.01.01", DescricaoServico = "Teste" });
+            .ReturnsAsync(CriarAliquotaResponse("01.01.01.000", 5.0m));
 
         Municipio mun = Municipio.Create("3106200", "Belo Horizonte", "MG");
         _municipioRepo.Setup(r => r.GetByCodigoIbgeAsync("3106200")).ReturnsAsync(mun);
@@ -463,5 +491,65 @@ public class CrawlerServiceTests
 
         // Assert
         _nfseClient.Verify(c => c.GetAliquotaAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ExtrairESalvarAliquotasAsync_ComMultiplasAliquotas_SalvaTodas()
+    {
+        // Arrange
+        AliquotaNfseResponse response = new()
+        {
+            Aliquotas = new Dictionary<string, List<AliquotaItem>>
+            {
+                ["01.01.01.000"] = new List<AliquotaItem>
+                {
+                    new() { Incidencia = "SIM", Aliq = 5.0m, DtIni = DateTime.UtcNow.AddYears(-1), DtFim = null },
+                    new() { Incidencia = "SIM", Aliq = 3.0m, DtIni = DateTime.UtcNow.AddYears(-2), DtFim = DateTime.UtcNow.AddYears(-1) }
+                }
+            },
+            Mensagem = "ok"
+        };
+
+        _aliquotaRepo.Setup(r => r.UpsertAsync(It.IsAny<Aliquota>())).Returns(Task.CompletedTask);
+
+        // Act
+        int count = await _sut.ExtrairESalvarAliquotasAsync(
+            response, "3106200", "Belo Horizonte", "01.01.01", "2026-04-01");
+
+        // Assert — only 1 vigente (the one with DtFim = null), the expired one is skipped
+        count.ShouldBe(1);
+        _aliquotaRepo.Verify(r => r.UpsertAsync(It.IsAny<Aliquota>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExtrairESalvarAliquotasAsync_SemAliquotas_RetornaZero()
+    {
+        // Arrange
+        AliquotaNfseResponse response = new()
+        {
+            Aliquotas = null,
+            Mensagem = "ok"
+        };
+
+        // Act
+        int count = await _sut.ExtrairESalvarAliquotasAsync(
+            response, "3106200", "Belo Horizonte", "01.01.01", "2026-04-01");
+
+        // Assert
+        count.ShouldBe(0);
+    }
+
+    [Fact]
+    public void NfseApiClient_FormatarCodigoServico_FormataCorretamente()
+    {
+        // 6 digits → adds .000
+        NfseApiClient.FormatarCodigoServico("01.01.01").ShouldBe("01.01.01.000");
+        NfseApiClient.FormatarCodigoServico("01.01.00").ShouldBe("01.01.00.000");
+        NfseApiClient.FormatarCodigoServico("010101").ShouldBe("01.01.01.000");
+
+        // 9 digits → formats with dots
+        NfseApiClient.FormatarCodigoServico("010101000").ShouldBe("01.01.01.000");
+        NfseApiClient.FormatarCodigoServico("01.01.01.000").ShouldBe("01.01.01.000");
+        NfseApiClient.FormatarCodigoServico("010101001").ShouldBe("01.01.01.001");
     }
 }

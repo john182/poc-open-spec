@@ -583,8 +583,9 @@ Todas as configuracoes do worker sao expostas via `appsettings.json` e podem ser
     },
     "MunicipalityRediscoveryDays": 30,
     "EnableHistoricalCollection": false,
-    "CertificatePath": "/certs/client.pfx",
-    "CertificatePassword": ""
+    "Certificate": {
+      "Note": "Gerenciado via API (POST/GET/DELETE /api/v1/crawler/certificado)"
+    }
   }
 }
 ```
@@ -606,8 +607,7 @@ Todas as configuracoes do worker sao expostas via `appsettings.json` e podem ser
 | CircuitBreaker.MinimumSamples | 10 | Minimo de amostras para avaliar o circuito |
 | MunicipalityRediscoveryDays | 30 | Dias para reverificar municipios inativos |
 | EnableHistoricalCollection | false | Habilitar coleta historica de aliquotas |
-| CertificatePath | `/certs/client.pfx` | Caminho do certificado PFX no container |
-| CertificatePassword | (vazio) | Senha do certificado PFX (usar secrets em producao) |
+| Certificate (via API) | - | O certificado PFX e gerenciado via endpoints REST: `POST /api/v1/crawler/certificado` (upload), `GET /api/v1/crawler/certificado` (status), `DELETE /api/v1/crawler/certificado` (remover). Nao requer variavel de ambiente. |
 
 ### Variaveis de ambiente
 
@@ -818,7 +818,7 @@ stateDiagram-v2
 2. Circuit breaker abre rapidamente (100% de falha)
 3. Worker entra em loop de pausa de 5 minutos com probe
 
-**Recuperacao:** Manual. Requer substituicao do certificado e restart do container. O worker retoma automaticamente apos o restart com certificado valido.
+**Recuperacao:** O administrador faz upload de um novo certificado via POST /api/v1/crawler/certificado. O worker detecta o novo certificado na proxima execucao ou probe, sem necessidade de restart.
 
 ---
 
@@ -857,7 +857,7 @@ flowchart LR
     end
 
     subgraph Falhas Manuais
-        D[Certificado invalido] -->|Troca + restart| R4[Retomada apos correcao]
+        D[Certificado invalido] -->|Upload via API| R4[Retomada automatica]
         E[Formato API mudou] -->|Fix + reprocessamento| R5[Retomada apos correcao]
         F[Seed incompleto] -->|Atualizar seed| R6[Reprocessamento forcado]
     end

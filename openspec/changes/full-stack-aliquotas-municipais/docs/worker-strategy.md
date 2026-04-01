@@ -582,9 +582,7 @@ Todas as configuracoes do worker sao expostas via `appsettings.json` e podem ser
       "MinimumSamples": 10
     },
     "MunicipalityRediscoveryDays": 30,
-    "EnableHistoricalCollection": false,
-    "CertificatePath": "/certs/client.pfx",
-    "CertificatePassword": ""
+    "EnableHistoricalCollection": false
   }
 }
 ```
@@ -606,8 +604,6 @@ Todas as configuracoes do worker sao expostas via `appsettings.json` e podem ser
 | CircuitBreaker.MinimumSamples | 10 | Minimo de amostras para avaliar o circuito |
 | MunicipalityRediscoveryDays | 30 | Dias para reverificar municipios inativos |
 | EnableHistoricalCollection | false | Habilitar coleta historica de aliquotas |
-| CertificatePath | `/certs/client.pfx` | Caminho do certificado PFX no container |
-| CertificatePassword | (vazio) | Senha do certificado PFX (usar secrets em producao) |
 
 ### Variaveis de ambiente
 
@@ -619,6 +615,33 @@ Worker__MaxConcurrency=5
 Worker__Retry__MaxAttempts=5
 Worker__CircuitBreaker__ErrorThresholdPercent=60
 ```
+
+### Gestao do Certificado PFX (via API)
+
+O certificado PFX para autenticacao mTLS com a API NFS-e **nao e hardcoded** nem montado como volume fixo. Em vez disso, e gerenciado dinamicamente via endpoint da API:
+
+| Endpoint | Metodo | Descricao |
+|----------|--------|-----------|
+| `/api/v1/crawler/certificado` | POST | Upload do certificado PFX (multipart/form-data) |
+| `/api/v1/crawler/certificado` | GET | Status do certificado atual (validade, thumbprint) |
+| `/api/v1/crawler/certificado` | DELETE | Remove o certificado atual |
+
+**Fluxo:**
+1. O administrador faz upload do certificado PFX via endpoint `POST /api/v1/crawler/certificado` (com senha no body)
+2. O certificado e armazenado de forma segura (criptografado no MongoDB ou em diretorio protegido do container)
+3. O worker carrega o certificado do store interno ao iniciar cada execucao
+4. Se o certificado nao estiver configurado, o worker nao inicia e retorna status `sem_certificado`
+
+**Vantagens:**
+- Nao exige rebuild ou restart do container para trocar o certificado
+- Permite rotacao de certificado sem downtime
+- O endpoint GET retorna metadados (validade, thumbprint) para monitoramento
+- Auditoria: cada upload e registrado com timestamp e usuario
+
+**Seguranca:**
+- O endpoint requer autenticacao JWT (role admin)
+- O certificado e criptografado em repouso
+- A senha do PFX nao e persistida apos o carregamento do certificado em memoria
 
 ---
 
@@ -809,16 +832,17 @@ stateDiagram-v2
 
 ---
 
-### Cenario 4: Certificado PFX invalido ou expirado
+### Cenario 4: Certificado PFX invalido, expirado ou ausente
 
-**Sintoma:** Todas as requisicoes a API NFS-e falham com erro de TLS/SSL.
+**Sintoma:** Todas as requisicoes a API NFS-e falham com erro de TLS/SSL, ou worker reporta status `sem_certificado`.
 
 **Comportamento:**
-1. Erros de handshake TLS sao tratados como erro transitorio nas primeiras tentativas
-2. Circuit breaker abre rapidamente (100% de falha)
-3. Worker entra em loop de pausa de 5 minutos com probe
+1. Se o certificado nao foi configurado via endpoint: worker nao inicia e reporta `sem_certificado`
+2. Se o certificado expirou: erros de handshake TLS sao tratados como erro transitorio nas primeiras tentativas
+3. Circuit breaker abre rapidamente (100% de falha)
+4. Worker entra em loop de pausa de 5 minutos com probe
 
-**Recuperacao:** Manual. Requer substituicao do certificado e restart do container. O worker retoma automaticamente apos o restart com certificado valido.
+**Recuperacao:** O administrador faz upload de um novo certificado via `POST /api/v1/crawler/certificado`. O worker detecta o novo certificado na proxima execucao ou probe, sem necessidade de restart.
 
 ---
 
@@ -857,7 +881,7 @@ flowchart LR
     end
 
     subgraph Falhas Manuais
-        D[Certificado invalido] -->|Troca + restart| R4[Retomada apos correcao]
+        D[Certificado invalido] -->|Upload via endpoint| R4[Retomada apos correcao]
         E[Formato API mudou] -->|Fix + reprocessamento| R5[Retomada apos correcao]
         F[Seed incompleto] -->|Atualizar seed| R6[Reprocessamento forcado]
     end

@@ -1,8 +1,8 @@
 # Fundacao do Frontend - Mapa Tributario
 
-## Analise do Template Sakai
+## Analise de Componentes de Layout
 
-O template Sakai do PrimeNG serve como base para o frontend. Cada componente foi avaliado individualmente para decidir entre reutilizar, adaptar ou descartar.
+O layout do frontend foi construido usando componentes PrimeNG como base. Cada componente foi avaliado individualmente para decidir entre construir, adaptar ou descartar.
 
 ### Decisao por Componente
 
@@ -30,12 +30,11 @@ O template Sakai do PrimeNG serve como base para o frontend. Cada componente foi
 
 A fundacao do frontend deve seguir esta sequencia. Nenhum passo pode ser pulado ou invertido.
 
-### Passo 1 - Analisar o template de referencia
+### Passo 1 - Definir estrutura de componentes
 
-- Clonar o template Sakai
-- Identificar componentes, servicos e estrutura de pastas
+- Identificar componentes necessarios para o layout (topbar, sidebar, menu, footer)
 - Mapear dependencias entre componentes
-- Documentar o que sera usado, adaptado e descartado (tabela acima)
+- Documentar o que sera construido, adaptado de componentes PrimeNG ou descartado (tabela acima)
 
 ### Passo 2 - Configurar o projeto Angular
 
@@ -78,11 +77,11 @@ Tokens principais:
 
 ### Passo 4 - Construir layout base
 
-- Adaptar `AppLayout` do Sakai
-- Adaptar `AppTopbar` (logo, toggle, dark mode, usuario)
-- Adaptar `AppSidebar` e `AppMenu` com items do Mapa Tributario
-- Reutilizar `AppMenuitem` e `AppFooter`
-- Adaptar `LayoutService` (remover preset config)
+- Construir `AppLayout` com PrimeNG components
+- Construir `AppTopbar` (logo, toggle, dark mode, usuario)
+- Construir `AppSidebar` e `AppMenu` com items do Mapa Tributario
+- Construir `AppMenuitem` recursivo e `AppFooter`
+- Construir `LayoutService` com signals de estado do layout
 - Testar layout com conteudo placeholder
 
 ### Passo 5 - Definir design system (componentes PrimeNG)
@@ -190,14 +189,14 @@ const VALIDATION_MESSAGES: Record<string, (params?: any) => string> = {
 
 ### Passo 10 - Implementar pagina de Acesso Negado (403)
 
-- Layout visual adaptado do template Sakai
+- Layout visual com PrimeNG components
 - Mensagem clara de acesso negado
 - Botao para voltar a home
 - Rota: `/access`
 
 ### Passo 11 - Implementar pagina 404
 
-- Layout visual adaptado do template Sakai
+- Layout visual com PrimeNG components
 - Mensagem de pagina nao encontrada
 - Botao para voltar a home
 - Wildcard route no router

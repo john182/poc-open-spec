@@ -36,7 +36,30 @@ O Brasil possui mais de 5.500 municipios, cada um com autonomia para definir ali
 - **Materializacao local** garante leitura rapida e independencia da disponibilidade da API externa
 - **Interface visual** com mapa interativo do Brasil permite navegacao intuitiva
 - **Filtros avancados** por codigo de servico, descricao, faixa de aliquota e competencia
-- **Acesso autenticado** via web, sem necessidade de certificado digital pelo usuario final
+- **Consulta publica** via web, sem necessidade de cadastro ou certificado digital para consultar dados
+- **Cadastro opcional** permite coletar metricas de uso, identificar usuarios reais e proteger a aplicacao contra chamadas automatizadas por bots
+
+---
+
+## 3. Motivacao para Autenticacao
+
+Embora o Mapa Tributario seja uma aplicacao **gratuita** e com **endpoints de consulta publicos** (nao exigem login para consultar dados), a aplicacao mantém o fluxo de cadastro e login por razoes estrategicas:
+
+| Motivacao | Descricao |
+|-----------|-----------|
+| **Metricas de uso reais** | Identificar usuarios reais permite medir adocao, frequencia de uso, municipios mais consultados e padroes de navegacao. Dados anonimos de bots poluiriam essas metricas. |
+| **Protecao contra bots** | A barreira de autenticacao desestimula scraping automatizado e chamadas massivas por robos. Mesmo que os endpoints de consulta sejam publicos, o frontend direciona o usuario pelo fluxo de login, criando uma camada de protecao humana. |
+| **Base de usuarios identificados** | Ter uma base de usuarios cadastrados viabiliza evolucoes futuras como: alertas de mudanca de aliquota, favoritos, historico de consultas e comunicacao direta. |
+| **Separacao de perfis** | Distinguir entre usuarios comuns (consulta) e administradores (operacao do crawler) garante que operacoes criticas fiquem restritas. |
+
+### Dois perfis de usuario
+
+| Perfil | Permissoes | Como e definido |
+|--------|-----------|----------------|
+| **Usuario (User)** | Consultar estados, municipios, aliquotas; navegar pelo mapa; usar filtros; acessar toda a parte de consulta | Qualquer usuario cadastrado recebe este perfil por padrao |
+| **Administrador (Admin)** | Tudo do perfil User + executar crawler manualmente, gerenciar certificado PFX, consultar status e historico de execucoes | Email do usuario deve estar na configuracao `Admin:Emails` do backend |
+
+> **Nota:** Os endpoints de consulta da API (`/api/v1/estados`, `/api/v1/municipios`, `/api/v1/aliquotas`) sao **tecnicamente publicos** (nao exigem JWT). Contudo, o frontend direciona o usuario pelo fluxo de login antes de acessar as paginas de consulta, garantindo identificacao e coleta de metricas.
 
 ---
 
@@ -77,6 +100,18 @@ O Brasil possui mais de 5.500 municipios, cada um com autonomia para definir ali
 | **Cenario tipico** | A empresa esta abrindo filial e precisa comparar aliquotas de ISS do servico principal em 5 capitais diferentes |
 | **Expectativa** | Visao visual por mapa, navegacao por estado, filtragem rapida |
 | **Nivel tecnico** | Baixo; precisa de experiencia visual acessivel, sem jargao tecnico |
+
+### 3.4 Administrador do Sistema - Diego
+
+| Atributo | Descricao |
+|----------|-----------|
+| **Perfil** | Profissional de TI responsavel pela operacao e manutencao da aplicacao, 25-40 anos |
+| **Objetivo** | Garantir que o crawler colete dados atualizados, gerenciar o certificado PFX e monitorar execucoes |
+| **Frequencia de uso** | Semanal para monitoramento; sob demanda para execucoes manuais e troca de certificado |
+| **Dor principal** | Precisa de visibilidade sobre o status da coleta e controle sobre o ciclo de execucao |
+| **Cenario tipico** | Certificado PFX esta proximo do vencimento; precisa fazer upload do novo certificado e disparar uma execucao manual para validar que a coleta funciona |
+| **Expectativa** | Interface administrativa clara com status do crawler, historico de execucoes e gestao de certificado |
+| **Nivel tecnico** | Alto; entende de infraestrutura, APIs e certificados digitais |
 
 ---
 
@@ -135,10 +170,15 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    A[Login] --> B[Layout Autenticado]
+    A[Login] --> B[Layout Principal]
     B --> C[Menu Lateral]
     C --> D[Consulta de Aliquotas]
     D --> E[Mapa do Brasil]
+
+    C --> |Admin apenas| K[Gerenciamento do Crawler]
+    K --> K1[Executar Crawler]
+    K --> K2[Status / Historico]
+    K --> K3[Certificado PFX]
 
     B --> F[Topbar]
     F --> G[Toggle Dark Mode]
@@ -151,8 +191,14 @@ flowchart LR
 ```
 
 **Estrutura do menu lateral:**
-- Consulta de Aliquotas (item principal, leva ao mapa)
-- (Expansivel no futuro: Historico, Favoritos, Configuracoes)
+
+| Item | Visibilidade | Descricao |
+|------|-------------|-----------|
+| Consulta de Aliquotas | Todos os usuarios | Item principal, leva ao mapa interativo |
+| Gerenciamento do Crawler | Apenas Admin | Executar, status, historico de execucoes |
+| Certificado PFX | Apenas Admin | Upload, verificacao e remocao do certificado |
+
+**Nota:** Usuarios com perfil User veem apenas o menu de consulta. Administradores veem tambem o menu do crawler. Se um usuario User tentar acessar rotas de admin diretamente pela URL, e redirecionado para a pagina de acesso negado (403).
 
 ### 4.4 Consulta por Mapa
 
@@ -235,13 +281,15 @@ flowchart TD
 | **Autenticacao** | Cadastro de usuario (nome, email, senha) | Must-have |
 | **Autenticacao** | Login com JWT (access + refresh token) | Must-have |
 | **Autenticacao** | Logout | Must-have |
-| **Autenticacao** | Guard de rotas (redireciona para login) | Must-have |
+| **Autenticacao** | Guard de rotas (redireciona para login no frontend) | Must-have |
+| **Autenticacao** | Perfis User e Admin (baseado em `Admin:Emails` config) | Must-have |
 | **Autenticacao** | Pagina de acesso negado (403) | Must-have |
-| **Frontend Base** | Layout administrativo (topbar, sidebar, footer) | Must-have |
+| **Frontend Base** | Layout com topbar, sidebar e footer | Must-have |
 | **Frontend Base** | Design system e design tokens | Must-have |
 | **Frontend Base** | Componentes reutilizaveis (loading, empty, error, retry) | Must-have |
 | **Frontend Base** | Dark mode | Should-have |
 | **Frontend Base** | Pagina 404 | Must-have |
+| **Frontend Base** | Menu condicional por perfil (User vs Admin) | Must-have |
 | **Consulta** | Mapa SVG interativo do Brasil | Must-have |
 | **Consulta** | Lista de municipios por estado | Must-have |
 | **Consulta** | Tabela paginada de servicos/aliquotas por municipio | Must-have |
@@ -250,7 +298,8 @@ flowchart TD
 | **Consulta** | Breadcrumb de navegacao | Should-have |
 | **Backend** | API REST versionada (/api/v1/) | Must-have |
 | **Backend** | Endpoints de autenticacao | Must-have |
-| **Backend** | Endpoints de consulta (estados, municipios, aliquotas) | Must-have |
+| **Backend** | Endpoints de consulta publicos (estados, municipios, aliquotas) | Must-have |
+| **Backend** | Endpoints de admin protegidos (crawler, certificado) | Must-have |
 | **Backend** | Swagger/OpenAPI documentado | Must-have |
 | **Backend** | Seed de estados e municipios (IBGE) | Must-have |
 | **Backend** | Seed de codigos de servico (LC 116/2003) | Must-have |
@@ -264,8 +313,9 @@ flowchart TD
 | **Worker** | Retry com exponential backoff | Must-have |
 | **Worker** | Registro de execucoes | Must-have |
 | **Worker** | Agendamento CRON | Must-have |
-| **Worker** | Trigger manual via endpoint | Should-have |
+| **Worker** | Trigger manual via endpoint (Admin) | Should-have |
 | **Worker** | Processamento incremental | Must-have |
+| **Worker** | Gerenciamento de certificado PFX via API (Admin) | Must-have |
 | **Infra** | Docker Compose (frontend, backend, MongoDB) | Must-have |
 | **Infra** | Dockerfiles multi-stage | Must-have |
 | **E2E** | Testes Cypress para fluxos criticos | Must-have |
@@ -319,13 +369,16 @@ O MVP nao cobrira todos os 5.570 municipios brasileiros. A estrategia e:
 |-----------|---------------|
 | **Autenticacao** | JWT com access token de curta duracao (15-30 min) e refresh token de longa duracao (7 dias) |
 | **Senhas** | Hash com bcrypt (work factor >= 12); nunca armazenadas em texto claro |
-| **Certificado PFX** | Montado via volume Docker; nunca versionado no repositorio; no .gitignore |
+| **Certificado PFX** | Gerenciado via API administrativa (upload, verificacao, remocao); nunca versionado no repositorio |
 | **HTTPS** | Comunicacao frontend-backend via HTTPS em producao |
-| **Protecao de endpoints** | Todos os endpoints de consulta exigem JWT valido; health check e publico |
+| **Endpoints de consulta** | Publicos — nao exigem JWT. Acessiveis por qualquer usuario (autenticado ou nao). Motivacao: dados tributarios sao informacao publica |
+| **Endpoints do crawler** | Protegidos por JWT + role Admin. Usuarios comuns recebem 403 Forbidden |
+| **Endpoints de autenticacao** | Publicos (register, login, refresh). Health check tambem e publico |
+| **Protecao contra bots** | Frontend direciona pelo fluxo de login antes da consulta, criando barreira humana. Login exigido no frontend, mas API de consulta permanece aberta para flexibilidade tecnica |
 | **Mensagens de erro** | Nao revelam detalhes internos (stack traces, nomes de colecao, etc.) |
 | **CORS** | Configurado para aceitar apenas origens conhecidas |
 | **Validacao de entrada** | Todos os inputs sao validados e sanitizados no backend |
-| **Rate limiting na API** | Protecao contra abuso nos endpoints publicos (auth) |
+| **Rate limiting na API** | Protecao contra abuso nos endpoints publicos (auth e consulta) |
 
 ### 7.3 Disponibilidade e Resiliencia
 

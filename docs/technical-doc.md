@@ -80,7 +80,7 @@ graph TB
 | Camada | Tecnologia | Versao | Justificativa |
 |--------|-----------|--------|---------------|
 | **Frontend** | Angular | 21 | Framework maduro para SPAs complexas; suporte a standalone components, signals e zoneless change detection |
-| **UI Components** | PrimeNG | 21 | Biblioteca rica de componentes UI para Angular; template Sakai como base controlada |
+| **UI Components** | PrimeNG | 21 | Biblioteca rica de componentes UI para Angular |
 | **CSS Framework** | Tailwind CSS | 4 | Utility-first; alta produtividade; boa integracao com PrimeNG via tailwindcss-primeui |
 | **Backend** | ASP.NET Core | .NET 10 | Framework performatico para APIs REST; excelente tooling para OpenAPI |
 | **Linguagem Backend** | C# | 13 | Tipagem forte, records, pattern matching; produtividade alta para dominio empresarial |
@@ -973,7 +973,7 @@ frontend/MapaTributario-ui/src/app/
 │   └── services/
 │       └── api.service.ts              # HttpClient base com URL prefix /api/v1
 │
-├── layout/                              # Layout autenticado (adaptado do Sakai)
+├── layout/                              # Layout principal da aplicacao
 │   ├── components/
 │   │   ├── app-layout.component.ts     # Shell principal (sidebar + content area)
 │   │   ├── app-topbar.component.ts     # Topbar: toggle dark mode, nome usuario, logout
@@ -1142,15 +1142,15 @@ frontend/MapaTributario-ui/src/app/
 | **Alternativas descartadas** | Leaflet/OpenLayers (pesado), D3.js (complexidade desproporcional), Google Maps (custo, overkill) |
 | **Consequencias** | (+) Zero dependencias, controle total, performance excelente. (-) Manutencao manual dos paths SVG (estaticos e amplamente disponiveis) |
 
-### ADR-006: Template PrimeNG Sakai como referencia controlada
+### ADR-006: Layout PrimeNG como referencia controlada
 
 | Item | Descricao |
 |------|-----------|
 | **Status** | Aceita |
-| **Contexto** | Precisa de layout administrativo solido sem construir do zero |
-| **Decisao** | Reutilizar layout/sidebar/topbar do Sakai; descartar dashboard, landing, configurator, UIKit demos |
-| **Alternativas descartadas** | Construir do zero (tempo excessivo), copiar template inteiro (divida tecnica massiva) |
-| **Consequencias** | (+) Base solida, economia de tempo. (-) Necessidade de adaptar e limpar. Mitigacao: mapeamento explicito por componente |
+| **Contexto** | Precisa de layout solido sem construir do zero |
+| **Decisao** | Construir layout proprio usando componentes PrimeNG (sidebar, topbar, menu); descartar dependencias de templates externos |
+| **Alternativas descartadas** | Construir do zero sem PrimeNG (tempo excessivo), copiar template inteiro externo (divida tecnica massiva) |
+| **Consequencias** | (+) Layout proprio e limpo, sem dependencias externas. (-) Mais trabalho inicial. Mitigacao: aproveitar os componentes prontos do PrimeNG |
 
 ### ADR-007: Fila de processamento persistente no MongoDB
 

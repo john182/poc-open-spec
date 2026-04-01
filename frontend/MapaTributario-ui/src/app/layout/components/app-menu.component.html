@@ -1,13 +1,13 @@
 <ul class="layout-menu" data-cy="app-menu">
   @for (item of model; track item.label) {
-    <li class="layout-menu-section">
-      <span class="layout-menu-section-label">{{ item.label }}</span>
+    <li class="layout-root-menuitem">
+      <div class="layout-menuitem-root-text">{{ item.label }}</div>
       <ul>
         @for (child of item.items; track child.label) {
           <li>
-            <a [routerLink]="child.routerLink" routerLinkActive="active-menuitem" class="layout-menuitem">
-              <i [class]="child.icon"></i>
-              <span>{{ child.label }}</span>
+            <a [routerLink]="child.routerLink" routerLinkActive="active-route">
+              <i [class]="child.icon" class="layout-menuitem-icon"></i>
+              <span class="layout-menuitem-text">{{ child.label }}</span>
             </a>
           </li>
         }

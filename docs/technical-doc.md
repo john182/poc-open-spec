@@ -14,7 +14,7 @@ C4Context
 
     System_Boundary(mapa, "Mapa Tributario") {
         Container(frontend, "Frontend Angular", "Angular 21, PrimeNG 21, Tailwind 4", "Interface web com mapa interativo, navegacao e filtros")
-        Container(backend, "Backend API", "ASP.NET Core, .NET 10", "API REST autenticada com JWT, Swagger, endpoints de consulta")
+        Container(backend, "Backend API", "ASP.NET Core, .NET 10", "API REST autenticada com JWT, OpenAPI, endpoints de consulta")
         Container(worker, "Worker/Crawler", ".NET 10 BackgroundService", "Coleta incremental de aliquotas, fila persistente, circuit breaker")
         ContainerDb(mongodb, "MongoDB 7", "MongoDB", "Dados consolidados: estados, municipios, servicos, aliquotas, execucoes, fila, usuarios")
     }
@@ -82,19 +82,19 @@ graph TB
 | **Frontend** | Angular | 21 | Framework maduro para SPAs complexas; suporte a standalone components, signals e zoneless change detection |
 | **UI Components** | PrimeNG | 21 | Biblioteca rica de componentes UI para Angular; template Sakai como base controlada |
 | **CSS Framework** | Tailwind CSS | 4 | Utility-first; alta produtividade; boa integracao com PrimeNG via tailwindcss-primeui |
-| **Backend** | ASP.NET Core | .NET 10 | Framework performatico para APIs REST; excelente tooling para OpenAPI/Swagger |
+| **Backend** | ASP.NET Core | .NET 10 | Framework performatico para APIs REST; excelente tooling para OpenAPI |
 | **Linguagem Backend** | C# | 13 | Tipagem forte, records, pattern matching; produtividade alta para dominio empresarial |
 | **Worker** | .NET BackgroundService | .NET 10 | Compartilha dominio e infra com backend; simplifica deploy (mesmo container) |
 | **Banco de Dados** | MongoDB | 7 | Schema flexivel para dados tributarios variados; bom para leitura rapida com indices compostos |
 | **Driver MongoDB** | MongoDB.Driver | 3.x | Driver oficial C# para MongoDB; suporte a LINQ e builders |
 | **Autenticacao** | JWT (RFC 7519) | - | Stateless; bem suportado pelo ASP.NET Core; access + refresh tokens |
 | **Hash de Senhas** | bcrypt | - | Padrao da industria; work factor configuravel; resistente a ataques de forca bruta |
-| **Logs** | Serilog | 4.x | Logs estruturados em JSON; sinks configurados para console e arquivo |
-| **Documentacao API** | Swagger / OpenAPI | 3.0 | Documentacao viva gerada a partir do codigo; Swagger UI integrado |
+| **Logs** | Microsoft.Extensions.Logging | built-in | ILogger nativo do .NET; logs estruturados em JSON; configuravel via appsettings |
+| **Documentacao API** | OpenAPI | 3.0 | Documentacao viva gerada a partir do codigo; endpoint em `/openapi/v1.json` |
 | **Testes Backend** | xUnit | latest | Padrao .NET; suporte a injecao de dependencia e paralelismo |
 | **Testes Frontend** | Vitest | 4.x | Rapido; ja configurado no projeto Angular |
 | **E2E Tests** | Cypress | 13.x | DX excelente para testes de UI; seletores estaveis; bom suporte a SPA |
-| **Servidor Web** | Nginx | alpine | Leve; serve SPA Angular; proxy reverso para backend |
+| **Servidor Web** | Nginx | alpine | Embutido no container frontend (multi-stage build); serve SPA Angular; proxy reverso para backend |
 | **Containerizacao** | Docker | - | Ambiente reprodutivel; multi-stage builds para imagens otimizadas |
 | **Orquestracao** | Docker Compose | v2 | Orquestracao local simples; define servicos, redes, volumes |
 | **Controle de Versao** | Git | - | Estrategia de micro PRs; worktrees por trilha |
@@ -390,8 +390,10 @@ sequenceDiagram
             B->>B: Gera hash bcrypt (work factor 12)
             B->>DB: Insere novo User
             DB-->>B: Confirmacao
-            B-->>F: 201 Created { mensagem: "Conta criada com sucesso" }
-            F-->>U: Redireciona para login com mensagem de sucesso
+            B->>B: Gera Access Token JWT + Refresh Token
+            B-->>F: 201 Created { accessToken, refreshToken, expiresIn }
+            F->>F: Armazena accessToken e refreshToken
+            F-->>U: Redireciona para pagina principal (Mapa)
         end
     end
 
@@ -408,7 +410,7 @@ sequenceDiagram
             B->>B: Gera Access Token JWT (15-30 min)
             B->>B: Gera Refresh Token (7 dias)
             B->>DB: Salva refresh token hash no usuario
-            B-->>F: 200 OK { accessToken, refreshToken, expiresIn, usuario: { nome, email } }
+            B-->>F: 200 OK { accessToken, refreshToken, expiresIn }
             F->>F: Armazena accessToken e refreshToken
             F-->>U: Redireciona para pagina principal (Mapa)
         end
@@ -682,7 +684,7 @@ graph TB
         subgraph "Rede: mapa-tributario-net"
             FE["frontend<br/>build: ./frontend/MapaTributario-ui<br/>image: nginx:alpine<br/>ports: 4200:80<br/>depends_on: backend"]
 
-            BE["backend<br/>build: ./backend/MapaTributario<br/>image: .NET 10 runtime<br/>ports: 5000:8080<br/>depends_on: mongodb<br/>env: JWT_SECRET, MONGO_URI<br/>volumes: certs:/certs"]
+            BE["backend<br/>build: ./backend/MapaTributario<br/>image: .NET 10 runtime<br/>ports: 5000:8080<br/>depends_on: mongodb<br/>env: JWT_SECRET, MONGO_URI"]
 
             MG["mongodb<br/>image: mongo:7<br/>ports: 27017:27017<br/>volumes: mongo-data:/data/db"]
         end
@@ -694,13 +696,11 @@ graph TB
 
     subgraph "Volumes"
         V1["mongo-data - persistencia de dados"]
-        V2["certs - certificado PFX"]
     end
 
     FE -->|"proxy /api/* -> backend:8080"| BE
     BE --> MG
     MG --- V1
-    BE --- V2
     CY -->|HTTP| FE
 ```
 
@@ -740,6 +740,8 @@ Stage 2 - Serve:
 
 ### 7.3 Nginx - Configuracao do Proxy Reverso
 
+> **Nota:** O Nginx nao e um container separado no docker-compose atual. Ele faz parte do container `frontend`, que usa a imagem `nginx:alpine` no segundo estagio do build multi-stage para servir a SPA Angular e atuar como proxy reverso para o backend. Em producao, pode-se optar por um Nginx externo ou outro reverse proxy.
+
 ```
 server {
     listen 80;
@@ -750,8 +752,8 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
     }
 
-    location /swagger {
-        proxy_pass http://backend:8080/swagger;
+    location /openapi {
+        proxy_pass http://backend:8080/openapi;
     }
 
     location /health {
@@ -775,8 +777,7 @@ server {
 | `JWT_EXPIRY_MINUTES` | backend | TTL do access token | `30` |
 | `JWT_REFRESH_EXPIRY_DAYS` | backend | TTL do refresh token | `7` |
 | `CRAWLER_CRON` | backend | CRON do worker | `0 2 * * *` |
-| `CRAWLER_PFX_PATH` | backend | Caminho do certificado PFX | `/certs/nfse.pfx` |
-| `CRAWLER_PFX_PASSWORD` | backend | Senha do certificado | (secret) |
+| _(certificado PFX)_ | backend | Gerenciado via API: `POST/GET/DELETE /api/v1/crawler/certificado` | - |
 | `NFSE_BASE_URL` | backend | URL da API NFS-e | `https://adn.nfse.gov.br` |
 | `ASPNETCORE_ENVIRONMENT` | backend | Ambiente .NET | `Production` |
 | `CYPRESS_BASE_URL` | cypress | URL do frontend para testes | `http://frontend:80` |

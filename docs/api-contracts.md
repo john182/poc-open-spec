@@ -21,6 +21,9 @@
   - [POST /api/v1/crawler/executar](#post-apiv1crawlerexecutar)
   - [GET /api/v1/crawler/status](#get-apiv1crawlerstatus)
   - [GET /api/v1/crawler/execucoes](#get-apiv1crawlerexecucoes)
+  - [POST /api/v1/crawler/certificado](#post-apiv1crawlercertificado)
+  - [GET /api/v1/crawler/certificado](#get-apiv1crawlercertificado)
+  - [DELETE /api/v1/crawler/certificado](#delete-apiv1crawlercertificado)
 - [Health Check](#health-check)
   - [GET /health](#get-health)
 - [Formato Padrao de Erro](#formato-padrao-de-erro)
@@ -753,6 +756,140 @@ Retorna o historico das ultimas 20 execucoes do crawler.
 
 ```http
 GET /api/v1/crawler/execucoes HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+---
+
+### Certificado PFX
+
+Endpoints para gerenciamento do certificado digital PFX usado pelo worker para autenticacao mTLS com a API NFS-e.
+
+---
+
+### POST /api/v1/crawler/certificado
+
+Faz upload de um certificado PFX com senha. Substitui o certificado anterior, se existir.
+
+**Autenticacao:** JWT Bearer (obrigatorio)
+
+**Content-Type:** `multipart/form-data`
+
+**Request Body (form-data):**
+
+| Campo | Tipo | Descricao |
+|-------|------|-----------|
+| file | file (binary) | Arquivo PFX do certificado digital |
+| password | string | Senha do certificado PFX |
+
+**Respostas:**
+
+| Status | Descricao |
+|--------|-----------|
+| 200 OK | Certificado carregado com sucesso |
+| 400 Bad Request | Arquivo PFX invalido ou senha incorreta |
+| 401 Unauthorized | Token ausente ou invalido |
+
+**Response Body (200):**
+
+```json
+{
+  "hasCertificate": true,
+  "uploadedAt": "2024-01-01T00:00:00Z"
+}
+```
+
+**Response Body (400):**
+
+```json
+{
+  "erro": "Arquivo PFX invalido ou senha incorreta",
+  "codigo": "INVALID_CERTIFICATE"
+}
+```
+
+**Exemplo de requisicao:**
+
+```http
+POST /api/v1/crawler/certificado HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+Content-Type: multipart/form-data; boundary=----FormBoundary
+
+------FormBoundary
+Content-Disposition: form-data; name="file"; filename="nfse.pfx"
+Content-Type: application/x-pkcs12
+
+(binary data)
+------FormBoundary
+Content-Disposition: form-data; name="password"
+
+minhaSenha123
+------FormBoundary--
+```
+
+---
+
+### GET /api/v1/crawler/certificado
+
+Retorna o status do certificado PFX atualmente carregado.
+
+**Autenticacao:** JWT Bearer (obrigatorio)
+
+**Parametros:** Nenhum
+
+**Respostas:**
+
+| Status | Descricao |
+|--------|-----------|
+| 200 OK | Status do certificado |
+| 401 Unauthorized | Token ausente ou invalido |
+
+**Response Body (200 - com certificado):**
+
+```json
+{
+  "hasCertificate": true,
+  "uploadedAt": "2024-01-01T00:00:00Z"
+}
+```
+
+**Response Body (200 - sem certificado):**
+
+```json
+{
+  "hasCertificate": false,
+  "uploadedAt": null
+}
+```
+
+**Exemplo de requisicao:**
+
+```http
+GET /api/v1/crawler/certificado HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+---
+
+### DELETE /api/v1/crawler/certificado
+
+Remove o certificado PFX atualmente carregado.
+
+**Autenticacao:** JWT Bearer (obrigatorio)
+
+**Parametros:** Nenhum
+
+**Respostas:**
+
+| Status | Descricao |
+|--------|-----------|
+| 204 No Content | Certificado removido com sucesso |
+| 401 Unauthorized | Token ausente ou invalido |
+
+**Exemplo de requisicao:**
+
+```http
+DELETE /api/v1/crawler/certificado HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 

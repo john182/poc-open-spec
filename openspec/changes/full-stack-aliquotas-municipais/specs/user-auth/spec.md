@@ -83,3 +83,24 @@ The system SHALL enforce minimum password requirements and store passwords secur
 #### Scenario: Password minimum requirements
 - **WHEN** a user submits a password shorter than 8 characters
 - **THEN** the system rejects the request with HTTP 400
+
+---
+
+### Requirement: Role-based access and frontend navigation
+The system SHALL assign roles to users based on the `Admin:Emails` configuration. Users whose email is in this list receive role "Admin"; all others receive role "User". The frontend SHALL adapt navigation based on the user's role.
+
+#### Scenario: Admin user sees crawler menu
+- **WHEN** a user with Admin role logs into the frontend
+- **THEN** the sidebar navigation displays the "Crawler Management" menu section (executar, status, certificado)
+
+#### Scenario: Regular user does not see crawler menu
+- **WHEN** a user with role "User" logs into the frontend
+- **THEN** the sidebar navigation does NOT display the "Crawler Management" menu section
+
+#### Scenario: Guest user can browse consultation
+- **WHEN** an unauthenticated user navigates to the consultation pages (mapa, estados, municipios, aliquotas)
+- **THEN** the frontend allows access without requiring login — consultation is public
+
+#### Scenario: Guest guard prevents re-login
+- **WHEN** an already-authenticated user navigates to the login page
+- **THEN** the frontend redirects them to the dashboard/consultation page

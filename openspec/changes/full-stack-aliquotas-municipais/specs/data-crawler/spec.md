@@ -8,8 +8,16 @@ The worker SHALL run as a .NET BackgroundService with configurable CRON schedule
 - **THEN** the worker starts a new collection cycle, creates an execution record, and processes the work queue
 
 #### Scenario: Manual trigger
-- **WHEN** an authenticated user calls `POST /api/v1/crawler/executar`
+- **WHEN** an admin user (role Admin) calls `POST /api/v1/crawler/executar`
 - **THEN** the worker starts a new collection cycle immediately and returns HTTP 202 Accepted with execution ID
+
+#### Scenario: Manual trigger with UF filter
+- **WHEN** an admin user calls `POST /api/v1/crawler/executar` with `{ "ufs": ["SE", "MG"] }`
+- **THEN** the worker starts a collection cycle only for the specified UFs
+
+#### Scenario: Non-admin user attempts trigger
+- **WHEN** a user without Admin role calls `POST /api/v1/crawler/executar`
+- **THEN** the system returns HTTP 403 Forbidden
 
 #### Scenario: Concurrent execution prevention
 - **WHEN** a manual trigger is requested while a cycle is already running
@@ -123,11 +131,11 @@ The worker SHALL record each execution cycle in the `execucoes_crawler` collecti
 - **THEN** the execution record is updated with final counts and status
 
 #### Scenario: Execution status endpoint
-- **WHEN** an authenticated user calls `GET /api/v1/crawler/status`
+- **WHEN** an admin user (role Admin) calls `GET /api/v1/crawler/status`
 - **THEN** the system returns the latest execution record
 
 #### Scenario: Execution history
-- **WHEN** an authenticated user calls `GET /api/v1/crawler/execucoes`
+- **WHEN** an admin user (role Admin) calls `GET /api/v1/crawler/execucoes`
 - **THEN** the system returns the last 20 execution records
 
 ---
@@ -200,3 +208,57 @@ The worker SHALL process data for the current competência (current month, forma
 #### Scenario: Historical collection
 - **WHEN** configured to collect historical data
 - **THEN** the worker uses the `historicoaliquotas` endpoint and stores results with their respective competências
+
+---
+
+### Requirement: PFX certificate management via API
+The system SHALL allow administrators to upload, check, and remove the PFX certificate used for mTLS authentication with the NFS-e API. Certificate management endpoints SHALL require Admin role.
+
+#### Scenario: Upload certificate
+- **WHEN** an admin user uploads a PFX file with password via `POST /api/v1/crawler/certificado`
+- **THEN** the system validates the certificate, stores it securely, and returns upload confirmation
+
+#### Scenario: Invalid certificate upload
+- **WHEN** an admin user uploads an invalid PFX file or provides wrong password
+- **THEN** the system returns HTTP 400 with error details
+
+#### Scenario: Check certificate status
+- **WHEN** an admin user calls `GET /api/v1/crawler/certificado`
+- **THEN** the system returns whether a certificate is loaded and when it was uploaded
+
+#### Scenario: Remove certificate
+- **WHEN** an admin user calls `DELETE /api/v1/crawler/certificado`
+- **THEN** the system removes the stored certificate and returns HTTP 204
+
+#### Scenario: Non-admin access to certificate endpoints
+- **WHEN** a non-admin user attempts any certificate endpoint
+- **THEN** the system returns HTTP 403 Forbidden
+
+#### Scenario: Crawler requires certificate
+- **WHEN** the crawler attempts to call the NFS-e API without a loaded certificate
+- **THEN** the system logs the error and marks the execution as failed
+
+---
+
+### Requirement: Admin role authorization for crawler endpoints
+All crawler management endpoints (executar, status, execucoes, certificado) SHALL require the Admin role. The admin role is determined by the `Admin:Emails` configuration. Users whose email is in this list receive the "Admin" role claim in their JWT token. Regular users (role "User") SHALL receive HTTP 403 Forbidden when accessing crawler endpoints.
+
+#### Scenario: Admin user accesses crawler
+- **WHEN** a user with Admin role calls any crawler endpoint
+- **THEN** the request is processed normally
+
+#### Scenario: Regular user blocked from crawler
+- **WHEN** a user with role "User" calls any crawler endpoint
+- **THEN** the system returns HTTP 403 Forbidden
+
+#### Scenario: Unauthenticated user blocked from crawler
+- **WHEN** a request without JWT calls any crawler endpoint
+- **THEN** the system returns HTTP 401 Unauthorized
+
+#### Scenario: Admin emails configuration
+- **WHEN** the application starts
+- **THEN** it reads `Admin:Emails` from configuration to determine which users receive the Admin role
+
+#### Scenario: Frontend navigation visibility
+- **WHEN** a regular user logs into the frontend
+- **THEN** the crawler management menu items are NOT displayed in the sidebar navigation

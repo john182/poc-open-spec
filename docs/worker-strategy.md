@@ -47,9 +47,9 @@ graph LR
     end
 
     subgraph MongoDB
-        FP[(fila_processamento)]
+        FP[(filaProcessamento)]
         ALQ[(aliquotas)]
-        EXC[(execucoes_crawler)]
+        EXC[(execucoesCrawler)]
     end
 
     subgraph Backend API
@@ -167,7 +167,7 @@ O endpoint `GET /cnc/consulta/cad/{municipio}` pode retornar informacoes sobre q
 
 ## Fila de Processamento
 
-A fila de processamento e persistida na colecao `fila_processamento` do MongoDB. Cada documento representa uma combinacao unica de municipio + servico + competencia a ser consultada.
+A fila de processamento e persistida na colecao `filaProcessamento` do MongoDB. Cada documento representa uma combinacao unica de municipio + servico + competencia a ser consultada.
 
 ### Schema do documento
 
@@ -462,7 +462,7 @@ A persistencia da fila no MongoDB permite que o worker retome o processamento ap
 
 ```mermaid
 flowchart TD
-    A[Worker reinicia] --> B[Verificar fila_processamento]
+    A[Worker reinicia] --> B[Verificar filaProcessamento]
     B --> C{Itens com status<br/>pendente ou erro?}
     C -->|Sim| D[Retomar processamento<br/>sem regenerar fila]
     C -->|Nao| E{Itens com status<br/>processando?}
@@ -507,7 +507,7 @@ O reprocessamento forcado ignora a logica incremental e recria a fila completa.
 
 ## Registro de Execucoes
 
-Cada ciclo de execucao do worker e registrado na colecao `execucoes_crawler` para rastreabilidade e monitoramento.
+Cada ciclo de execucao do worker e registrado na colecao `execucoesCrawler` para rastreabilidade e monitoramento.
 
 ### Schema do registro
 

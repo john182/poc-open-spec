@@ -12,21 +12,6 @@ public class AliquotaRepository : IAliquotaRepository
     public AliquotaRepository(IMongoDatabase database)
     {
         _aliquotas = database.GetCollection<Aliquota>("aliquotas");
-
-        var municipioIndex = Builders<Aliquota>.IndexKeys.Ascending(a => a.CodigoMunicipio);
-        _aliquotas.Indexes.CreateOne(new CreateIndexModel<Aliquota>(municipioIndex));
-
-        var compostoIndex = Builders<Aliquota>.IndexKeys
-            .Ascending(a => a.CodigoMunicipio)
-            .Ascending(a => a.CodigoServico);
-        _aliquotas.Indexes.CreateOne(
-            new CreateIndexModel<Aliquota>(compostoIndex, new CreateIndexOptions { Unique = true }));
-
-        var competenciaIndex = Builders<Aliquota>.IndexKeys
-            .Ascending(a => a.CodigoMunicipio)
-            .Ascending(a => a.CodigoServico)
-            .Ascending(a => a.Competencia);
-        _aliquotas.Indexes.CreateOne(new CreateIndexModel<Aliquota>(competenciaIndex));
     }
 
     public async Task<(IReadOnlyList<Aliquota> Items, long Total)> GetByMunicipioAsync(

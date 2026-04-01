@@ -49,13 +49,13 @@ public class ConsultaControllerTests : IntegrationTestBase
     // --- Auth ---
 
     [Fact]
-    public async Task GET_Estados_SemToken_Retorna401()
+    public async Task GET_Estados_SemToken_Retorna200_EndpointPublico()
     {
         var unauthClient = Factory.CreateClient();
 
         var response = await unauthClient.GetAsync("/api/v1/estados");
 
-        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
         unauthClient.Dispose();
     }
 
@@ -110,13 +110,13 @@ public class ConsultaControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task GET_MunicipiosPorUf_SemToken_Retorna401()
+    public async Task GET_MunicipiosPorUf_SemToken_Retorna200_EndpointPublico()
     {
         var unauthClient = Factory.CreateClient();
 
         var response = await unauthClient.GetAsync("/api/v1/estados/SP/municipios");
 
-        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
         unauthClient.Dispose();
     }
 
@@ -246,13 +246,13 @@ public class ConsultaControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task GET_AliquotasPorMunicipio_SemToken_Retorna401()
+    public async Task GET_AliquotasPorMunicipio_SemToken_Retorna200_EndpointPublico()
     {
         var unauthClient = Factory.CreateClient();
 
         var response = await unauthClient.GetAsync("/api/v1/municipios/3550308/aliquotas");
 
-        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
         unauthClient.Dispose();
     }
 
@@ -301,13 +301,13 @@ public class ConsultaControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task GET_DetalheAliquota_SemToken_Retorna401()
+    public async Task GET_DetalheAliquota_SemToken_Retorna200_EndpointPublico()
     {
         var unauthClient = Factory.CreateClient();
 
         var response = await unauthClient.GetAsync("/api/v1/municipios/3550308/aliquotas/01.01.00");
 
-        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
         unauthClient.Dispose();
     }
 }

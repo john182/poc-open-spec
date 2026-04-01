@@ -272,7 +272,7 @@ Content-Type: application/json
 
 ## Consulta de Dados
 
-Todos os endpoints desta secao requerem autenticacao JWT.
+Endpoints **publicos** — nao requerem autenticacao. Qualquer usuario (autenticado ou nao) pode consultar dados.
 
 ---
 
@@ -280,7 +280,7 @@ Todos os endpoints desta secao requerem autenticacao JWT.
 
 Retorna a lista de todos os 27 estados brasileiros.
 
-**Autenticacao:** JWT Bearer (obrigatorio)
+**Autenticacao:** Nenhuma (endpoint publico)
 
 **Parametros:** Nenhum
 
@@ -289,7 +289,6 @@ Retorna a lista de todos os 27 estados brasileiros.
 | Status | Descricao |
 |--------|-----------|
 | 200 OK | Lista de estados |
-| 401 Unauthorized | Token ausente ou invalido |
 
 **Response Body (200):**
 
@@ -321,7 +320,6 @@ Retorna a lista de todos os 27 estados brasileiros.
 
 ```http
 GET /api/v1/estados HTTP/1.1
-Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 
 **Exemplo de resposta (200):**
@@ -343,7 +341,7 @@ Content-Type: application/json
 
 Retorna a lista de municipios de um estado especifico.
 
-**Autenticacao:** JWT Bearer (obrigatorio)
+**Autenticacao:** Nenhuma (endpoint publico)
 
 **Path Parameters:**
 
@@ -356,7 +354,6 @@ Retorna a lista de municipios de um estado especifico.
 | Status | Descricao |
 |--------|-----------|
 | 200 OK | Lista de municipios do estado |
-| 401 Unauthorized | Token ausente ou invalido |
 | 404 Not Found | UF invalida ou nao encontrada |
 
 **Response Body (200):**
@@ -395,7 +392,6 @@ Retorna a lista de municipios de um estado especifico.
 
 ```http
 GET /api/v1/estados/MG/municipios HTTP/1.1
-Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 
 ---
@@ -404,7 +400,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 Retorna lista paginada de aliquotas de servicos para um municipio.
 
-**Autenticacao:** JWT Bearer (obrigatorio)
+**Autenticacao:** Nenhuma (endpoint publico)
 
 **Path Parameters:**
 
@@ -430,7 +426,6 @@ Retorna lista paginada de aliquotas de servicos para um municipio.
 |--------|-----------|
 | 200 OK | Lista paginada de aliquotas |
 | 400 Bad Request | Parametros de query invalidos |
-| 401 Unauthorized | Token ausente ou invalido |
 | 404 Not Found | Municipio nao encontrado no cadastro |
 
 **Response Body (200):**
@@ -490,14 +485,12 @@ Retorna lista paginada de aliquotas de servicos para um municipio.
 
 ```http
 GET /api/v1/municipios/3106200/aliquotas?pagina=1&tamanhoPagina=10&codigoServico=01.01&aliquotaMin=2&aliquotaMax=5 HTTP/1.1
-Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 
 **Exemplo de requisicao sem filtros (defaults):**
 
 ```http
 GET /api/v1/municipios/3106200/aliquotas HTTP/1.1
-Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 
 ---
@@ -506,7 +499,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 Retorna o detalhe de uma aliquota especifica para um servico em um municipio.
 
-**Autenticacao:** JWT Bearer (obrigatorio)
+**Autenticacao:** Nenhuma (endpoint publico)
 
 **Path Parameters:**
 
@@ -520,7 +513,6 @@ Retorna o detalhe de uma aliquota especifica para um servico em um municipio.
 | Status | Descricao |
 |--------|-----------|
 | 200 OK | Detalhe da aliquota encontrado |
-| 401 Unauthorized | Token ausente ou invalido |
 | 404 Not Found | Municipio ou servico nao encontrado |
 
 **Response Body (200):**
@@ -562,15 +554,13 @@ Retorna o detalhe de uma aliquota especifica para um servico em um municipio.
 
 ```http
 GET /api/v1/municipios/3106200/aliquotas/01.01.01.001 HTTP/1.1
-Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 
 ---
 
 ## Crawler Admin
 
-Endpoints para gerenciamento do worker/crawler. Requerem autenticacao JWT.
-No MVP nao ha controle por role; futuramente serao restritos a administradores.
+Endpoints para gerenciamento do worker/crawler. Requerem autenticacao JWT com **role Admin**. Usuarios com role 'User' recebem 403 Forbidden. O frontend NAO deve exibir estes endpoints para usuarios comuns — apenas administradores veem o menu do crawler.
 
 ---
 
@@ -578,19 +568,21 @@ No MVP nao ha controle por role; futuramente serao restritos a administradores.
 
 Dispara uma execucao manual do crawler.
 
-**Autenticacao:** JWT Bearer (obrigatorio)
+**Autenticacao:** JWT Bearer (obrigatorio, role Admin)
 
 **Request Body (opcional):**
 
 ```json
 {
-  "forcarReprocessamento": false
+  "forcarReprocessamento": false,
+  "ufs": ["SE", "MG"]
 }
 ```
 
 | Campo | Tipo | Default | Descricao |
 |-------|------|---------|-----------|
 | forcarReprocessamento | boolean | false | Se `true`, regenera a fila completa ignorando dados ja coletados na competencia atual |
+| ufs | string[] | null | Lista de UFs para filtrar a execucao. Se null ou vazio, processa todas as 27 UFs |
 
 **Respostas:**
 
@@ -598,6 +590,7 @@ Dispara uma execucao manual do crawler.
 |--------|-----------|
 | 202 Accepted | Execucao iniciada com sucesso |
 | 401 Unauthorized | Token ausente ou invalido |
+| 403 Forbidden | Usuario nao tem role Admin |
 | 409 Conflict | Ja existe uma execucao em andamento |
 
 **Response Body (202):**
@@ -646,7 +639,7 @@ Content-Type: application/json
 
 Retorna o status da execucao mais recente do crawler.
 
-**Autenticacao:** JWT Bearer (obrigatorio)
+**Autenticacao:** JWT Bearer (obrigatorio, role Admin)
 
 **Parametros:** Nenhum
 
@@ -657,6 +650,7 @@ Retorna o status da execucao mais recente do crawler.
 | 200 OK | Status da ultima execucao |
 | 204 No Content | Nenhuma execucao registrada |
 | 401 Unauthorized | Token ausente ou invalido |
+| 403 Forbidden | Usuario nao tem role Admin |
 
 **Response Body (200):**
 
@@ -708,7 +702,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 Retorna o historico das ultimas 20 execucoes do crawler.
 
-**Autenticacao:** JWT Bearer (obrigatorio)
+**Autenticacao:** JWT Bearer (obrigatorio, role Admin)
 
 **Parametros:** Nenhum
 
@@ -718,6 +712,7 @@ Retorna o historico das ultimas 20 execucoes do crawler.
 |--------|-----------|
 | 200 OK | Lista de execucoes |
 | 401 Unauthorized | Token ausente ou invalido |
+| 403 Forbidden | Usuario nao tem role Admin |
 
 **Response Body (200):**
 
@@ -771,7 +766,7 @@ Endpoints para gerenciamento do certificado digital PFX usado pelo worker para a
 
 Faz upload de um certificado PFX com senha. Substitui o certificado anterior, se existir.
 
-**Autenticacao:** JWT Bearer (obrigatorio)
+**Autenticacao:** JWT Bearer (obrigatorio, role Admin)
 
 **Content-Type:** `multipart/form-data`
 
@@ -789,6 +784,7 @@ Faz upload de um certificado PFX com senha. Substitui o certificado anterior, se
 | 200 OK | Certificado carregado com sucesso |
 | 400 Bad Request | Arquivo PFX invalido ou senha incorreta |
 | 401 Unauthorized | Token ausente ou invalido |
+| 403 Forbidden | Usuario nao tem role Admin |
 
 **Response Body (200):**
 
@@ -833,7 +829,7 @@ minhaSenha123
 
 Retorna o status do certificado PFX atualmente carregado.
 
-**Autenticacao:** JWT Bearer (obrigatorio)
+**Autenticacao:** JWT Bearer (obrigatorio, role Admin)
 
 **Parametros:** Nenhum
 
@@ -843,6 +839,7 @@ Retorna o status do certificado PFX atualmente carregado.
 |--------|-----------|
 | 200 OK | Status do certificado |
 | 401 Unauthorized | Token ausente ou invalido |
+| 403 Forbidden | Usuario nao tem role Admin |
 
 **Response Body (200 - com certificado):**
 
@@ -875,7 +872,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 Remove o certificado PFX atualmente carregado.
 
-**Autenticacao:** JWT Bearer (obrigatorio)
+**Autenticacao:** JWT Bearer (obrigatorio, role Admin)
 
 **Parametros:** Nenhum
 
@@ -885,6 +882,7 @@ Remove o certificado PFX atualmente carregado.
 |--------|-----------|
 | 204 No Content | Certificado removido com sucesso |
 | 401 Unauthorized | Token ausente ou invalido |
+| 403 Forbidden | Usuario nao tem role Admin |
 
 **Exemplo de requisicao:**
 

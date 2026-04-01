@@ -11,9 +11,6 @@ public class UserRepository : IUserRepository
     public UserRepository(IMongoDatabase database)
     {
         _users = database.GetCollection<User>("users");
-        var indexKeys = Builders<User>.IndexKeys.Ascending(u => u.Email);
-        var indexOptions = new CreateIndexOptions { Unique = true };
-        _users.Indexes.CreateOne(new CreateIndexModel<User>(indexKeys, indexOptions));
     }
 
     public async Task<User> CreateAsync(User user)

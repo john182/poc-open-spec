@@ -11,10 +11,6 @@ public class ServicoRepository : IServicoRepository
     public ServicoRepository(IMongoDatabase database)
     {
         _servicos = database.GetCollection<Servico>("servicos");
-
-        var codigoIndex = Builders<Servico>.IndexKeys.Ascending(s => s.CodigoTribNac);
-        _servicos.Indexes.CreateOne(
-            new CreateIndexModel<Servico>(codigoIndex, new CreateIndexOptions { Unique = true }));
     }
 
     public async Task<IReadOnlyList<Servico>> GetAllAsync()

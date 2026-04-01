@@ -292,7 +292,7 @@ Colecao principal com dados consolidados de aliquotas. Escrita pelo worker, lida
 
 ---
 
-#### `execucoes_crawler`
+#### `execucoesCrawler`
 
 Historico de execucoes do worker/crawler.
 
@@ -318,7 +318,7 @@ Historico de execucoes do worker/crawler.
 
 ---
 
-#### `fila_processamento`
+#### `filaProcessamento`
 
 Fila de trabalho do worker. Permite retomada e reprocessamento.
 
@@ -426,17 +426,19 @@ sequenceDiagram
     participant B as Backend .NET
 
     rect rgb(230, 255, 230)
-        Note over F,B: Requisicao Autenticada Normal
-        F->>I: GET /api/v1/estados
+        Note over F,B: Requisicao Autenticada Normal (endpoints protegidos)
+        F->>I: GET /api/v1/crawler/status
         I->>I: Anexa header Authorization: Bearer {accessToken}
         I->>B: Request com JWT
         B->>B: Valida JWT (assinatura, expiracao, claims)
         B-->>F: 200 OK { dados }
     end
 
+    Note over F,B: Nota: Endpoints de consulta (/api/v1/estados, municipios, aliquotas) sao publicos e nao requerem JWT.
+
     rect rgb(255, 230, 230)
         Note over F,B: Token Expirado - Refresh Automatico
-        F->>I: GET /api/v1/municipios/3106200/aliquotas
+        F->>I: GET /api/v1/crawler/execucoes
         I->>I: Anexa header Authorization: Bearer {accessToken}
         I->>B: Request com JWT expirado
         B-->>I: 401 Unauthorized
@@ -507,7 +509,7 @@ flowchart TD
     MANUAL --> CHECK_RUNNING
 
     CHECK_RUNNING -->|Sim| REJECT[Rejeita: 409 Conflict]
-    CHECK_RUNNING -->|Nao| CREATE_EXEC["Cria registro em<br/>execucoes_crawler<br/>status: em_andamento"]
+    CHECK_RUNNING -->|Nao| CREATE_EXEC["Cria registro em<br/>execucoesCrawler<br/>status: em_andamento"]
 
     CREATE_EXEC --> CHECK_QUEUE{Fila com itens<br/>pendentes ou erro?}
 
@@ -568,7 +570,7 @@ flowchart TD
     CHECK_CB_THRESHOLD -->|Nao| PICK
     OPEN_CB --> PICK
 
-    FINISH --> UPDATE_EXEC["Atualiza execucoes_crawler:<br/>fim, processados, erros,<br/>status final, duracao"]
+    FINISH --> UPDATE_EXEC["Atualiza execucoesCrawler:<br/>fim, processados, erros,<br/>status final, duracao"]
     UPDATE_EXEC --> CALC_STATUS{Todos processados?}
     CALC_STATUS -->|Sem erros| STATUS_OK["status = concluido"]
     CALC_STATUS -->|Alguns erros| STATUS_PARTIAL["status = falha_parcial"]
@@ -624,7 +626,7 @@ flowchart TD
         LOGIN <-->|Link| SIGNUP
     end
 
-    subgraph "Layout Autenticado - AuthGuard"
+    subgraph "Layout Autenticado"
         MAPA["/consulta<br/>Mapa do Brasil SVG"]
         ESTADO["/consulta/estado/:uf<br/>Municipios do Estado"]
         MUNICIPIO["/consulta/municipio/:codigoIbge<br/>Aliquotas do Municipio"]
@@ -654,9 +656,9 @@ flowchart TD
 |------|-----------|-------|--------|-----------|
 | `/auth/login` | LoginComponent | - | Sem layout | Tela de login |
 | `/auth/signup` | SignupComponent | - | Sem layout | Tela de cadastro |
-| `/consulta` | MapaComponent | AuthGuard | AppLayout | Mapa do Brasil |
-| `/consulta/estado/:uf` | EstadoComponent | AuthGuard | AppLayout | Municipios do estado |
-| `/consulta/municipio/:codigoIbge` | MunicipioComponent | AuthGuard | AppLayout | Aliquotas do municipio |
+| `/consulta` | MapaComponent | - | AppLayout | Mapa do Brasil |
+| `/consulta/estado/:uf` | EstadoComponent | - | AppLayout | Municipios do estado |
+| `/consulta/municipio/:codigoIbge` | MunicipioComponent | - | AppLayout | Aliquotas do municipio |
 | `/acesso-negado` | AccessDeniedComponent | - | Sem layout | Erro 403 |
 | `/404` | NotFoundComponent | - | Sem layout | Erro 404 |
 | `**` | redirect para `/404` | - | - | Wildcard |
@@ -828,113 +830,133 @@ docker compose down -v
 
 ## 8. Padroes de Codigo
 
-### 8.1 Backend .NET - Clean Architecture
+### 8.1 Backend .NET - Projeto Unico com Separacao por Pastas
 
 ```
 backend/MapaTributario/
 ├── src/
-│   ├── MapaTributario.Domain/           # Camada de Dominio
-│   │   ├── Entities/                    # Entidades de dominio
-│   │   │   ├── Estado.cs
-│   │   │   ├── Municipio.cs
-│   │   │   ├── Servico.cs
-│   │   │   ├── Aliquota.cs
-│   │   │   ├── User.cs
-│   │   │   ├── ExecucaoCrawler.cs
-│   │   │   └── FilaProcessamento.cs
-│   │   ├── ValueObjects/               # Objetos de valor imutaveis
-│   │   │   ├── CodigoServico.cs        # Normalizacao com/sem pontos
-│   │   │   └── Competencia.cs          # Normalizacao de formato YYYYMM
-│   │   ├── Enums/
-│   │   │   ├── StatusExecucao.cs       # EmAndamento, Concluido, FalhaParcial, Falha
-│   │   │   ├── StatusFila.cs           # Pendente, Processando, Concluido, Erro
-│   │   │   └── TipoExecucao.cs        # Agendado, Manual
-│   │   └── Interfaces/                 # Contratos (ports)
-│   │       ├── IEstadoRepository.cs
-│   │       ├── IMunicipioRepository.cs
-│   │       ├── IServicoRepository.cs
-│   │       ├── IAliquotaRepository.cs
-│   │       ├── IUserRepository.cs
-│   │       ├── IExecucaoCrawlerRepository.cs
-│   │       ├── IFilaProcessamentoRepository.cs
-│   │       └── INfseApiClient.cs
-│   │
-│   ├── MapaTributario.Application/      # Camada de Aplicacao
-│   │   ├── Services/                    # Casos de uso
-│   │   │   ├── AuthService.cs           # Register, Login, Refresh
-│   │   │   ├── ConsultaService.cs       # Listagem, Filtros, Paginacao
-│   │   │   └── CrawlerService.cs        # Orquestracao do crawler
-│   │   ├── DTOs/                        # Data Transfer Objects
-│   │   │   ├── Auth/
-│   │   │   │   ├── RegisterRequest.cs
-│   │   │   │   ├── LoginRequest.cs
-│   │   │   │   ├── RefreshRequest.cs
-│   │   │   │   └── AuthResponse.cs
-│   │   │   ├── Consulta/
-│   │   │   │   ├── EstadoResponse.cs
-│   │   │   │   ├── MunicipioResponse.cs
-│   │   │   │   ├── AliquotaResponse.cs
-│   │   │   │   ├── AliquotaDetalheResponse.cs
-│   │   │   │   └── PaginatedResponse.cs
-│   │   │   └── Crawler/
-│   │   │       ├── ExecutarCrawlerRequest.cs
-│   │   │       ├── ExecucaoResponse.cs
-│   │   │       └── StatusCrawlerResponse.cs
-│   │   ├── Validators/                  # Validacao de DTOs
-│   │   │   ├── RegisterRequestValidator.cs
-│   │   │   └── LoginRequestValidator.cs
-│   │   └── Mappings/                    # Entity -> DTO mappings
-│   │       └── MappingExtensions.cs
-│   │
-│   ├── MapaTributario.Infrastructure/   # Camada de Infraestrutura (adapters)
-│   │   ├── Persistence/                 # Repositorios MongoDB
-│   │   │   ├── MongoDbContext.cs         # Configuracao de colecoes e indices
-│   │   │   ├── EstadoRepository.cs
-│   │   │   ├── MunicipioRepository.cs
-│   │   │   ├── ServicoRepository.cs
-│   │   │   ├── AliquotaRepository.cs
-│   │   │   ├── UserRepository.cs
-│   │   │   ├── ExecucaoCrawlerRepository.cs
-│   │   │   └── FilaProcessamentoRepository.cs
-│   │   ├── External/                    # Clientes HTTP externos
-│   │   │   └── NfseApiClient.cs         # HttpClient + PFX + mTLS
-│   │   ├── Auth/                        # Infraestrutura de autenticacao
-│   │   │   ├── JwtTokenGenerator.cs
-│   │   │   └── PasswordHasher.cs
-│   │   ├── Seed/                        # Seed de dados de referencia
-│   │   │   ├── EstadosSeed.cs           # 27 UFs
-│   │   │   ├── MunicipiosSeed.cs        # ~5.570 municipios IBGE
-│   │   │   └── ServicosSeed.cs          # Codigos LC 116/2003
-│   │   └── Resilience/                  # Padroes de resiliencia do worker
-│   │       ├── RateLimiter.cs
-│   │       └── CircuitBreaker.cs
-│   │
-│   └── MapaTributario.Api/             # Camada de API (host / composicao)
+│   └── MapaTributario.API/               # Projeto unico com separacao por camadas via pastas
+│       ├── Domain/                        # Camada de Dominio
+│       │   ├── Entities/
+│       │   │   ├── Estado.cs
+│       │   │   ├── Municipio.cs
+│       │   │   ├── Servico.cs
+│       │   │   ├── Aliquota.cs
+│       │   │   ├── User.cs
+│       │   │   ├── ExecucaoCrawler.cs
+│       │   │   └── FilaProcessamento.cs
+│       │   ├── ValueObjects/
+│       │   │   ├── CodigoServico.cs       # Normalizacao com/sem pontos
+│       │   │   └── Competencia.cs         # Normalizacao de formato YYYYMM
+│       │   ├── Enums/
+│       │   │   ├── StatusExecucao.cs
+│       │   │   ├── StatusFila.cs
+│       │   │   └── TipoExecucao.cs
+│       │   └── Interfaces/               # Contratos (ports)
+│       │       ├── IEstadoRepository.cs
+│       │       ├── IMunicipioRepository.cs
+│       │       ├── IServicoRepository.cs
+│       │       ├── IAliquotaRepository.cs
+│       │       ├── IUserRepository.cs
+│       │       ├── IExecucaoCrawlerRepository.cs
+│       │       ├── IFilaProcessamentoRepository.cs
+│       │       └── INfseApiClient.cs
+│       │
+│       ├── Application/                   # Camada de Aplicacao
+│       │   ├── Auth/
+│       │   │   ├── AuthService.cs         # Register, Login, Refresh
+│       │   │   └── Validators/
+│       │   │       ├── RegisterRequestValidator.cs
+│       │   │       └── LoginRequestValidator.cs
+│       │   ├── Consulta/
+│       │   │   └── ConsultaService.cs     # Listagem, Filtros, Paginacao
+│       │   ├── Crawler/
+│       │   │   ├── CrawlerService.cs      # Orquestracao do crawler
+│       │   │   └── ICertificadoStore.cs   # Contrato para armazenamento de certificado PFX
+│       │   ├── DTOs/
+│       │   │   ├── Auth/
+│       │   │   │   ├── RegisterRequest.cs
+│       │   │   │   ├── LoginRequest.cs
+│       │   │   │   ├── RefreshRequest.cs
+│       │   │   │   └── AuthResponse.cs
+│       │   │   ├── Consulta/
+│       │   │   │   ├── EstadoResponse.cs
+│       │   │   │   ├── MunicipioResponse.cs
+│       │   │   │   ├── AliquotaResponse.cs
+│       │   │   │   ├── AliquotaDetalheResponse.cs
+│       │   │   │   └── PaginatedResponse.cs
+│       │   │   └── Crawler/
+│       │   │       ├── ExecutarCrawlerRequest.cs
+│       │   │       ├── ExecucaoResponse.cs
+│       │   │       └── StatusCrawlerResponse.cs
+│       │   └── Mappings/
+│       │       └── MappingExtensions.cs   # Entity -> DTO mappings
+│       │
+│       ├── Infrastructure/                # Camada de Infraestrutura (adapters)
+│       │   ├── Repository/
+│       │   │   ├── Mongo/
+│       │   │   │   ├── MongoMappings.cs       # Class maps para entidades base
+│       │   │   │   ├── CrawlerMongoMappings.cs # Class maps para entidades do crawler
+│       │   │   │   └── MongoIndexSetup.cs     # Criacao centralizada de indices (todas as colecoes)
+│       │   │   ├── EstadoRepository.cs
+│       │   │   ├── MunicipioRepository.cs
+│       │   │   ├── ServicoRepository.cs
+│       │   │   ├── AliquotaRepository.cs
+│       │   │   ├── UserRepository.cs
+│       │   │   ├── ExecucaoCrawlerRepository.cs
+│       │   │   └── FilaProcessamentoRepository.cs
+│       │   ├── External/
+│       │   │   └── NfseApiClient.cs       # HttpClient + PFX + mTLS
+│       │   ├── Auth/
+│       │   │   ├── JwtTokenGenerator.cs
+│       │   │   └── PasswordHasher.cs
+│       │   ├── Seed/
+│       │   │   ├── EstadosSeed.cs         # 27 UFs
+│       │   │   ├── MunicipiosSeed.cs      # ~5.570 municipios IBGE
+│       │   │   └── ServicosSeed.cs        # Codigos LC 116/2003
+│       │   ├── Resilience/
+│       │   │   ├── RateLimiter.cs
+│       │   │   └── CircuitBreaker.cs
+│       │   └── Crawler/
+│       │       ├── CertificadoStore.cs    # Armazenamento de certificado PFX em memoria
+│       │       └── ExecutionGuard.cs      # Controle de execucao concorrente do crawler
+│       │
 │       ├── Controllers/
 │       │   ├── AuthController.cs
-│       │   ├── ConsultaController.cs
-│       │   ├── CrawlerController.cs
+│       │   ├── ConsultaController.cs      # Endpoints publicos (sem [Authorize])
+│       │   ├── CrawlerController.cs       # Requer JWT + role Admin
 │       │   └── HealthController.cs
 │       ├── Middleware/
 │       │   └── ErrorHandlingMiddleware.cs
 │       ├── Workers/
 │       │   └── CrawlerBackgroundService.cs
+│       ├── Extensions/                    # DI por camada
+│       │   ├── InfrastructureServiceExtensions.cs  # AddMapaTributarioInfrastructure()
+│       │   └── ApplicationServiceExtensions.cs     # AddMapaTributarioApplication()
 │       ├── Configuration/
 │       │   ├── JwtConfiguration.cs
 │       │   ├── MongoDbConfiguration.cs
 │       │   └── CrawlerConfiguration.cs
-│       ├── Program.cs                   # Composicao, DI, pipeline
+│       ├── Program.cs                     # Composicao simplificada: AddInfrastructure + AddApplication
 │       └── appsettings.json
 │
 └── tests/
-    ├── MapaTributario.UnitTests/
-    │   ├── Services/                    # Testes de AuthService, ConsultaService, CrawlerService
-    │   ├── Domain/                      # Testes de ValueObjects (CodigoServico, Competencia)
-    │   └── Validators/                  # Testes de validadores
-    └── MapaTributario.IntegrationTests/
-        ├── Controllers/                 # Testes de endpoints
-        └── Persistence/                 # Testes de repositorios com MongoDB
+    ├── MapaTributario.Tests.Unit/
+    │   ├── Services/                      # Testes de AuthService, ConsultaService, CrawlerService
+    │   ├── Domain/                        # Testes de ValueObjects (CodigoServico, Competencia)
+    │   └── Validators/                    # Testes de validadores
+    └── MapaTributario.Tests.Integration/
+        ├── AuthControllerTests.cs         # Testes de endpoints de autenticacao
+        ├── ConsultaControllerTests.cs     # Testes de endpoints publicos de consulta
+        └── CrawlerControllerTests.cs      # Testes de endpoints do crawler (requer JWT)
 ```
+
+**Decisoes arquiteturais relevantes:**
+
+- **Projeto unico com separacao por pastas:** As camadas Domain, Application, Infrastructure e API/Host coexistem em um unico projeto (`MapaTributario.API`). A separacao e logica, via pastas e namespaces. Isso simplifica build e deploy sem sacrificar organizacao.
+- **DI por camada:** O `Program.cs` chama `AddMapaTributarioInfrastructure()` (MongoDB, repositorios, auth infra, certificado, seed, API client) e `AddMapaTributarioApplication()` (services, use cases, resiliencia, JWT auth, FluentValidation, background service). Cada extension registra apenas os componentes de sua camada.
+- **Indices centralizados:** A classe `MongoIndexSetup` cria todos os indices de todas as 7 colecoes em um unico ponto, chamado na inicializacao via `app.ApplyMongoIndexesAsync()`. Repositorios nao criam indices em seus construtores.
+- **Endpoints de consulta publicos:** Os endpoints `/api/v1/estados`, `/api/v1/estados/:uf/municipios`, `/api/v1/municipios/:codigoIbge/aliquotas` e `/api/v1/municipios/:codigoIbge/aliquotas/:codigoServico` nao possuem `[Authorize]`. Apenas endpoints do crawler requerem JWT com role Admin.
 
 ### 8.2 Frontend Angular - Feature Modules
 
@@ -1035,7 +1057,7 @@ frontend/MapaTributario-ui/src/app/
 | **DTOs** | PascalCase + sufixo Request/Response | `LoginRequest`, `AliquotaResponse` |
 | **Controllers** | PascalCase + sufixo Controller | `ConsultaController`, `AuthController` |
 | **Enums** | PascalCase, singular | `StatusExecucao.EmAndamento` |
-| **Colecoes MongoDB** | snake_case (convencao Mongo) | `execucoes_crawler`, `fila_processamento` |
+| **Colecoes MongoDB** | camelCase | `execucoesCrawler`, `filaProcessamento` |
 | **Arquivos de config** | PascalCase | `CrawlerConfiguration.cs`, `JwtConfiguration.cs` |
 
 ### 9.2 Frontend (Angular / TypeScript)
@@ -1136,9 +1158,9 @@ frontend/MapaTributario-ui/src/app/
 |------|-----------|
 | **Status** | Aceita |
 | **Contexto** | Worker precisa de retomada, reprocessamento e visibilidade do progresso |
-| **Decisao** | Colecao `fila_processamento` no MongoDB como fila de trabalho |
+| **Decisao** | Colecao `filaProcessamento` no MongoDB como fila de trabalho |
 | **Alternativas descartadas** | RabbitMQ/Kafka (infra adicional desnecessaria), fila em memoria (perde progresso), Azure Service Bus (vendor lock-in) |
-| **Consequencias** | (+) Retomada automatica, visibilidade total, sem infra adicional. (-) Nao e fila otimizada (polling). Mitigacao: indice em `status + proximaTentativa` |
+| **Consequencias** | (+) Retomada automatica, visibilidade total, sem infra adicional. (-) Nao e fila otimizada (polling). Mitigacao: indice em `status + proximaTentativa`. Indices centralizados em `MongoIndexSetup` |
 
 ### ADR-008: Codigo de servico armazenado sem pontos
 

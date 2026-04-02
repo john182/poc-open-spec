@@ -641,12 +641,10 @@ public class CrawlerServiceTests
         // Assert
         resultado.Count.ShouldBe(4);
 
-        // Capitais devem vir primeiro (ordenadas por UF)
+        // Dentro de cada UF, capitais vêm primeiro (MG é processado antes de SP)
         resultado[0].CodigoIbge.ShouldBe("3106200"); // BH (capital MG)
-        resultado[1].CodigoIbge.ShouldBe("3550308"); // SP (capital SP)
-
-        // Depois os demais (ordenados por UF e nome)
-        resultado[2].CodigoIbge.ShouldBe("3170206"); // Uberlândia (interior MG — MG vem antes de SP)
+        resultado[1].CodigoIbge.ShouldBe("3170206"); // Uberlândia (interior MG)
+        resultado[2].CodigoIbge.ShouldBe("3550308"); // São Paulo (capital SP)
         resultado[3].CodigoIbge.ShouldBe("3509502"); // Campinas (interior SP)
     }
 

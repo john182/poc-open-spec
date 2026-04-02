@@ -25,4 +25,11 @@ export const CRAWLER_ROUTES: Routes = [
         (m) => m.CrawlerExecucoesComponent,
       ),
   },
+  {
+    path: 'configuracao',
+    loadComponent: () =>
+      import('./configuracao/crawler-configuracao.component').then(
+        (m) => m.CrawlerConfiguracaoComponent,
+      ),
+  },
 ];

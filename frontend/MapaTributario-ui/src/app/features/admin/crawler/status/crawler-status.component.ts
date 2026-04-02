@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
@@ -13,13 +13,15 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
 import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
 import { CrawlerService } from '../services/crawler.service';
-import { StatusCrawler } from '../models/crawler.models';
+import { StatusCrawler, ProgressoUf } from '../models/crawler.models';
 
 const SIGLAS_UF = [
   'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO',
   'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR',
   'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO',
 ];
+
+const INTERVALO_POLLING_MS = 5000;
 
 @Component({
   selector: 'app-crawler-status',
@@ -32,8 +34,9 @@ const SIGLAS_UF = [
   templateUrl: './crawler-status.component.html',
   styleUrl: './crawler-status.component.scss',
 })
-export class CrawlerStatusComponent implements OnInit {
+export class CrawlerStatusComponent implements OnInit, OnDestroy {
   private readonly _crawlerService = inject(CrawlerService);
+  private _intervalPolling: ReturnType<typeof setInterval> | null = null;
 
   readonly migalhas: MenuItem[] = [
     { label: 'Administração', routerLink: '/admin' },
@@ -47,13 +50,26 @@ export class CrawlerStatusComponent implements OnInit {
 
   readonly opcoesUf = SIGLAS_UF.map(uf => ({ label: uf, value: uf }));
   readonly executando = signal(false);
+  readonly executandoCapitais = signal(false);
   readonly mensagemExecucao = signal('');
   readonly erroExecucao = signal('');
   readonly forcarReprocessamento = signal(false);
   readonly filtroUfs = signal<string[]>([]);
 
+  readonly listaProgressoUfs = signal<ProgressoUf[]>([]);
+
+  readonly ufsConcluidasLista = computed(() => {
+    return this.listaProgressoUfs()
+      .filter(p => p.status === 'Concluido')
+      .map(p => p.uf);
+  });
+
   ngOnInit(): void {
     this._carregarStatus();
+  }
+
+  ngOnDestroy(): void {
+    this._pararPolling();
   }
 
   tentarNovamente(): void {
@@ -85,6 +101,28 @@ export class CrawlerStatusComponent implements OnInit {
     });
   }
 
+  executarCapitaisPrimeiro(): void {
+    this.executandoCapitais.set(true);
+    this.mensagemExecucao.set('');
+    this.erroExecucao.set('');
+
+    this._crawlerService.executar({
+      forcarReprocessamento: this.forcarReprocessamento(),
+      capitaisPrimeiro: true,
+    }).subscribe({
+      next: (resposta) => {
+        this.mensagemExecucao.set(resposta.mensagem);
+        this.executandoCapitais.set(false);
+        this._carregarStatus();
+      },
+      error: (err) => {
+        const msg = err.error?.erro ?? 'Erro ao iniciar execução do crawler.';
+        this.erroExecucao.set(msg);
+        this.executandoCapitais.set(false);
+      },
+    });
+  }
+
   obterSeveridadeStatus(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
     switch (status?.toLowerCase()) {
       case 'concluido': return 'success';
@@ -96,23 +134,69 @@ export class CrawlerStatusComponent implements OnInit {
     }
   }
 
+  obterSeveridadeProgressoUf(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
+    switch (status?.toLowerCase()) {
+      case 'concluido': return 'success';
+      case 'emandamento': return 'info';
+      case 'falha': return 'danger';
+      default: return 'secondary';
+    }
+  }
+
   private _carregarStatus(): void {
     this.carregando.set(true);
     this.erro.set('');
     this._crawlerService.obterStatus().subscribe({
       next: (status) => {
-        // NenhumaExecucao agora vem como 200 com status "NenhumaExecucao"
-        if (status.status === 'NenhumaExecucao') {
-          this.statusAtual.set(status);
-        } else {
-          this.statusAtual.set(status);
-        }
+        this.statusAtual.set(status);
+        this._atualizarListaProgressoUfs(status);
         this.carregando.set(false);
+        this._gerenciarPolling(status);
       },
       error: () => {
         this.erro.set('Erro ao carregar status do crawler.');
         this.carregando.set(false);
+        this._pararPolling();
       },
     });
+  }
+
+  private _atualizarListaProgressoUfs(status: StatusCrawler): void {
+    if (status.progressoUfs && Object.keys(status.progressoUfs).length > 0) {
+      this.listaProgressoUfs.set(Object.values(status.progressoUfs));
+    } else {
+      this.listaProgressoUfs.set([]);
+    }
+  }
+
+  private _gerenciarPolling(status: StatusCrawler): void {
+    if (status.status === 'EmAndamento') {
+      this._iniciarPolling();
+    } else {
+      this._pararPolling();
+    }
+  }
+
+  private _iniciarPolling(): void {
+    if (this._intervalPolling) return;
+    this._intervalPolling = setInterval(() => {
+      this._crawlerService.obterStatus().subscribe({
+        next: (status) => {
+          this.statusAtual.set(status);
+          this._atualizarListaProgressoUfs(status);
+          this._gerenciarPolling(status);
+        },
+        error: () => {
+          this._pararPolling();
+        },
+      });
+    }, INTERVALO_POLLING_MS);
+  }
+
+  private _pararPolling(): void {
+    if (this._intervalPolling) {
+      clearInterval(this._intervalPolling);
+      this._intervalPolling = null;
+    }
   }
 }

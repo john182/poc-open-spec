@@ -6,6 +6,8 @@ import {
   ExecutarCrawlerRequest,
   ExecutarCrawlerResponse,
   CertificadoStatus,
+  ConfiguracaoCrawler,
+  AtualizarConfiguracaoCrawlerRequest,
 } from '../models/crawler.models';
 
 @Injectable({ providedIn: 'root' })
@@ -38,5 +40,13 @@ export class CrawlerService {
 
   removerCertificado(): Observable<{ mensagem: string }> {
     return this._http.delete<{ mensagem: string }>(`${this._baseUrl}/certificado`);
+  }
+
+  obterConfiguracao(): Observable<ConfiguracaoCrawler> {
+    return this._http.get<ConfiguracaoCrawler>(`${this._baseUrl}/configuracao`);
+  }
+
+  atualizarConfiguracao(request: AtualizarConfiguracaoCrawlerRequest): Observable<ConfiguracaoCrawler> {
+    return this._http.put<ConfiguracaoCrawler>(`${this._baseUrl}/configuracao`, request);
   }
 }

@@ -4,7 +4,9 @@ import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { CheckboxModule } from 'primeng/checkbox';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
 import { MenuItem } from 'primeng/api';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
@@ -13,11 +15,18 @@ import { EmptyStateComponent } from '../../../../shared/components/empty-state/e
 import { CrawlerService } from '../services/crawler.service';
 import { StatusCrawler } from '../models/crawler.models';
 
+const SIGLAS_UF = [
+  'AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO',
+  'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR',
+  'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO',
+];
+
 @Component({
   selector: 'app-crawler-status',
   standalone: true,
   imports: [
-    FormsModule, DatePipe, ButtonModule, InputTextModule, CheckboxModule, TagModule,
+    FormsModule, DatePipe, ButtonModule, InputTextModule, CheckboxModule,
+    MultiSelectModule, TagModule, TooltipModule,
     PageHeaderComponent, LoadingSpinnerComponent, ErrorStateComponent, EmptyStateComponent,
   ],
   templateUrl: './crawler-status.component.html',
@@ -27,8 +36,8 @@ export class CrawlerStatusComponent implements OnInit {
   private readonly _crawlerService = inject(CrawlerService);
 
   readonly migalhas: MenuItem[] = [
-    { label: 'Administração' },
-    { label: 'Crawler' },
+    { label: 'Administração', routerLink: '/admin' },
+    { label: 'Crawler', routerLink: '/admin/crawler' },
     { label: 'Status' },
   ];
 
@@ -36,11 +45,12 @@ export class CrawlerStatusComponent implements OnInit {
   readonly carregando = signal(true);
   readonly erro = signal('');
 
+  readonly opcoesUf = SIGLAS_UF.map(uf => ({ label: uf, value: uf }));
   readonly executando = signal(false);
   readonly mensagemExecucao = signal('');
   readonly erroExecucao = signal('');
   readonly forcarReprocessamento = signal(false);
-  readonly filtroUfs = signal('');
+  readonly filtroUfs = signal<string[]>([]);
 
   ngOnInit(): void {
     this._carregarStatus();
@@ -55,8 +65,8 @@ export class CrawlerStatusComponent implements OnInit {
     this.mensagemExecucao.set('');
     this.erroExecucao.set('');
 
-    const ufsTexto = this.filtroUfs().trim();
-    const ufs = ufsTexto ? ufsTexto.split(',').map(u => u.trim().toUpperCase()).filter(u => u) : undefined;
+    const ufsSelecionadas = this.filtroUfs();
+    const ufs = ufsSelecionadas.length > 0 ? ufsSelecionadas : undefined;
 
     this._crawlerService.executar({
       forcarReprocessamento: this.forcarReprocessamento(),

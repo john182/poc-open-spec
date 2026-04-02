@@ -82,12 +82,22 @@
               inputId="forcarReprocessamento"
               data-cy="checkbox-forcar" />
             <label for="forcarReprocessamento">Forçar reprocessamento</label>
+            <i class="pi pi-info-circle"
+               pTooltip="Quando marcado, reprocessa todos os serviços mesmo que já tenham dados recentes. Sem marcar, apenas serviços sem dados ou com dados expirados serão processados."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
           </div>
           <div class="opcao-campo">
-            <label for="ufs">Filtrar por UFs (separadas por vírgula)</label>
-            <input pInputText id="ufs" placeholder="Ex: SP, MG, RJ"
-                   data-cy="input-ufs"
-                   [ngModel]="filtroUfs()" (ngModelChange)="filtroUfs.set($event)" />
+            <label for="ufs">Filtrar por UFs</label>
+            <p-multiSelect id="ufs"
+                           [options]="opcoesUf"
+                           [(ngModel)]="filtroUfs"
+                           placeholder="Todas as UFs"
+                           [showClear]="true"
+                           [filter]="true"
+                           filterPlaceHolder="Buscar UF..."
+                           data-cy="input-ufs"
+                           display="chip" />
           </div>
         </div>
         <p-button

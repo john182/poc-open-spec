@@ -7,6 +7,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
+import { DatePickerModule } from 'primeng/datepicker';
 import { MenuItem } from 'primeng/api';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
@@ -20,7 +21,7 @@ import { Aliquota, AliquotaDetalhe, FiltroAliquota } from '../models/consulta.mo
   standalone: true,
   imports: [
     FormsModule, DecimalPipe, TableModule, InputTextModule, InputNumberModule,
-    ButtonModule, DialogModule, PageHeaderComponent,
+    ButtonModule, DialogModule, DatePickerModule, PageHeaderComponent,
     LoadingSpinnerComponent, EmptyStateComponent, ErrorStateComponent,
   ],
   templateUrl: './municipio-aliquotas.component.html',
@@ -44,7 +45,7 @@ export class MunicipioAliquotasComponent implements OnInit {
   readonly filtroDescricao = signal('');
   readonly filtroAliquotaMin = signal<number | null>(null);
   readonly filtroAliquotaMax = signal<number | null>(null);
-  readonly filtroCompetencia = signal('');
+  readonly filtroCompetencia = signal<Date | null>(null);
 
   readonly detalheVisivel = signal(false);
   readonly detalhe = signal<AliquotaDetalhe | null>(null);
@@ -66,6 +67,8 @@ export class MunicipioAliquotasComponent implements OnInit {
     return itens;
   });
 
+  private _carregamentoInicialFeito = false;
+
   ngOnInit(): void {
     const codigo = this._route.snapshot.paramMap.get('codigoIbge') ?? '';
     const uf = this._route.snapshot.queryParamMap.get('uf') ?? '';
@@ -77,6 +80,13 @@ export class MunicipioAliquotasComponent implements OnInit {
   }
 
   aplicarFiltros(): void {
+    const competenciaDate = this.filtroCompetencia();
+    let competenciaStr: string | undefined;
+    if (competenciaDate) {
+      const ano = competenciaDate.getFullYear();
+      const mes = String(competenciaDate.getMonth() + 1).padStart(2, '0');
+      competenciaStr = `${ano}-${mes}`;
+    }
     this.filtro.set({
       pagina: 1,
       tamanhoPagina: 20,
@@ -84,7 +94,7 @@ export class MunicipioAliquotasComponent implements OnInit {
       descricao: this.filtroDescricao() || undefined,
       aliquotaMin: this.filtroAliquotaMin() ?? undefined,
       aliquotaMax: this.filtroAliquotaMax() ?? undefined,
-      competencia: this.filtroCompetencia() || undefined,
+      competencia: competenciaStr,
     });
     this._carregarAliquotas();
   }
@@ -94,11 +104,16 @@ export class MunicipioAliquotasComponent implements OnInit {
     this.filtroDescricao.set('');
     this.filtroAliquotaMin.set(null);
     this.filtroAliquotaMax.set(null);
-    this.filtroCompetencia.set('');
+    this.filtroCompetencia.set(null);
     this.aplicarFiltros();
   }
 
   onPaginaChange(evento: { first: number; rows: number }): void {
+    // PrimeNG lazy table dispara onLazyLoad ao inicializar — ignorar pois ngOnInit já fez o carregamento inicial
+    if (!this._carregamentoInicialFeito) {
+      this._carregamentoInicialFeito = true;
+      return;
+    }
     const pagina = Math.floor(evento.first / evento.rows) + 1;
     this.filtro.update(f => ({ ...f, pagina, tamanhoPagina: evento.rows }));
     this._carregarAliquotas();

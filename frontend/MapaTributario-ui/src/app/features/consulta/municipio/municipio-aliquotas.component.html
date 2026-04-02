@@ -17,17 +17,21 @@
       <div class="filtro-campo">
         <label for="aliquotaMin">Alíquota mín. (%)</label>
         <p-inputNumber id="aliquotaMin" mode="decimal" [minFractionDigits]="0" [maxFractionDigits]="2"
+                       [min]="0" [max]="100"
                        [ngModel]="filtroAliquotaMin()" (ngModelChange)="filtroAliquotaMin.set($event)" />
       </div>
       <div class="filtro-campo">
         <label for="aliquotaMax">Alíquota máx. (%)</label>
         <p-inputNumber id="aliquotaMax" mode="decimal" [minFractionDigits]="0" [maxFractionDigits]="2"
+                       [min]="0" [max]="100"
                        [ngModel]="filtroAliquotaMax()" (ngModelChange)="filtroAliquotaMax.set($event)" />
       </div>
       <div class="filtro-campo">
         <label for="competencia">Competência</label>
-        <input pInputText id="competencia" placeholder="YYYYMM"
-               [ngModel]="filtroCompetencia()" (ngModelChange)="filtroCompetencia.set($event)" />
+        <p-datepicker id="competencia" view="month" dateFormat="mm/yy"
+                      placeholder="Selecione o mês"
+                      [showClear]="true"
+                      [ngModel]="filtroCompetencia()" (ngModelChange)="filtroCompetencia.set($event)" />
       </div>
     </div>
     <div class="filtros-acoes">

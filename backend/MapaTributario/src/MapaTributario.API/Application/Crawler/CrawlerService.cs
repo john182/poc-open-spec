@@ -382,7 +382,7 @@ public class CrawlerService : ICrawlerService
                 if (!forcarReprocessamento)
                 {
                     bool jaColetado = await _aliquotaRepository.ExistsAsync(
-                        municipio.CodigoIbge, servico.CodigoTribNac, competencia);
+                        municipio.CodigoIbge, servico.CodigoTribNac.Replace(".", ""), competencia);
 
                     if (jaColetado)
                     {
@@ -805,10 +805,11 @@ public class CrawlerService : ICrawlerService
                     continue;
                 }
 
+                string codigoServicoNormalizado = codigoServicoBase.Replace(".", "");
                 Aliquota aliquota = Aliquota.Create(
                     codigoMunicipio,
                     nomeMunicipio,
-                    codigoServicoBase,
+                    codigoServicoNormalizado,
                     FormatServiceCode(codigoServicoApi),
                     string.Empty, // API doesn't return description per aliquota
                     aliquotaItem.Aliq.Value,

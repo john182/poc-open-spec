@@ -272,8 +272,8 @@ public class CrawlerServiceTests
         Servico srv2 = Servico.Create("07.02.01", "Serv2", "07", "02", "01");
         string competencia = CrawlerService.GetCompetenciaAtual();
 
-        _aliquotaRepo.Setup(r => r.ExistsAsync("3106200", "01.01.01", competencia)).ReturnsAsync(true);
-        _aliquotaRepo.Setup(r => r.ExistsAsync("3106200", "07.02.01", competencia)).ReturnsAsync(false);
+        _aliquotaRepo.Setup(r => r.ExistsAsync("3106200", "010101", competencia)).ReturnsAsync(true);
+        _aliquotaRepo.Setup(r => r.ExistsAsync("3106200", "070201", competencia)).ReturnsAsync(false);
 
         List<FilaProcessamento> inserted = new();
         _filaRepo.Setup(r => r.InsertManyAsync(It.IsAny<IEnumerable<FilaProcessamento>>()))

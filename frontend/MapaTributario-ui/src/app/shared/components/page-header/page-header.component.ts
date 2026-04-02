@@ -1,11 +1,12 @@
 import { Component, input } from '@angular/core';
+import { RouterModule } from '@angular/router';
 import { BreadcrumbModule } from 'primeng/breadcrumb';
 import { MenuItem } from 'primeng/api';
 
 @Component({
   selector: 'app-page-header',
   standalone: true,
-  imports: [BreadcrumbModule],
+  imports: [BreadcrumbModule, RouterModule],
   templateUrl: './page-header.component.html',
   styleUrl: './page-header.component.scss',
 })

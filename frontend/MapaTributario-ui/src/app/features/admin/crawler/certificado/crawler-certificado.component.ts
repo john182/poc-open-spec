@@ -26,8 +26,8 @@ export class CrawlerCertificadoComponent implements OnInit {
   private readonly _crawlerService = inject(CrawlerService);
 
   readonly migalhas: MenuItem[] = [
-    { label: 'Administração' },
-    { label: 'Crawler' },
+    { label: 'Administração', routerLink: '/admin' },
+    { label: 'Crawler', routerLink: '/admin/crawler' },
     { label: 'Certificado' },
   ];
 

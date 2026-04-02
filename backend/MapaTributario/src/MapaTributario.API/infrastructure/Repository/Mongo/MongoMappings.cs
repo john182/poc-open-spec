@@ -105,7 +105,8 @@ public static class MongoMappings
             cm.MapMember(a => a.CodigoServico).SetElementName("codigoServico");
             cm.MapMember(a => a.CodigoServicoFormatado).SetElementName("codigoServicoFormatado");
             cm.MapMember(a => a.DescricaoServico).SetElementName("descricaoServico");
-            cm.MapMember(a => a.ValorAliquota).SetElementName("valorAliquota");
+            cm.MapMember(a => a.ValorAliquota).SetElementName("valorAliquota")
+                .SetSerializer(new DecimalSerializer(BsonType.Decimal128));
             cm.MapMember(a => a.Competencia).SetElementName("competencia");
             cm.MapMember(a => a.ColetadoEm).SetElementName("coletadoEm");
             cm.MapMember(a => a.Fonte).SetElementName("fonte");

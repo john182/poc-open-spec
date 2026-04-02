@@ -139,6 +139,7 @@ export class CrawlerStatusComponent implements OnInit, OnDestroy {
       case 'concluido': return 'success';
       case 'emandamento': return 'info';
       case 'falha': return 'danger';
+      case 'interrompido': return 'warn';
       default: return 'secondary';
     }
   }

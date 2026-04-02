@@ -219,7 +219,8 @@ public class CrawlerService : ICrawlerService
     {
         _logger.LogInformation("Phase 1: Discovering municipalities via convenio endpoint");
 
-        List<Municipio> todos = new();
+        List<Municipio> todosAtivos = new();
+        bool interrompidoPorProtecao = false;
 
         IEnumerable<string> ufsParaProcessar = filtroUfs is { Count: > 0 }
             ? filtroUfs.Select(u => u.ToUpperInvariant()).Where(u => UfsBrasil.Todas.Contains(u))
@@ -232,89 +233,103 @@ public class CrawlerService : ICrawlerService
 
         foreach (string uf in ufsParaProcessar)
         {
-            execucao.IniciarProcessamentoUf(uf);
-
-            IReadOnlyList<Municipio> porUf = await _municipioRepository.GetByUfAsync(uf);
-            todos.AddRange(porUf);
-
-            int municipiosUf = porUf.Count;
-            execucao.FinalizarProcessamentoUf(uf, municipiosUf);
-        }
-
-        // Filtrar por capital quando solicitado:
-        // filtroCapital = true  → somente capitais estaduais
-        // filtroCapital = false → somente municípios que NÃO são capitais
-        // filtroCapital = null  → sem filtro (todos os municípios)
-        if (filtroCapital.HasValue)
-        {
-            int antesDoFiltro = todos.Count;
-            todos = todos.Where(m => m.EhCapital == filtroCapital.Value).ToList();
-
-            _logger.LogInformation(
-                "Filtro por capital aplicado (somenteCapitais={Filtro}): {Antes} → {Depois} municípios",
-                filtroCapital.Value, antesDoFiltro, todos.Count);
-        }
-
-        // Priorizar capitais: processar todas as capitais primeiro (de todas as UFs),
-        // depois os demais municípios em ordem alfabética por UF e nome.
-        List<Municipio> todosOrdenados = todos
-            .OrderByDescending(m => m.EhCapital)
-            .ThenBy(m => m.SiglaEstado)
-            .ThenBy(m => m.Nome)
-            .ToList();
-
-        _logger.LogInformation(
-            "Processing order: {Capitais} capitais first, then {Demais} remaining municipalities",
-            todosOrdenados.Count(m => m.EhCapital),
-            todosOrdenados.Count(m => !m.EhCapital));
-
-        List<Municipio> ativos = new();
-
-        foreach (Municipio municipio in todosOrdenados)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (_certificateProtection.ShouldHalt || _certificateProtection.BudgetExhausted)
+            // Se a proteção de certificado interrompeu, UFs restantes ficam "Pendente"
+            if (interrompidoPorProtecao)
             {
                 break;
             }
 
-            try
+            execucao.IniciarProcessamentoUf(uf);
+
+            IReadOnlyList<Municipio> porUf = await _municipioRepository.GetByUfAsync(uf);
+            int municipiosEncontrados = porUf.Count;
+
+            // Filtrar por capital quando solicitado
+            List<Municipio> municipiosParaVerificar = porUf.ToList();
+            if (filtroCapital.HasValue)
             {
-                await _rateLimiter.WaitAsync(cancellationToken);
-                await _circuitBreaker.WaitIfOpenAsync(cancellationToken);
+                municipiosParaVerificar = municipiosParaVerificar
+                    .Where(m => m.EhCapital == filtroCapital.Value).ToList();
+            }
 
-                Stopwatch sw = Stopwatch.StartNew();
-                ConvenioNfseResponse? convenio =
-                    await _nfseApiClient.GetConvenioAsync(municipio.CodigoIbge, cancellationToken);
-                sw.Stop();
+            // Priorizar capitais dentro da UF
+            municipiosParaVerificar = municipiosParaVerificar
+                .OrderByDescending(m => m.EhCapital)
+                .ThenBy(m => m.Nome)
+                .ToList();
 
-                _certificateProtection.OnResponseReceived(200, sw.Elapsed.TotalSeconds);
-                _circuitBreaker.RecordSuccess();
-                await _certificateProtection.OnItemProcessedAsync(cancellationToken);
+            List<Municipio> ativosUf = new();
+            int errosUf = 0;
+            int verificadosUf = 0;
+            bool ufInterrompida = false;
 
-                if (convenio is not null && convenio.Ativo)
+            foreach (Municipio municipio in municipiosParaVerificar)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (_certificateProtection.ShouldHalt || _certificateProtection.BudgetExhausted)
                 {
-                    ativos.Add(municipio);
+                    ufInterrompida = true;
+                    interrompidoPorProtecao = true;
+                    break;
+                }
+
+                verificadosUf++;
+
+                try
+                {
+                    await _rateLimiter.WaitAsync(cancellationToken);
+                    await _circuitBreaker.WaitIfOpenAsync(cancellationToken);
+
+                    Stopwatch sw = Stopwatch.StartNew();
+                    ConvenioNfseResponse? convenio =
+                        await _nfseApiClient.GetConvenioAsync(municipio.CodigoIbge, cancellationToken);
+                    sw.Stop();
+
+                    _certificateProtection.OnResponseReceived(200, sw.Elapsed.TotalSeconds);
+                    _circuitBreaker.RecordSuccess();
+                    await _certificateProtection.OnItemProcessedAsync(cancellationToken);
+
+                    if (convenio is not null && convenio.Ativo)
+                    {
+                        ativosUf.Add(municipio);
+                    }
+                }
+                catch (HttpRequestException ex)
+                {
+                    int statusCode = (int)(ex.StatusCode ?? System.Net.HttpStatusCode.InternalServerError);
+                    _certificateProtection.OnResponseReceived(statusCode, 0);
+                    _circuitBreaker.RecordFailure();
+                    await _certificateProtection.OnItemProcessedAsync(cancellationToken);
+                    errosUf++;
+
+                    _logger.LogWarning(
+                        "Failed to check convenio for municipality {CodigoIbge}: {Message}",
+                        municipio.CodigoIbge, ex.Message);
                 }
             }
-            catch (HttpRequestException ex)
-            {
-                int statusCode = (int)(ex.StatusCode ?? System.Net.HttpStatusCode.InternalServerError);
-                _certificateProtection.OnResponseReceived(statusCode, 0);
-                _circuitBreaker.RecordFailure();
-                await _certificateProtection.OnItemProcessedAsync(cancellationToken);
 
-                _logger.LogWarning(
-                    "Failed to check convenio for municipality {CodigoIbge}: {Message}",
-                    municipio.CodigoIbge, ex.Message);
+            // Determinar status da UF com base no resultado real
+            if (ufInterrompida)
+            {
+                execucao.InterromperProcessamentoUf(uf, municipiosEncontrados, ativosUf.Count);
             }
+            else if (verificadosUf > 0 && errosUf == verificadosUf)
+            {
+                execucao.FalharProcessamentoUf(uf, municipiosEncontrados);
+            }
+            else
+            {
+                execucao.FinalizarProcessamentoUf(uf, municipiosEncontrados, ativosUf.Count);
+            }
+
+            todosAtivos.AddRange(ativosUf);
         }
 
-        _logger.LogInformation("Phase 1 complete. {Active}/{Total} municipalities active",
-            ativos.Count, todos.Count);
+        _logger.LogInformation("Phase 1 complete. {Active} active municipalities found across all UFs",
+            todosAtivos.Count);
 
-        return ativos;
+        return todosAtivos;
     }
 
     internal async Task<List<Municipio>> FaseProbeAsync(

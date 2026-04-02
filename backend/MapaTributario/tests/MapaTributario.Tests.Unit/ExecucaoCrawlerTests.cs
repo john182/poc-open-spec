@@ -92,4 +92,72 @@ public class ExecucaoCrawlerTests
         execucao.SetId("abc123");
         execucao.Id.ShouldBe("abc123");
     }
+
+    [Fact]
+    public void FinalizarProcessamentoUf_AtualizaStatusMunicipiosEncontradosEAtivos()
+    {
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        execucao.IniciarProcessamentoUf("SP");
+
+        execucao.FinalizarProcessamentoUf("SP", municipiosEncontrados: 100, municipiosAtivos: 42);
+
+        execucao.ProgressoUfs["SP"].Status.ShouldBe("Concluido");
+        execucao.ProgressoUfs["SP"].MunicipiosEncontrados.ShouldBe(100);
+        execucao.ProgressoUfs["SP"].MunicipiosAtivos.ShouldBe(42);
+        execucao.ProgressoUfs["SP"].Fim.ShouldNotBeNull();
+        execucao.UfAtual.ShouldBeNull();
+    }
+
+    [Fact]
+    public void FalharProcessamentoUf_MarcaStatusFalhaComMunicipiosAtivosZero()
+    {
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        execucao.IniciarProcessamentoUf("RJ");
+
+        execucao.FalharProcessamentoUf("RJ", municipiosEncontrados: 50);
+
+        execucao.ProgressoUfs["RJ"].Status.ShouldBe("Falha");
+        execucao.ProgressoUfs["RJ"].MunicipiosEncontrados.ShouldBe(50);
+        execucao.ProgressoUfs["RJ"].MunicipiosAtivos.ShouldBe(0);
+        execucao.ProgressoUfs["RJ"].Fim.ShouldNotBeNull();
+        execucao.UfAtual.ShouldBeNull();
+    }
+
+    [Fact]
+    public void InterromperProcessamentoUf_MarcaStatusInterrompidoComAtivosAteAgora()
+    {
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        execucao.IniciarProcessamentoUf("MG");
+
+        execucao.InterromperProcessamentoUf("MG", municipiosEncontrados: 80, municipiosAtivosAteAgora: 15);
+
+        execucao.ProgressoUfs["MG"].Status.ShouldBe("Interrompido");
+        execucao.ProgressoUfs["MG"].MunicipiosEncontrados.ShouldBe(80);
+        execucao.ProgressoUfs["MG"].MunicipiosAtivos.ShouldBe(15);
+        execucao.ProgressoUfs["MG"].Fim.ShouldNotBeNull();
+        execucao.UfAtual.ShouldBeNull();
+    }
+
+    [Fact]
+    public void ProgressoUf_StatusInicial_DeveSePendente()
+    {
+        ProgressoUf progresso = new();
+
+        progresso.Status.ShouldBe("Pendente");
+        progresso.MunicipiosEncontrados.ShouldBe(0);
+        progresso.MunicipiosAtivos.ShouldBe(0);
+    }
+
+    [Fact]
+    public void IniciarProcessamentoUf_CriaProgressoComStatusEmAndamento()
+    {
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+
+        execucao.IniciarProcessamentoUf("SE");
+
+        execucao.ProgressoUfs.ShouldContainKey("SE");
+        execucao.ProgressoUfs["SE"].Status.ShouldBe("EmAndamento");
+        execucao.ProgressoUfs["SE"].Inicio.ShouldNotBeNull();
+        execucao.UfAtual.ShouldBe("SE");
+    }
 }

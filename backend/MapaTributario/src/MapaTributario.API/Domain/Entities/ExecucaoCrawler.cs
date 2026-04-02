@@ -92,17 +92,52 @@ public class ExecucaoCrawler
         }
     }
 
-    public void FinalizarProcessamentoUf(string uf, int municipiosEncontrados)
+    public void FinalizarProcessamentoUf(string uf, int municipiosEncontrados, int municipiosAtivos)
     {
         string ufNormalizada = uf.ToUpperInvariant();
         if (ProgressoUfs.ContainsKey(ufNormalizada))
         {
             ProgressoUfs[ufNormalizada].Status = "Concluido";
             ProgressoUfs[ufNormalizada].MunicipiosEncontrados = municipiosEncontrados;
+            ProgressoUfs[ufNormalizada].MunicipiosAtivos = municipiosAtivos;
             ProgressoUfs[ufNormalizada].Fim = DateTime.UtcNow;
         }
 
         // Limpar UfAtual se era esta UF
+        if (UfAtual == ufNormalizada)
+        {
+            UfAtual = null;
+        }
+    }
+
+    public void FalharProcessamentoUf(string uf, int municipiosEncontrados)
+    {
+        string ufNormalizada = uf.ToUpperInvariant();
+        if (ProgressoUfs.ContainsKey(ufNormalizada))
+        {
+            ProgressoUfs[ufNormalizada].Status = "Falha";
+            ProgressoUfs[ufNormalizada].MunicipiosEncontrados = municipiosEncontrados;
+            ProgressoUfs[ufNormalizada].MunicipiosAtivos = 0;
+            ProgressoUfs[ufNormalizada].Fim = DateTime.UtcNow;
+        }
+
+        if (UfAtual == ufNormalizada)
+        {
+            UfAtual = null;
+        }
+    }
+
+    public void InterromperProcessamentoUf(string uf, int municipiosEncontrados, int municipiosAtivosAteAgora)
+    {
+        string ufNormalizada = uf.ToUpperInvariant();
+        if (ProgressoUfs.ContainsKey(ufNormalizada))
+        {
+            ProgressoUfs[ufNormalizada].Status = "Interrompido";
+            ProgressoUfs[ufNormalizada].MunicipiosEncontrados = municipiosEncontrados;
+            ProgressoUfs[ufNormalizada].MunicipiosAtivos = municipiosAtivosAteAgora;
+            ProgressoUfs[ufNormalizada].Fim = DateTime.UtcNow;
+        }
+
         if (UfAtual == ufNormalizada)
         {
             UfAtual = null;
@@ -129,6 +164,7 @@ public class ProgressoUf
     public string Uf { get; set; } = null!;
     public string Status { get; set; } = "Pendente";
     public int MunicipiosEncontrados { get; set; }
+    public int MunicipiosAtivos { get; set; }
     public DateTime? Inicio { get; set; }
     public DateTime? Fim { get; set; }
 }

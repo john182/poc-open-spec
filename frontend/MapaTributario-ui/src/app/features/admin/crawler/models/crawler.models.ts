@@ -19,6 +19,7 @@ export interface ProgressoUf {
   uf: string;
   status: string;
   municipiosEncontrados: number;
+  municipiosAtivos: number;
   inicio: string;
   fim: string | null;
 }

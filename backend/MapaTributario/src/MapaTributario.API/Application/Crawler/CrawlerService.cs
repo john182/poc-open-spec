@@ -86,6 +86,7 @@ public class CrawlerService : ICrawlerService
         TipoExecucao tipo,
         bool forcarReprocessamento = false,
         IReadOnlyList<string>? filtroUfs = null,
+        bool? filtroCapital = null,
         CancellationToken cancellationToken = default)
     {
         if (!CertificadoDisponivel())
@@ -140,7 +141,7 @@ public class CrawlerService : ICrawlerService
             string competencia = GetCompetenciaAtual();
 
             // Phase 1: Discover active municipalities via convenio endpoint
-            List<Municipio> municipiosAtivos = await FaseConvenioAsync(execucao, filtroUfs, cancellationToken);
+            List<Municipio> municipiosAtivos = await FaseConvenioAsync(execucao, filtroUfs, filtroCapital, cancellationToken);
 
             // Persistir progresso de UFs no banco
             await _execucaoRepository.UpdateAsync(execucao);
@@ -213,6 +214,7 @@ public class CrawlerService : ICrawlerService
     internal async Task<List<Municipio>> FaseConvenioAsync(
         ExecucaoCrawler execucao,
         IReadOnlyList<string>? filtroUfs,
+        bool? filtroCapital,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Phase 1: Discovering municipalities via convenio endpoint");
@@ -237,6 +239,20 @@ public class CrawlerService : ICrawlerService
 
             int municipiosUf = porUf.Count;
             execucao.FinalizarProcessamentoUf(uf, municipiosUf);
+        }
+
+        // Filtrar por capital quando solicitado:
+        // filtroCapital = true  → somente capitais estaduais
+        // filtroCapital = false → somente municípios que NÃO são capitais
+        // filtroCapital = null  → sem filtro (todos os municípios)
+        if (filtroCapital.HasValue)
+        {
+            int antesDoFiltro = todos.Count;
+            todos = todos.Where(m => m.EhCapital == filtroCapital.Value).ToList();
+
+            _logger.LogInformation(
+                "Filtro por capital aplicado (somenteCapitais={Filtro}): {Antes} → {Depois} municípios",
+                filtroCapital.Value, antesDoFiltro, todos.Count);
         }
 
         // Priorizar capitais: processar todas as capitais primeiro (de todas as UFs),

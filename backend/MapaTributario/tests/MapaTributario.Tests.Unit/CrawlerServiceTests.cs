@@ -238,7 +238,7 @@ public class CrawlerServiceTests
 
         // Act
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
-        List<Municipio> result = await _sut.FaseConvenioAsync(execucao, null, CancellationToken.None);
+        List<Municipio> result = await _sut.FaseConvenioAsync(execucao, null, null, CancellationToken.None);
 
         // Assert
         result.Count.ShouldBe(1);
@@ -636,7 +636,7 @@ public class CrawlerServiceTests
 
         // Act
         ExecucaoCrawler execucaoCapitais = ExecucaoCrawler.Create(TipoExecucao.Manual);
-        List<Municipio> resultado = await _sut.FaseConvenioAsync(execucaoCapitais, null, CancellationToken.None);
+        List<Municipio> resultado = await _sut.FaseConvenioAsync(execucaoCapitais, null, null, CancellationToken.None);
 
         // Assert
         resultado.Count.ShouldBe(4);
@@ -669,7 +669,7 @@ public class CrawlerServiceTests
 
         // Act
         ExecucaoCrawler execucaoUfs = ExecucaoCrawler.Create(TipoExecucao.Manual);
-        List<Municipio> resultado = await _sut.FaseConvenioAsync(execucaoUfs, null, CancellationToken.None);
+        List<Municipio> resultado = await _sut.FaseConvenioAsync(execucaoUfs, null, null, CancellationToken.None);
 
         // Assert
         resultado.Count.ShouldBe(2);

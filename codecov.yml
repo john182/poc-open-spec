@@ -1,0 +1,19 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 90%
+        threshold: 2%
+    patch:
+      default:
+        target: 80%
+
+ignore:
+  # Backend - Infraestrutura pura (MongoDB, DI, seed, startup)
+  - "backend/MapaTributario/src/MapaTributario.API/Infrastructure/Repository/**"
+  - "backend/MapaTributario/src/MapaTributario.API/Infrastructure/Seed/**"
+  - "backend/MapaTributario/src/MapaTributario.API/Extensions/**"
+  - "backend/MapaTributario/src/MapaTributario.API/Program.cs"
+  # Testes
+  - "backend/MapaTributario/tests/**"
+  - "frontend/MapaTributario-ui/src/**/*.spec.ts"

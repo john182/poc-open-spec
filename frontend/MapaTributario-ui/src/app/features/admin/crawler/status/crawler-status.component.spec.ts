@@ -239,4 +239,224 @@ describe('CrawlerStatusComponent', () => {
       expect(screen.getByText('Falha interna no servidor')).toBeTruthy();
     });
   });
+
+  it('Given_CliqueBotaoExecutar_Should_EnviarRequisicaoEExibirMensagem', async () => {
+    // Arrange
+    const { container, httpTesting, fixture } = await setup();
+    httpTesting.expectOne('/api/v1/crawler/status').flush(statusMock);
+    fixture.detectChanges();
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-cy="btn-executar"] button')).toBeTruthy();
+    });
+
+    const botaoExecutar = container.querySelector('[data-cy="btn-executar"] button') as HTMLButtonElement;
+
+    // Act
+    fireEvent.click(botaoExecutar);
+
+    // Assert
+    const reqExecutar = httpTesting.expectOne('/api/v1/crawler/executar');
+    expect(reqExecutar.request.method).toBe('POST');
+    expect(reqExecutar.request.body).toEqual({
+      forcarReprocessamento: false,
+      ufs: undefined,
+    });
+    reqExecutar.flush({ mensagem: 'Crawler iniciado com sucesso' });
+
+    httpTesting.expectOne('/api/v1/crawler/status').flush(statusMock);
+    fixture.detectChanges();
+
+    await waitFor(() => {
+      expect(screen.getByText('Crawler iniciado com sucesso')).toBeTruthy();
+    });
+  });
+
+  it('Given_FalhaAoExecutarCrawler_Should_ExibirMensagemErro', async () => {
+    // Arrange
+    const { container, httpTesting, fixture } = await setup();
+    httpTesting.expectOne('/api/v1/crawler/status').flush(statusMock);
+    fixture.detectChanges();
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-cy="btn-executar"] button')).toBeTruthy();
+    });
+
+    const botaoExecutar = container.querySelector('[data-cy="btn-executar"] button') as HTMLButtonElement;
+
+    // Act
+    fireEvent.click(botaoExecutar);
+
+    httpTesting.expectOne('/api/v1/crawler/executar').flush(
+      { erro: 'Crawler já em execução' },
+      { status: 409, statusText: 'Conflict' },
+    );
+    fixture.detectChanges();
+
+    // Assert
+    await waitFor(() => {
+      expect(screen.getByText('Crawler já em execução')).toBeTruthy();
+    });
+    expect(fixture.componentInstance.executando()).toBe(false);
+  });
+
+  it('Given_FalhaAoExecutarSemDetalhe_Should_ExibirMensagemPadrao', async () => {
+    // Arrange
+    const { httpTesting, fixture } = await setup();
+    httpTesting.expectOne('/api/v1/crawler/status').flush(statusMock);
+    fixture.detectChanges();
+
+    const componente = fixture.componentInstance;
+
+    // Act
+    componente.executarCrawler();
+
+    httpTesting.expectOne('/api/v1/crawler/executar').error(new ProgressEvent('error'));
+    fixture.detectChanges();
+
+    // Assert
+    expect(componente.erroExecucao()).toBe('Erro ao iniciar execução do crawler.');
+    expect(componente.executando()).toBe(false);
+  });
+
+  it('Given_SemCertificado_Should_ExibirAvisoDeCertificado', async () => {
+    // Arrange
+    const { container, httpTesting, fixture } = await setup();
+
+    // Act
+    httpTesting.expectOne('/api/v1/crawler/status').flush({
+      ...statusMock,
+      temCertificado: false,
+    });
+    fixture.detectChanges();
+
+    // Assert
+    await waitFor(() => {
+      expect(container.querySelector('[data-cy="aviso-certificado"]')).toBeTruthy();
+      expect(screen.getByText(/Nenhum certificado digital configurado/)).toBeTruthy();
+    });
+  });
+
+  it('Given_ComCertificado_Should_NaoExibirAvisoDeCertificado', async () => {
+    // Arrange
+    const { container, httpTesting, fixture } = await setup();
+
+    // Act
+    httpTesting.expectOne('/api/v1/crawler/status').flush(statusMock);
+    fixture.detectChanges();
+
+    // Assert
+    await waitFor(() => {
+      expect(container.querySelector('[data-cy="aviso-certificado"]')).toBeNull();
+    });
+  });
+
+  it('Given_StatusComDetalhesErro_Should_ExibirListaDeErros', async () => {
+    // Arrange
+    const { container, httpTesting, fixture } = await setup();
+
+    // Act
+    httpTesting.expectOne('/api/v1/crawler/status').flush({
+      ...statusMock,
+      detalhesErro: ['Timeout no município X', 'Certificado expirado'],
+    });
+    fixture.detectChanges();
+
+    // Assert
+    await waitFor(() => {
+      expect(container.querySelector('[data-cy="detalhes-erro"]')).toBeTruthy();
+      expect(screen.getByText('Timeout no município X')).toBeTruthy();
+      expect(screen.getByText('Certificado expirado')).toBeTruthy();
+    });
+  });
+
+  it('Given_StatusSemDetalhesErro_Should_NaoExibirSecaoDeErros', async () => {
+    // Arrange
+    const { container, httpTesting, fixture } = await setup();
+
+    // Act
+    httpTesting.expectOne('/api/v1/crawler/status').flush(statusMock);
+    fixture.detectChanges();
+
+    // Assert
+    await waitFor(() => {
+      expect(container.querySelector('[data-cy="detalhes-erro"]')).toBeNull();
+    });
+  });
+
+  it('Given_StatusEmAndamentoSemFim_Should_ExibirEmAndamento', async () => {
+    // Arrange
+    const { httpTesting, fixture } = await setup();
+
+    // Act
+    httpTesting.expectOne('/api/v1/crawler/status').flush({
+      ...statusMock,
+      status: 'EmAndamento',
+      fim: null,
+    });
+    fixture.detectChanges();
+
+    // Assert
+    await waitFor(() => {
+      expect(screen.getByText('Em andamento')).toBeTruthy();
+    });
+
+    // Limpar polling
+    fixture.componentInstance.ngOnDestroy();
+  });
+
+  it('Given_ObterSeveridadeStatus_Should_RetornarSeveridadeCorreta', async () => {
+    // Arrange
+    const { httpTesting, fixture } = await setup();
+    httpTesting.expectOne('/api/v1/crawler/status').flush(statusMock);
+    fixture.detectChanges();
+
+    const componente = fixture.componentInstance;
+
+    // Act & Assert
+    expect(componente.obterSeveridadeStatus('Concluido')).toBe('success');
+    expect(componente.obterSeveridadeStatus('EmAndamento')).toBe('info');
+    expect(componente.obterSeveridadeStatus('FalhaParcial')).toBe('warn');
+    expect(componente.obterSeveridadeStatus('Falha')).toBe('danger');
+    expect(componente.obterSeveridadeStatus('NenhumaExecucao')).toBe('secondary');
+    expect(componente.obterSeveridadeStatus('OutroValor')).toBe('secondary');
+  });
+
+  it('Given_ObterSeveridadeProgressoUf_Should_RetornarSeveridadeCorreta', async () => {
+    // Arrange
+    const { httpTesting, fixture } = await setup();
+    httpTesting.expectOne('/api/v1/crawler/status').flush(statusMock);
+    fixture.detectChanges();
+
+    const componente = fixture.componentInstance;
+
+    // Act & Assert
+    expect(componente.obterSeveridadeProgressoUf('Concluido')).toBe('success');
+    expect(componente.obterSeveridadeProgressoUf('EmAndamento')).toBe('info');
+    expect(componente.obterSeveridadeProgressoUf('Falha')).toBe('danger');
+    expect(componente.obterSeveridadeProgressoUf('OutroValor')).toBe('secondary');
+  });
+
+  it('Given_TentarNovamente_Should_RecarregarStatus', async () => {
+    // Arrange
+    const { httpTesting, fixture } = await setup();
+    httpTesting.expectOne('/api/v1/crawler/status').error(new ProgressEvent('error'));
+    fixture.detectChanges();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Erro ao carregar status do crawler/)).toBeTruthy();
+    });
+
+    // Act
+    fixture.componentInstance.tentarNovamente();
+
+    // Assert
+    const reqRetry = httpTesting.expectOne('/api/v1/crawler/status');
+    reqRetry.flush(statusMock);
+    fixture.detectChanges();
+
+    await waitFor(() => {
+      expect(screen.getByText('Concluido')).toBeTruthy();
+    });
+  });
 });

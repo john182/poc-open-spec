@@ -63,6 +63,52 @@
             </ul>
           </div>
         }
+
+        <!-- Progresso por UF -->
+        @if (statusAtual()!.ufAtual || statusAtual()!.ufsProcessadas.length > 0 || listaProgressoUfs().length > 0) {
+          <div class="secao-progresso-uf" data-cy="progresso-ufs">
+            <h4>
+              Progresso por UF
+              @if (statusAtual()!.ufAtual) {
+                <span class="uf-atual-badge">
+                  <i class="pi pi-spin pi-spinner"></i>
+                  Processando: {{ statusAtual()!.ufAtual }}
+                </span>
+              }
+            </h4>
+            @if (statusAtual()!.ufsProcessadas.length > 0) {
+              <div class="ufs-resumo">
+                <span class="ufs-resumo-label">UFs processadas:</span>
+                <span class="ufs-resumo-valor">{{ statusAtual()!.ufsProcessadas.length }}</span>
+              </div>
+              <div class="ufs-processadas-lista">
+                @for (uf of statusAtual()!.ufsProcessadas; track uf) {
+                  <p-tag [value]="uf" severity="success" />
+                }
+              </div>
+            }
+            @if (listaProgressoUfs().length > 0) {
+              <div class="progresso-uf-grid">
+                @for (progresso of listaProgressoUfs(); track progresso.uf) {
+                  <div class="progresso-uf-card" [attr.data-cy]="'progresso-uf-' + progresso.uf">
+                    <div class="progresso-uf-header">
+                      <span class="progresso-uf-sigla">{{ progresso.uf }}</span>
+                      <p-tag [value]="progresso.status"
+                             [severity]="obterSeveridadeProgressoUf(progresso.status)" />
+                    </div>
+                    <div class="progresso-uf-detalhes">
+                      <span>Municípios: {{ progresso.municipiosEncontrados }}</span>
+                      <span>Início: {{ progresso.inicio | date:'HH:mm:ss' }}</span>
+                      @if (progresso.fim) {
+                        <span>Fim: {{ progresso.fim | date:'HH:mm:ss' }}</span>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
       } @else {
         <app-empty-state
           titulo="Nenhuma execução encontrada"

@@ -10,6 +10,17 @@ export interface StatusCrawler {
   erros: number;
   detalhesErro: string[];
   temCertificado: boolean;
+  ufAtual: string | null;
+  ufsProcessadas: string[];
+  progressoUfs: Record<string, ProgressoUf>;
+}
+
+export interface ProgressoUf {
+  uf: string;
+  status: string;
+  municipiosEncontrados: number;
+  inicio: string;
+  fim: string | null;
 }
 
 export interface ExecutarCrawlerRequest {
@@ -32,9 +43,9 @@ export interface ConfiguracaoCrawler {
   cronSchedule: string;
   limiteRequisicoesPorSegundo: number;
   orcamentoDiario: number;
-  tamanheLoteCertificado: number;
+  tamanhoLoteCertificado: number;
   pausaLoteSegundos: number;
-  tamanheLoteMongo: number;
+  tamanhoLoteMongo: number;
   maxTentativas: number;
   limiteParadaAntecipada: number;
   maxDesdobramento: number;
@@ -57,9 +68,9 @@ export interface AtualizarConfiguracaoCrawlerRequest {
   cronSchedule: string;
   limiteRequisicoesPorSegundo: number;
   orcamentoDiario: number;
-  tamanheLoteCertificado: number;
+  tamanhoLoteCertificado: number;
   pausaLoteSegundos: number;
-  tamanheLoteMongo: number;
+  tamanhoLoteMongo: number;
   maxTentativas: number;
   limiteParadaAntecipada: number;
   maxDesdobramento: number;

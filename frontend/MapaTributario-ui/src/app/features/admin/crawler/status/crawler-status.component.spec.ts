@@ -30,6 +30,9 @@ describe('CrawlerStatusComponent', () => {
     erros: 2,
     detalhesErro: [],
     temCertificado: true,
+    ufAtual: null,
+    ufsProcessadas: ['SP', 'RJ'],
+    progressoUfs: {},
   };
 
   it('deve exibir loading inicialmente', async () => {
@@ -62,6 +65,9 @@ describe('CrawlerStatusComponent', () => {
       erros: 0,
       detalhesErro: [],
       temCertificado: false,
+      ufAtual: null,
+      ufsProcessadas: [],
+      progressoUfs: {},
     });
     fixture.detectChanges();
     await waitFor(() => {
@@ -86,5 +92,54 @@ describe('CrawlerStatusComponent', () => {
       expect(container.querySelector('[data-cy="executar-crawler"]')).toBeTruthy();
       expect(container.querySelector('[data-cy="btn-executar"]')).toBeTruthy();
     });
+  });
+
+  it('deve exibir progresso por UF quando disponivel', async () => {
+    const { container, httpTesting, fixture } = await setup();
+    httpTesting.expectOne('/api/v1/crawler/status').flush({
+      ...statusMock,
+      status: 'EmAndamento',
+      fim: null,
+      ufAtual: 'MG',
+      ufsProcessadas: ['SP', 'RJ'],
+      progressoUfs: {
+        SP: { uf: 'SP', status: 'Concluido', municipiosEncontrados: 645, inicio: '2026-03-01T10:00:00Z', fim: '2026-03-01T10:30:00Z' },
+        RJ: { uf: 'RJ', status: 'Concluido', municipiosEncontrados: 92, inicio: '2026-03-01T10:30:00Z', fim: '2026-03-01T10:45:00Z' },
+        MG: { uf: 'MG', status: 'EmAndamento', municipiosEncontrados: 200, inicio: '2026-03-01T10:45:00Z', fim: null },
+      },
+    });
+    fixture.detectChanges();
+    await waitFor(() => {
+      expect(container.querySelector('[data-cy="progresso-ufs"]')).toBeTruthy();
+      expect(container.querySelector('[data-cy="progresso-uf-SP"]')).toBeTruthy();
+      expect(container.querySelector('[data-cy="progresso-uf-RJ"]')).toBeTruthy();
+      expect(container.querySelector('[data-cy="progresso-uf-MG"]')).toBeTruthy();
+    });
+  });
+
+  it('deve iniciar polling quando status for EmAndamento', async () => {
+    const { httpTesting, fixture } = await setup();
+    httpTesting.expectOne('/api/v1/crawler/status').flush({
+      ...statusMock,
+      status: 'EmAndamento',
+      fim: null,
+      ufAtual: 'SP',
+      ufsProcessadas: [],
+      progressoUfs: {},
+    });
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance['_intervalPolling']).toBeTruthy();
+
+    fixture.componentInstance.ngOnDestroy();
+    expect(fixture.componentInstance['_intervalPolling']).toBeNull();
+  });
+
+  it('nao deve iniciar polling quando status for Concluido', async () => {
+    const { httpTesting, fixture } = await setup();
+    httpTesting.expectOne('/api/v1/crawler/status').flush(statusMock);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance['_intervalPolling']).toBeNull();
   });
 });

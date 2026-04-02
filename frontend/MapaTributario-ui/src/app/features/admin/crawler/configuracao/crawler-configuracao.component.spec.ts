@@ -23,9 +23,9 @@ describe('CrawlerConfiguracaoComponent', () => {
     cronSchedule: '0 2 * * *',
     limiteRequisicoesPorSegundo: 15,
     orcamentoDiario: 50000,
-    tamanheLoteCertificado: 200,
+    tamanhoLoteCertificado: 200,
     pausaLoteSegundos: 5,
-    tamanheLoteMongo: 50,
+    tamanhoLoteMongo: 50,
     maxTentativas: 3,
     limiteParadaAntecipada: 9,
     maxDesdobramento: 20,
@@ -135,7 +135,7 @@ describe('CrawlerConfiguracaoComponent', () => {
     });
   });
 
-  it('deve restaurar valores padrao ao clicar em restaurar', async () => {
+  it('deve recarregar configuracao do servidor ao restaurar padrao', async () => {
     const { httpTesting, fixture } = await setup();
     httpTesting.expectOne('/api/v1/crawler/configuracao').flush({
       ...configuracaoMock,
@@ -144,12 +144,27 @@ describe('CrawlerConfiguracaoComponent', () => {
     });
     fixture.detectChanges();
 
+    expect(fixture.componentInstance.cronSchedule()).toBe('0 5 * * *');
+    expect(fixture.componentInstance.maxTentativas()).toBe(10);
+
     fixture.componentInstance.restaurarPadrao();
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.cronSchedule()).toBe('0 2 * * *');
-    expect(fixture.componentInstance.maxTentativas()).toBe(3);
-    expect(fixture.componentInstance.limiteRequisicoesPorSegundo()).toBe(15);
-    expect(fixture.componentInstance.codigosSondagemTexto()).toBe('01.01.01, 07.02.01, 14.01.01, 17.01.01, 25.01.01');
+    httpTesting.expectOne('/api/v1/crawler/configuracao').flush(configuracaoMock);
+    fixture.detectChanges();
+
+    await waitFor(() => {
+      expect(fixture.componentInstance.cronSchedule()).toBe('0 2 * * *');
+      expect(fixture.componentInstance.maxTentativas()).toBe(3);
+    });
+  });
+
+  it('deve exibir botao de executar crawler com link para status', async () => {
+    const { container, httpTesting, fixture } = await setup();
+    httpTesting.expectOne('/api/v1/crawler/configuracao').flush(configuracaoMock);
+    fixture.detectChanges();
+    await waitFor(() => {
+      expect(container.querySelector('[data-cy="btn-ir-executar"]')).toBeTruthy();
+    });
   });
 });

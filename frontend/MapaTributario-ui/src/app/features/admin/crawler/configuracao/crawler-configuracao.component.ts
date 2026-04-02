@@ -1,5 +1,6 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -19,7 +20,7 @@ import { ConfiguracaoCrawler, AtualizarConfiguracaoCrawlerRequest } from '../mod
   selector: 'app-crawler-configuracao',
   standalone: true,
   imports: [
-    FormsModule, DatePipe, ButtonModule, InputTextModule, InputNumberModule,
+    FormsModule, RouterModule, DatePipe, ButtonModule, InputTextModule, InputNumberModule,
     CheckboxModule, TooltipModule, DividerModule, TextareaModule,
     PageHeaderComponent, LoadingSpinnerComponent, ErrorStateComponent,
   ],
@@ -46,9 +47,9 @@ export class CrawlerConfiguracaoComponent implements OnInit {
   readonly cronSchedule = signal('');
   readonly limiteRequisicoesPorSegundo = signal(15);
   readonly orcamentoDiario = signal(50000);
-  readonly tamanheLoteCertificado = signal(200);
+  readonly tamanhoLoteCertificado = signal(200);
   readonly pausaLoteSegundos = signal(5);
-  readonly tamanheLoteMongo = signal(50);
+  readonly tamanhoLoteMongo = signal(50);
   readonly maxTentativas = signal(3);
   readonly limiteParadaAntecipada = signal(9);
   readonly maxDesdobramento = signal(20);
@@ -87,9 +88,9 @@ export class CrawlerConfiguracaoComponent implements OnInit {
       cronSchedule: this.cronSchedule(),
       limiteRequisicoesPorSegundo: this.limiteRequisicoesPorSegundo(),
       orcamentoDiario: this.orcamentoDiario(),
-      tamanheLoteCertificado: this.tamanheLoteCertificado(),
+      tamanhoLoteCertificado: this.tamanhoLoteCertificado(),
       pausaLoteSegundos: this.pausaLoteSegundos(),
-      tamanheLoteMongo: this.tamanheLoteMongo(),
+      tamanhoLoteMongo: this.tamanhoLoteMongo(),
       maxTentativas: this.maxTentativas(),
       limiteParadaAntecipada: this.limiteParadaAntecipada(),
       maxDesdobramento: this.maxDesdobramento(),
@@ -127,29 +128,9 @@ export class CrawlerConfiguracaoComponent implements OnInit {
   }
 
   restaurarPadrao(): void {
-    this.cronSchedule.set('0 2 * * *');
-    this.limiteRequisicoesPorSegundo.set(15);
-    this.orcamentoDiario.set(50000);
-    this.tamanheLoteCertificado.set(200);
-    this.pausaLoteSegundos.set(5);
-    this.tamanheLoteMongo.set(50);
-    this.maxTentativas.set(3);
-    this.limiteParadaAntecipada.set(9);
-    this.maxDesdobramento.set(20);
-    this.maxDetalhamento.set(99);
-    this.maxFalhasConsecutivasDetalhamento.set(2);
-    this.maxFalhasConsecutivasDesdobramento.set(2);
-    this.maxItensParalelos.set(10);
-    this.codigosSondagem.set(['01.01.01', '07.02.01', '14.01.01', '17.01.01', '25.01.01']);
-    this.codigosSondagemTexto.set('01.01.01, 07.02.01, 14.01.01, 17.01.01, 25.01.01');
-    this.validadeDiasProcessamento.set(7);
-    this.circuitBreakerLimiarErroPercent.set(50);
-    this.circuitBreakerJanelaAvaliacaoSegundos.set(60);
-    this.circuitBreakerPausaSegundos.set(300);
-    this.circuitBreakerAmostraMinima.set(10);
-    this.ativo.set(true);
     this.mensagemSucesso.set('');
     this.erroSalvar.set('');
+    this._carregarConfiguracao();
   }
 
   private _carregarConfiguracao(): void {
@@ -172,9 +153,9 @@ export class CrawlerConfiguracaoComponent implements OnInit {
     this.cronSchedule.set(configuracao.cronSchedule);
     this.limiteRequisicoesPorSegundo.set(configuracao.limiteRequisicoesPorSegundo);
     this.orcamentoDiario.set(configuracao.orcamentoDiario);
-    this.tamanheLoteCertificado.set(configuracao.tamanheLoteCertificado);
+    this.tamanhoLoteCertificado.set(configuracao.tamanhoLoteCertificado);
     this.pausaLoteSegundos.set(configuracao.pausaLoteSegundos);
-    this.tamanheLoteMongo.set(configuracao.tamanheLoteMongo);
+    this.tamanhoLoteMongo.set(configuracao.tamanhoLoteMongo);
     this.maxTentativas.set(configuracao.maxTentativas);
     this.limiteParadaAntecipada.set(configuracao.limiteParadaAntecipada);
     this.maxDesdobramento.set(configuracao.maxDesdobramento);

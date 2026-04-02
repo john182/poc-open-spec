@@ -56,40 +56,56 @@
       <h3>Controle de Execução</h3>
       <div class="campos-grid">
         <div class="campo-formulario">
-          <label for="maxTentativas">Máx. Tentativas</label>
+          <label for="maxTentativas">
+            Máx. Tentativas
+            <i class="pi pi-info-circle"
+               pTooltip="Número máximo de tentativas por requisição antes de considerar falha."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </label>
           <p-inputNumber id="maxTentativas"
                          [(ngModel)]="maxTentativas"
                          [min]="1" [max]="10"
-                         data-cy="input-max-tentativas"
-                         pTooltip="Número máximo de tentativas por requisição antes de considerar falha."
-                         tooltipPosition="top" />
+                         data-cy="input-max-tentativas" />
         </div>
         <div class="campo-formulario">
-          <label for="maxItensParalelos">Máx. Itens Paralelos</label>
+          <label for="maxItensParalelos">
+            Máx. Itens Paralelos
+            <i class="pi pi-info-circle"
+               pTooltip="Número máximo de itens processados em paralelo."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </label>
           <p-inputNumber id="maxItensParalelos"
                          [(ngModel)]="maxItensParalelos"
                          [min]="1" [max]="50"
-                         data-cy="input-max-itens-paralelos"
-                         pTooltip="Número máximo de itens processados em paralelo."
-                         tooltipPosition="top" />
+                         data-cy="input-max-itens-paralelos" />
         </div>
         <div class="campo-formulario">
-          <label for="validadeDiasProcessamento">Validade (dias)</label>
+          <label for="validadeDiasProcessamento">
+            Validade (dias)
+            <i class="pi pi-info-circle"
+               pTooltip="Quantidade de dias até que um registro processado seja considerado expirado e reprocessado."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </label>
           <p-inputNumber id="validadeDiasProcessamento"
                          [(ngModel)]="validadeDiasProcessamento"
                          [min]="1" [max]="365"
-                         data-cy="input-validade-dias"
-                         pTooltip="Quantidade de dias até que um registro processado seja considerado expirado e reprocessado."
-                         tooltipPosition="top" />
+                         data-cy="input-validade-dias" />
         </div>
         <div class="campo-formulario">
-          <label for="limiteParadaAntecipada">Limite Parada Antecipada</label>
+          <label for="limiteParadaAntecipada">
+            Limite Parada Antecipada
+            <i class="pi pi-info-circle"
+               pTooltip="Número de erros consecutivos antes de interromper a execução."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </label>
           <p-inputNumber id="limiteParadaAntecipada"
                          [(ngModel)]="limiteParadaAntecipada"
                          [min]="1" [max]="100"
-                         data-cy="input-limite-parada-antecipada"
-                         pTooltip="Número de erros consecutivos antes de interromper a execução."
-                         tooltipPosition="top" />
+                         data-cy="input-limite-parada-antecipada" />
         </div>
       </div>
     </div>
@@ -101,49 +117,69 @@
       <h3>Limites e Proteção</h3>
       <div class="campos-grid">
         <div class="campo-formulario">
-          <label for="limiteRequisicoesPorSegundo">Requisições/segundo</label>
+          <label for="limiteRequisicoesPorSegundo">
+            Requisições/segundo
+            <i class="pi pi-info-circle"
+               pTooltip="Limite máximo de requisições por segundo ao serviço externo."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </label>
           <p-inputNumber id="limiteRequisicoesPorSegundo"
                          [(ngModel)]="limiteRequisicoesPorSegundo"
                          [min]="1" [max]="100"
-                         data-cy="input-limite-requisicoes"
-                         pTooltip="Limite máximo de requisições por segundo ao serviço externo."
-                         tooltipPosition="top" />
+                         data-cy="input-limite-requisicoes" />
         </div>
         <div class="campo-formulario">
-          <label for="orcamentoDiario">Orçamento Diário</label>
+          <label for="orcamentoDiario">
+            Orçamento Diário
+            <i class="pi pi-info-circle"
+               pTooltip="Limite máximo de requisições permitidas por dia."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </label>
           <p-inputNumber id="orcamentoDiario"
                          [(ngModel)]="orcamentoDiario"
                          [min]="1000" [max]="500000"
-                         data-cy="input-orcamento-diario"
-                         pTooltip="Limite máximo de requisições permitidas por dia."
-                         tooltipPosition="top" />
+                         data-cy="input-orcamento-diario" />
         </div>
         <div class="campo-formulario">
-          <label for="tamanheLoteCertificado">Lote Certificado</label>
-          <p-inputNumber id="tamanheLoteCertificado"
-                         [(ngModel)]="tamanheLoteCertificado"
+          <label for="tamanhoLoteCertificado">
+            Lote Certificado
+            <i class="pi pi-info-circle"
+               pTooltip="Tamanho do lote de processamento com certificado digital."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </label>
+          <p-inputNumber id="tamanhoLoteCertificado"
+                         [(ngModel)]="tamanhoLoteCertificado"
                          [min]="10" [max]="1000"
-                         data-cy="input-tamanho-lote-certificado"
-                         pTooltip="Tamanho do lote de processamento com certificado digital."
-                         tooltipPosition="top" />
+                         data-cy="input-tamanho-lote-certificado" />
         </div>
         <div class="campo-formulario">
-          <label for="pausaLoteSegundos">Pausa entre Lotes (s)</label>
+          <label for="pausaLoteSegundos">
+            Pausa entre Lotes (s)
+            <i class="pi pi-info-circle"
+               pTooltip="Tempo de espera em segundos entre o processamento de cada lote."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </label>
           <p-inputNumber id="pausaLoteSegundos"
                          [(ngModel)]="pausaLoteSegundos"
                          [min]="0" [max]="60"
-                         data-cy="input-pausa-lote"
-                         pTooltip="Tempo de espera em segundos entre o processamento de cada lote."
-                         tooltipPosition="top" />
+                         data-cy="input-pausa-lote" />
         </div>
         <div class="campo-formulario">
-          <label for="tamanheLoteMongo">Lote MongoDB</label>
-          <p-inputNumber id="tamanheLoteMongo"
-                         [(ngModel)]="tamanheLoteMongo"
+          <label for="tamanhoLoteMongo">
+            Lote de Gravação
+            <i class="pi pi-info-circle"
+               pTooltip="Tamanho do lote para operações de gravação no banco de dados."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </label>
+          <p-inputNumber id="tamanhoLoteMongo"
+                         [(ngModel)]="tamanhoLoteMongo"
                          [min]="10" [max]="500"
-                         data-cy="input-tamanho-lote-mongo"
-                         pTooltip="Tamanho do lote para operações de gravação no MongoDB."
-                         tooltipPosition="top" />
+                         data-cy="input-tamanho-lote-mongo" />
         </div>
       </div>
     </div>
@@ -155,40 +191,56 @@
       <h3>Exploração</h3>
       <div class="campos-grid">
         <div class="campo-formulario">
-          <label for="maxDesdobramento">Máx. Desdobramento</label>
+          <label for="maxDesdobramento">
+            Máx. Desdobramento
+            <i class="pi pi-info-circle"
+               pTooltip="Profundidade máxima de desdobramento de serviços."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </label>
           <p-inputNumber id="maxDesdobramento"
                          [(ngModel)]="maxDesdobramento"
                          [min]="1" [max]="100"
-                         data-cy="input-max-desdobramento"
-                         pTooltip="Profundidade máxima de desdobramento de serviços."
-                         tooltipPosition="top" />
+                         data-cy="input-max-desdobramento" />
         </div>
         <div class="campo-formulario">
-          <label for="maxDetalhamento">Máx. Detalhamento</label>
+          <label for="maxDetalhamento">
+            Máx. Detalhamento
+            <i class="pi pi-info-circle"
+               pTooltip="Limite máximo de detalhamento por serviço."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </label>
           <p-inputNumber id="maxDetalhamento"
                          [(ngModel)]="maxDetalhamento"
                          [min]="1" [max]="999"
-                         data-cy="input-max-detalhamento"
-                         pTooltip="Limite máximo de detalhamento por serviço."
-                         tooltipPosition="top" />
+                         data-cy="input-max-detalhamento" />
         </div>
         <div class="campo-formulario">
-          <label for="maxFalhasConsecutivasDetalhamento">Falhas Detalhamento</label>
+          <label for="maxFalhasConsecutivasDetalhamento">
+            Falhas Detalhamento
+            <i class="pi pi-info-circle"
+               pTooltip="Número máximo de falhas consecutivas no detalhamento antes de pular o item."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </label>
           <p-inputNumber id="maxFalhasConsecutivasDetalhamento"
                          [(ngModel)]="maxFalhasConsecutivasDetalhamento"
                          [min]="1" [max]="20"
-                         data-cy="input-falhas-detalhamento"
-                         pTooltip="Número máximo de falhas consecutivas no detalhamento antes de pular o item."
-                         tooltipPosition="top" />
+                         data-cy="input-falhas-detalhamento" />
         </div>
         <div class="campo-formulario">
-          <label for="maxFalhasConsecutivasDesdobramento">Falhas Desdobramento</label>
+          <label for="maxFalhasConsecutivasDesdobramento">
+            Falhas Desdobramento
+            <i class="pi pi-info-circle"
+               pTooltip="Número máximo de falhas consecutivas no desdobramento antes de pular o item."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </label>
           <p-inputNumber id="maxFalhasConsecutivasDesdobramento"
                          [(ngModel)]="maxFalhasConsecutivasDesdobramento"
                          [min]="1" [max]="20"
-                         data-cy="input-falhas-desdobramento"
-                         pTooltip="Número máximo de falhas consecutivas no desdobramento antes de pular o item."
-                         tooltipPosition="top" />
+                         data-cy="input-falhas-desdobramento" />
         </div>
         <div class="campo-formulario campo-largo">
           <label for="codigosSondagemTexto">Códigos de Sondagem</label>
@@ -209,41 +261,57 @@
       <h3>Circuit Breaker</h3>
       <div class="campos-grid">
         <div class="campo-formulario">
-          <label for="circuitBreakerLimiarErroPercent">Limiar de Erro (%)</label>
+          <label for="circuitBreakerLimiarErroPercent">
+            Limiar de Erro (%)
+            <i class="pi pi-info-circle"
+               pTooltip="Percentual de erros que aciona a abertura do circuit breaker."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </label>
           <p-inputNumber id="circuitBreakerLimiarErroPercent"
                          [(ngModel)]="circuitBreakerLimiarErroPercent"
                          [min]="1" [max]="100"
                          suffix="%"
-                         data-cy="input-cb-limiar-erro"
-                         pTooltip="Percentual de erros que aciona a abertura do circuit breaker."
-                         tooltipPosition="top" />
+                         data-cy="input-cb-limiar-erro" />
         </div>
         <div class="campo-formulario">
-          <label for="circuitBreakerJanelaAvaliacaoSegundos">Janela de Avaliação (s)</label>
+          <label for="circuitBreakerJanelaAvaliacaoSegundos">
+            Janela de Avaliação (s)
+            <i class="pi pi-info-circle"
+               pTooltip="Janela de tempo em segundos para avaliar a taxa de erros."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </label>
           <p-inputNumber id="circuitBreakerJanelaAvaliacaoSegundos"
                          [(ngModel)]="circuitBreakerJanelaAvaliacaoSegundos"
                          [min]="10" [max]="600"
-                         data-cy="input-cb-janela"
-                         pTooltip="Janela de tempo em segundos para avaliar a taxa de erros."
-                         tooltipPosition="top" />
+                         data-cy="input-cb-janela" />
         </div>
         <div class="campo-formulario">
-          <label for="circuitBreakerPausaSegundos">Pausa (s)</label>
+          <label for="circuitBreakerPausaSegundos">
+            Pausa (s)
+            <i class="pi pi-info-circle"
+               pTooltip="Tempo em segundos que o circuit breaker permanece aberto antes de tentar novamente."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </label>
           <p-inputNumber id="circuitBreakerPausaSegundos"
                          [(ngModel)]="circuitBreakerPausaSegundos"
                          [min]="10" [max]="3600"
-                         data-cy="input-cb-pausa"
-                         pTooltip="Tempo em segundos que o circuit breaker permanece aberto antes de tentar novamente."
-                         tooltipPosition="top" />
+                         data-cy="input-cb-pausa" />
         </div>
         <div class="campo-formulario">
-          <label for="circuitBreakerAmostraMinima">Amostra Mínima</label>
+          <label for="circuitBreakerAmostraMinima">
+            Amostra Mínima
+            <i class="pi pi-info-circle"
+               pTooltip="Número mínimo de requisições na janela antes de avaliar o circuit breaker."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </label>
           <p-inputNumber id="circuitBreakerAmostraMinima"
                          [(ngModel)]="circuitBreakerAmostraMinima"
                          [min]="1" [max]="100"
-                         data-cy="input-cb-amostra"
-                         pTooltip="Número mínimo de requisições na janela antes de avaliar o circuit breaker."
-                         tooltipPosition="top" />
+                         data-cy="input-cb-amostra" />
         </div>
       </div>
     </div>
@@ -264,6 +332,12 @@
                 data-cy="btn-restaurar-padrao"
                 [disabled]="salvando()"
                 (onClick)="restaurarPadrao()" />
+      <p-button label="Executar Crawler"
+                icon="pi pi-play"
+                severity="info"
+                [outlined]="true"
+                data-cy="btn-ir-executar"
+                routerLink="/admin/crawler/status" />
     </div>
 
     @if (mensagemSucesso()) {

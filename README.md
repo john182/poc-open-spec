@@ -1,5 +1,7 @@
 # Mapa Tributario — Crawler de Aliquotas ISS
 
+[![SonarQube Cloud](https://sonarcloud.io/images/project_badges/sonarcloud-light.svg)](https://sonarcloud.io/summary/new_code?id=john182_poc-open-spec)
+
 Um projeto full-stack que coleta periodicamente aliquotas de ISS da API NFS-e (adn.nfse.gov.br) e apresenta os dados atraves de um frontend interativo com navegacao por mapa, estado, municipio e codigo de servico.
 
 ---

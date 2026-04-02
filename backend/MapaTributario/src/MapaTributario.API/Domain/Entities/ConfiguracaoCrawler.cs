@@ -89,16 +89,93 @@ public class ConfiguracaoCrawler
         AtualizadoEm = DateTime.UtcNow;
     }
 
-    public void AtualizarParcial(
-        int? maxItensParalelos = null,
-        int? tamanhoLoteMongo = null,
-        int? tamanhoLoteCertificado = null,
-        int? maxTentativas = null)
+    public void Atualizar(
+        string cronSchedule,
+        int limiteRequisicoesPorSegundo,
+        int orcamentoDiario,
+        int tamanhoLoteCertificado,
+        int pausaLoteSegundos,
+        int tamanhoLoteMongo,
+        int maxTentativas,
+        int limiteParadaAntecipada,
+        int maxDesdobramento,
+        int maxDetalhamento,
+        int maxFalhasConsecutivasDetalhamento,
+        int maxFalhasConsecutivasDesdobramento,
+        int maxItensParalelos,
+        List<string> codigosSondagem,
+        int validadeDiasProcessamento,
+        int circuitBreakerLimiarErroPercent,
+        int circuitBreakerJanelaAvaliacaoSegundos,
+        int circuitBreakerPausaSegundos,
+        int circuitBreakerAmostraMinima,
+        bool ativo)
     {
-        if (maxItensParalelos.HasValue) MaxItensParalelos = maxItensParalelos.Value;
-        if (tamanhoLoteMongo.HasValue) TamanhoLoteMongo = tamanhoLoteMongo.Value;
+        CronSchedule = cronSchedule;
+        LimiteRequisicoesPorSegundo = limiteRequisicoesPorSegundo;
+        OrcamentoDiario = orcamentoDiario;
+        TamanhoLoteCertificado = tamanhoLoteCertificado;
+        PausaLoteSegundos = pausaLoteSegundos;
+        TamanhoLoteMongo = tamanhoLoteMongo;
+        MaxTentativas = maxTentativas;
+        LimiteParadaAntecipada = limiteParadaAntecipada;
+        MaxDesdobramento = maxDesdobramento;
+        MaxDetalhamento = maxDetalhamento;
+        MaxFalhasConsecutivasDetalhamento = maxFalhasConsecutivasDetalhamento;
+        MaxFalhasConsecutivasDesdobramento = maxFalhasConsecutivasDesdobramento;
+        MaxItensParalelos = maxItensParalelos;
+        CodigosSondagem = codigosSondagem;
+        ValidadeDiasProcessamento = validadeDiasProcessamento;
+        CircuitBreakerLimiarErroPercent = circuitBreakerLimiarErroPercent;
+        CircuitBreakerJanelaAvaliacaoSegundos = circuitBreakerJanelaAvaliacaoSegundos;
+        CircuitBreakerPausaSegundos = circuitBreakerPausaSegundos;
+        CircuitBreakerAmostraMinima = circuitBreakerAmostraMinima;
+        Ativo = ativo;
+        MarcarAtualizado();
+    }
+
+    public void AtualizarParcial(
+        string? cronSchedule = null,
+        int? limiteRequisicoesPorSegundo = null,
+        int? orcamentoDiario = null,
+        int? tamanhoLoteCertificado = null,
+        int? pausaLoteSegundos = null,
+        int? tamanhoLoteMongo = null,
+        int? maxTentativas = null,
+        int? limiteParadaAntecipada = null,
+        int? maxDesdobramento = null,
+        int? maxDetalhamento = null,
+        int? maxFalhasConsecutivasDetalhamento = null,
+        int? maxFalhasConsecutivasDesdobramento = null,
+        int? maxItensParalelos = null,
+        List<string>? codigosSondagem = null,
+        int? validadeDiasProcessamento = null,
+        int? circuitBreakerLimiarErroPercent = null,
+        int? circuitBreakerJanelaAvaliacaoSegundos = null,
+        int? circuitBreakerPausaSegundos = null,
+        int? circuitBreakerAmostraMinima = null,
+        bool? ativo = null)
+    {
+        if (cronSchedule is not null) CronSchedule = cronSchedule;
+        if (limiteRequisicoesPorSegundo.HasValue) LimiteRequisicoesPorSegundo = limiteRequisicoesPorSegundo.Value;
+        if (orcamentoDiario.HasValue) OrcamentoDiario = orcamentoDiario.Value;
         if (tamanhoLoteCertificado.HasValue) TamanhoLoteCertificado = tamanhoLoteCertificado.Value;
+        if (pausaLoteSegundos.HasValue) PausaLoteSegundos = pausaLoteSegundos.Value;
+        if (tamanhoLoteMongo.HasValue) TamanhoLoteMongo = tamanhoLoteMongo.Value;
         if (maxTentativas.HasValue) MaxTentativas = maxTentativas.Value;
-        AtualizadoEm = DateTime.UtcNow;
+        if (limiteParadaAntecipada.HasValue) LimiteParadaAntecipada = limiteParadaAntecipada.Value;
+        if (maxDesdobramento.HasValue) MaxDesdobramento = maxDesdobramento.Value;
+        if (maxDetalhamento.HasValue) MaxDetalhamento = maxDetalhamento.Value;
+        if (maxFalhasConsecutivasDetalhamento.HasValue) MaxFalhasConsecutivasDetalhamento = maxFalhasConsecutivasDetalhamento.Value;
+        if (maxFalhasConsecutivasDesdobramento.HasValue) MaxFalhasConsecutivasDesdobramento = maxFalhasConsecutivasDesdobramento.Value;
+        if (maxItensParalelos.HasValue) MaxItensParalelos = maxItensParalelos.Value;
+        if (codigosSondagem is not null) CodigosSondagem = codigosSondagem;
+        if (validadeDiasProcessamento.HasValue) ValidadeDiasProcessamento = validadeDiasProcessamento.Value;
+        if (circuitBreakerLimiarErroPercent.HasValue) CircuitBreakerLimiarErroPercent = circuitBreakerLimiarErroPercent.Value;
+        if (circuitBreakerJanelaAvaliacaoSegundos.HasValue) CircuitBreakerJanelaAvaliacaoSegundos = circuitBreakerJanelaAvaliacaoSegundos.Value;
+        if (circuitBreakerPausaSegundos.HasValue) CircuitBreakerPausaSegundos = circuitBreakerPausaSegundos.Value;
+        if (circuitBreakerAmostraMinima.HasValue) CircuitBreakerAmostraMinima = circuitBreakerAmostraMinima.Value;
+        if (ativo.HasValue) Ativo = ativo.Value;
+        MarcarAtualizado();
     }
 }

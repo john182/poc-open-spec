@@ -27,7 +27,16 @@ public static class ApplicationServiceExtensions
         services.AddScoped<ICrawlerService, CrawlerService>();
         services.AddSingleton<ICrawlerExecutionGuard, CrawlerExecutionGuard>();
 
+        // Configuração Crawler (CRUD)
+        services.AddScoped<IConfiguracaoCrawlerAppService, ConfiguracaoCrawlerAppService>();
+
         // Resilience components (singletons for shared state)
+        // NOTA: Os parâmetros de RateLimiter, CircuitBreaker e CertificateProtection são lidos
+        // apenas do appsettings.json na inicialização. Os campos correspondentes em
+        // ConfiguracaoCrawler (ex: CircuitBreakerLimiarErroPercent, LimiteRequisicoesPorSegundo)
+        // ainda NÃO são aplicados dinamicamente em runtime. Futuramente, esses singletons
+        // deverão ser substituídos por instâncias que recarreguem os valores da configuração
+        // MongoDB a cada execução do crawler.
         RegisterResilienceComponents(services, configuration);
 
         // Background service

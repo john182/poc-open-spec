@@ -19,7 +19,7 @@ public class AliquotaRepository : IAliquotaRepository
         int pagina,
         int tamanhoPagina,
         string? codigoServico = null,
-        string? descricao = null,
+        IReadOnlyList<string>? codigosServicoPorDescricao = null,
         decimal? aliquotaMin = null,
         decimal? aliquotaMax = null,
         string? competencia = null)
@@ -40,10 +40,14 @@ public class AliquotaRepository : IAliquotaRepository
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(descricao))
+        if (codigosServicoPorDescricao is { Count: > 0 })
         {
-            var escapedDescricao = Regex.Escape(descricao);
-            filter &= filterBuilder.Regex(a => a.DescricaoServico, new MongoDB.Bson.BsonRegularExpression(escapedDescricao, "i"));
+            filter &= filterBuilder.In(a => a.CodigoServico, codigosServicoPorDescricao);
+        }
+        else if (codigosServicoPorDescricao is { Count: 0 })
+        {
+            // Descrição informada mas nenhum serviço encontrado — retornar vazio
+            return (Array.Empty<Aliquota>(), 0);
         }
 
         if (aliquotaMin.HasValue)

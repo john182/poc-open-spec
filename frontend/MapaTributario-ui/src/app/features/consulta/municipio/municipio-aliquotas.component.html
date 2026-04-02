@@ -7,89 +7,84 @@
       <div class="filtro-campo">
         <label for="codigoServico">Código de serviço</label>
         <p-inputMask id="codigoServico" mask="99.99.99" placeholder="__.__.__" [autoClear]="false"
-               [ngModel]="filtroCodigoServico()" (ngModelChange)="filtroCodigoServico.set($event)" />
+          [ngModel]="filtroCodigoServico()" (ngModelChange)="filtroCodigoServico.set($event)" />
       </div>
       <div class="filtro-campo">
         <label for="descricao">Descrição</label>
-        <input pInputText id="descricao" placeholder="Buscar por descrição..."
-               [ngModel]="filtroDescricao()" (ngModelChange)="filtroDescricao.set($event)" />
+        <input pInputText id="descricao" placeholder="Buscar por descrição..." [ngModel]="filtroDescricao()"
+          (ngModelChange)="filtroDescricao.set($event)" />
       </div>
       <div class="filtro-campo">
         <label for="aliquotaMin">Alíquota mín. (%)</label>
-        <p-inputNumber id="aliquotaMin" mode="decimal" [minFractionDigits]="0" [maxFractionDigits]="2"
-                       [min]="0" [max]="100"
-                       [ngModel]="filtroAliquotaMin()" (ngModelChange)="filtroAliquotaMin.set($event)" />
+        <p-inputNumber id="aliquotaMin" mode="decimal" [minFractionDigits]="0" [maxFractionDigits]="2" [min]="0"
+          [max]="100" [ngModel]="filtroAliquotaMin()" (ngModelChange)="filtroAliquotaMin.set($event)" />
       </div>
       <div class="filtro-campo">
         <label for="aliquotaMax">Alíquota máx. (%)</label>
-        <p-inputNumber id="aliquotaMax" mode="decimal" [minFractionDigits]="0" [maxFractionDigits]="2"
-                       [min]="0" [max]="100"
-                       [ngModel]="filtroAliquotaMax()" (ngModelChange)="filtroAliquotaMax.set($event)" />
+        <p-inputNumber id="aliquotaMax" mode="decimal" [minFractionDigits]="0" [maxFractionDigits]="2" [min]="0"
+          [max]="100" [ngModel]="filtroAliquotaMax()" (ngModelChange)="filtroAliquotaMax.set($event)" />
       </div>
       <div class="filtro-campo">
         <label for="competencia">Competência</label>
-        <p-datepicker id="competencia" view="month" dateFormat="mm/yy"
-                      placeholder="Selecione o mês"
-                      [showClear]="true"
-                      [ngModel]="filtroCompetencia()" (ngModelChange)="filtroCompetencia.set($event)" />
+        <p-datepicker id="competencia" view="month" dateFormat="mm/yy" placeholder="Selecione o mês" [showClear]="true"
+          [ngModel]="filtroCompetencia()" (ngModelChange)="filtroCompetencia.set($event)" />
       </div>
     </div>
     <div class="filtros-acoes">
       <p-button label="Filtrar" icon="pi pi-search" data-cy="btn-filtrar" (onClick)="aplicarFiltros()" />
-      <p-button label="Limpar" icon="pi pi-times" severity="secondary" data-cy="btn-limpar" (onClick)="limparFiltros()" />
+      <p-button label="Limpar" icon="pi pi-times" severity="secondary" data-cy="btn-limpar"
+        (onClick)="limparFiltros()" />
     </div>
   </div>
 
-  <!-- Conteúdo -->
-  @if (carregando()) {
-    <app-loading-spinner mensagem="Carregando alíquotas..." />
-  } @else if (erro()) {
+  @if (erro()) {
     <app-error-state [mensagem]="erro()" (tentarNovamente)="tentarNovamente()" />
-  } @else if (aliquotas().length === 0) {
-    <app-empty-state
-      titulo="Nenhuma alíquota encontrada"
-      mensagem="Não há dados de alíquotas para este município com os filtros aplicados." />
-  } @else {
-    <p-table
-      [value]="aliquotas()"
-      [paginator]="true"
-      [rows]="20"
-      [totalRecords]="totalItens()"
-      [lazy]="true"
-      [rowsPerPageOptions]="[10, 20, 50]"
-      (onLazyLoad)="onPaginaChange($any($event))"
-      data-cy="tabela-aliquotas"
-      styleClass="p-datatable-striped">
-      <ng-template pTemplate="header">
-        <tr>
-          <th>Código</th>
-          <th>Descrição</th>
-          <th>Alíquota (%)</th>
-          <th>Competência</th>
-          <th>Ações</th>
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="body" let-aliquota>
-        <tr [attr.data-cy]="'aliquota-' + aliquota.codigoServico">
-          <td>{{ aliquota.codigoServicoFormatado }}</td>
-          <td class="descricao-celula" [pTooltip]="aliquota.descricaoServico" tooltipPosition="top">
-            {{ aliquota.descricaoServico }}
-          </td>
-          <td>{{ aliquota.aliquota | number:'1.2-2' }}</td>
-          <td>{{ aliquota.competencia | date:'MM/yyyy' }}</td>
-          <td>
-            <p-button icon="pi pi-eye" [rounded]="true" [text]="true"
-                      data-cy="btn-detalhe" (onClick)="verDetalhe(aliquota)" />
-          </td>
-        </tr>
-      </ng-template>
-    </p-table>
   }
+
+  <p-table
+    [loading]="carregando()"
+    [value]="pagina().conteudo"
+    [paginator]="true"
+    [rows]="20"
+    [rowsPerPageOptions]="[20, 40, 60, 80]"
+    [totalRecords]="pagina().totalElementos"
+    [lazy]="true"
+    (onLazyLoad)="pesquisarPaginada($event)"
+    data-cy="tabela-aliquotas">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Código</th>
+        <th>Descrição</th>
+        <th>Alíquota (%)</th>
+        <th>Competência</th>
+        <th>Ações</th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-aliquota>
+      <tr [attr.data-cy]="'aliquota-' + aliquota.codigoServico">
+        <td>{{ aliquota.codigoServicoFormatado }}</td>
+        <td class="descricao-celula" [pTooltip]="aliquota.descricaoServico" tooltipPosition="top">
+          {{ aliquota.descricaoServico }}
+        </td>
+        <td>{{ aliquota.aliquota | number:'1.2-2' }}</td>
+        <td>{{ aliquota.competencia | date:'MM/yyyy' }}</td>
+        <td>
+          <p-button icon="pi pi-eye" [rounded]="true" [text]="true" data-cy="btn-detalhe"
+            (onClick)="verDetalhe(aliquota)" />
+        </td>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="5" class="texto-centralizado">Nenhuma alíquota encontrada</td>
+      </tr>
+    </ng-template>
+  </p-table>
 </div>
 
 <!-- Dialog de detalhe -->
-<p-dialog header="Detalhe da Alíquota" [(visible)]="detalheVisivel" [modal]="true"
-          [style]="{ width: '500px' }" data-cy="dialog-detalhe">
+<p-dialog header="Detalhe da Alíquota" [(visible)]="detalheVisivel" [modal]="true" [style]="{ width: '500px' }"
+  data-cy="dialog-detalhe">
   @if (detalheCarregando()) {
     <app-loading-spinner mensagem="Carregando detalhe..." />
   } @else if (detalhe()) {

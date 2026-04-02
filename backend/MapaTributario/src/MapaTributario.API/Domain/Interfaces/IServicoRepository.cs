@@ -7,6 +7,7 @@ public interface IServicoRepository
     Task<IReadOnlyList<Servico>> GetAllAsync();
     Task<Servico?> GetByCodigoAsync(string codigoTribNac);
     Task<IReadOnlyDictionary<string, string>> ObterDescricoesPorCodigosAsync(IEnumerable<string> codigosTribNac);
+    Task<IReadOnlyList<string>> BuscarCodigosPorDescricaoAsync(string descricao);
     Task<long> CountAsync();
     Task InsertManyAsync(IEnumerable<Servico> servicos);
 }

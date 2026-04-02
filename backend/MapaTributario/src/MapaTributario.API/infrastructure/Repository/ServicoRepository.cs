@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using MapaTributario.API.Domain.Entities;
 using MapaTributario.API.Domain.Interfaces;
 using MongoDB.Driver;
@@ -39,6 +40,16 @@ public class ServicoRepository : IServicoRepository
         var filter = Builders<Servico>.Filter.In(s => s.CodigoTribNac, codigos);
         var servicos = await _servicos.Find(filter).ToListAsync();
         return servicos.ToDictionary(s => s.CodigoTribNac, s => s.Descricao);
+    }
+
+    public async Task<IReadOnlyList<string>> BuscarCodigosPorDescricaoAsync(string descricao)
+    {
+        var escapado = Regex.Escape(descricao);
+        var filtro = Builders<Servico>.Filter.Regex(s => s.Descricao, new MongoDB.Bson.BsonRegularExpression(escapado, "i"));
+        var servicos = await _servicos.Find(filtro)
+            .Project(s => s.CodigoTribNac)
+            .ToListAsync();
+        return servicos;
     }
 
     public async Task<long> CountAsync()

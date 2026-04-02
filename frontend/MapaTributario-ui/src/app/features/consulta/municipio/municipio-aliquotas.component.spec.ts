@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { MunicipioAliquotasComponent } from './municipio-aliquotas.component';
 
 describe('MunicipioAliquotasComponent', () => {
@@ -13,6 +14,7 @@ describe('MunicipioAliquotasComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
+        provideAnimationsAsync(),
         {
           provide: ActivatedRoute,
           useValue: {
@@ -28,45 +30,44 @@ describe('MunicipioAliquotasComponent', () => {
     return { ...result, httpTesting };
   }
 
-  it('deve exibir loading inicialmente', async () => {
-    const { container } = await setup();
-    expect(container.querySelector('app-loading-spinner')).toBeTruthy();
+  const respostaPaginada = (items: any[] = [], totalItens = 0, totalPaginas = 0) => ({
+    items,
+    pagina: 1,
+    tamanhoPagina: 20,
+    totalItens,
+    totalPaginas,
   });
 
-  it('deve renderizar tabela apos carregar aliquotas (nao empty state)', async () => {
+  const aliquotaExemplo = {
+    codigoServico: '010101001',
+    codigoServicoFormatado: '01.01.01.001',
+    descricaoServico: 'Analise e desenvolvimento',
+    aliquota: 2.0,
+    competencia: '2026-03-01',
+  };
+
+  it('deve exibir tabela com loading enquanto carrega', async () => {
+    const { container } = await setup();
+    const tabela = container.querySelector('[data-cy="tabela-aliquotas"]');
+    expect(tabela).toBeTruthy();
+  });
+
+  it('deve renderizar tabela apos carregar aliquotas', async () => {
     const { container, httpTesting, fixture } = await setup();
-    httpTesting.expectOne(r => r.url === '/api/v1/municipios/3106200/aliquotas').flush({
-      items: [
-        {
-          codigoServico: '010101001',
-          codigoServicoFormatado: '01.01.01.001',
-          descricaoServico: 'Analise e desenvolvimento',
-          aliquota: 2.0,
-          competencia: '2026-03-01',
-        },
-      ],
-      pagina: 1,
-      tamanhoPagina: 20,
-      totalItens: 1,
-      totalPaginas: 1,
-    });
+    httpTesting.expectOne(r => r.url === '/api/v1/municipios/3106200/aliquotas').flush(
+      respostaPaginada([aliquotaExemplo], 1, 1)
+    );
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
-    // Apos carregar dados: loading desaparece e empty state nao aparece
-    expect(container.querySelector('app-empty-state')).toBeNull();
     expect(container.querySelector('app-error-state')).toBeNull();
   });
 
-  it('deve exibir empty state quando nao ha aliquotas', async () => {
+  it('deve exibir mensagem vazia quando nao ha aliquotas', async () => {
     const { httpTesting, fixture } = await setup();
-    httpTesting.expectOne(r => r.url === '/api/v1/municipios/3106200/aliquotas').flush({
-      items: [],
-      pagina: 1,
-      tamanhoPagina: 20,
-      totalItens: 0,
-      totalPaginas: 0,
-    });
+    httpTesting.expectOne(r => r.url === '/api/v1/municipios/3106200/aliquotas').flush(
+      respostaPaginada()
+    );
     fixture.detectChanges();
     await waitFor(() => {
       expect(screen.getByText('Nenhuma alíquota encontrada')).toBeTruthy();

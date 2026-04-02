@@ -9,7 +9,7 @@ public interface IAliquotaRepository
         int pagina,
         int tamanhoPagina,
         string? codigoServico = null,
-        string? descricao = null,
+        IReadOnlyList<string>? codigosServicoPorDescricao = null,
         decimal? aliquotaMin = null,
         decimal? aliquotaMax = null,
         string? competencia = null);

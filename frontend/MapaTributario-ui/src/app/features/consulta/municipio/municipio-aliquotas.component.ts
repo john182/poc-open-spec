@@ -2,7 +2,7 @@ import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DecimalPipe, DatePipe } from '@angular/common';
-import { TableModule } from 'primeng/table';
+import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputMaskModule } from 'primeng/inputmask';
@@ -12,11 +12,22 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { TooltipModule } from 'primeng/tooltip';
 import { MenuItem } from 'primeng/api';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
-import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
-import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
+import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
 import { ConsultaService } from '../services/consulta.service';
-import { Aliquota, AliquotaDetalhe, FiltroAliquota } from '../models/consulta.models';
+import { Aliquota, AliquotaDetalhe, FiltroAliquota, RespostaPaginada } from '../models/consulta.models';
+
+export class Pagina<T> {
+  totalElementos: number;
+  totalPaginas: number;
+  conteudo: Partial<T>[];
+
+  constructor() {
+    this.conteudo = [];
+    this.totalElementos = 0;
+    this.totalPaginas = 0;
+  }
+}
 
 @Component({
   selector: 'app-municipio-aliquotas',
@@ -24,7 +35,7 @@ import { Aliquota, AliquotaDetalhe, FiltroAliquota } from '../models/consulta.mo
   imports: [
     FormsModule, DecimalPipe, DatePipe, TableModule, InputTextModule, InputNumberModule, InputMaskModule,
     ButtonModule, DialogModule, DatePickerModule, TooltipModule, PageHeaderComponent,
-    LoadingSpinnerComponent, EmptyStateComponent, ErrorStateComponent,
+    ErrorStateComponent, LoadingSpinnerComponent,
   ],
   templateUrl: './municipio-aliquotas.component.html',
   styleUrl: './municipio-aliquotas.component.scss',
@@ -33,26 +44,29 @@ export class MunicipioAliquotasComponent implements OnInit {
   private readonly _route = inject(ActivatedRoute);
   private readonly _consultaService = inject(ConsultaService);
 
+  // Dados do município (rota)
   readonly codigoIbge = signal('');
   readonly nomeMunicipio = signal('');
   readonly uf = signal('');
-  readonly aliquotas = signal<Aliquota[]>([]);
-  readonly carregando = signal(true);
-  readonly erro = signal('');
-  readonly totalItens = signal(0);
-  readonly totalPaginas = signal(0);
 
-  readonly filtro = signal<FiltroAliquota>({ pagina: 1, tamanhoPagina: 20 });
+  // Estado da tabela (p-table lazy)
+  readonly pagina = signal<Pagina<Aliquota>>(new Pagina<Aliquota>());
+  readonly carregando = signal(false);
+  readonly erro = signal('');
+
+  // Filtros
   readonly filtroCodigoServico = signal('');
   readonly filtroDescricao = signal('');
   readonly filtroAliquotaMin = signal<number | null>(null);
   readonly filtroAliquotaMax = signal<number | null>(null);
   readonly filtroCompetencia = signal<Date | null>(null);
 
+  // Detalhe
   readonly detalheVisivel = signal(false);
   readonly detalhe = signal<AliquotaDetalhe | null>(null);
   readonly detalheCarregando = signal(false);
 
+  // Computeds
   readonly tituloMunicipio = computed(() =>
     this.nomeMunicipio() || `Município ${this.codigoIbge()}`
   );
@@ -69,8 +83,6 @@ export class MunicipioAliquotasComponent implements OnInit {
     return itens;
   });
 
-  private _carregamentoInicialFeito = false;
-
   ngOnInit(): void {
     const codigo = this._route.snapshot.paramMap.get('codigoIbge') ?? '';
     const uf = this._route.snapshot.queryParamMap.get('uf') ?? '';
@@ -78,29 +90,17 @@ export class MunicipioAliquotasComponent implements OnInit {
     this.codigoIbge.set(codigo);
     this.uf.set(uf);
     this.nomeMunicipio.set(nome);
-    this._carregarAliquotas();
+  }
+
+  /** Chamado pelo p-table (onLazyLoad) no init e a cada mudança de página/tamanho */
+  pesquisarPaginada(evento?: TableLazyLoadEvent): void {
+    const paginaIndex = (evento?.first ?? 0) / (evento?.rows ?? 20);
+    const itensPorPagina = evento?.rows ?? 20;
+    this._carregarDados(paginaIndex, itensPorPagina);
   }
 
   aplicarFiltros(): void {
-    const competenciaDate = this.filtroCompetencia();
-    let competenciaStr: string | undefined;
-    if (competenciaDate) {
-      const ano = competenciaDate.getFullYear();
-      const mes = String(competenciaDate.getMonth() + 1).padStart(2, '0');
-      competenciaStr = `${ano}-${mes}`;
-    }
-    // Limpar placeholders da máscara do código de serviço (remove _ e pontos soltos)
-    const codigoServicoRaw = this.filtroCodigoServico()?.replace(/_/g, '').replace(/\.+$/, '') || '';
-    this.filtro.set({
-      pagina: 1,
-      tamanhoPagina: 20,
-      codigoServico: codigoServicoRaw || undefined,
-      descricao: this.filtroDescricao() || undefined,
-      aliquotaMin: this.filtroAliquotaMin() ?? undefined,
-      aliquotaMax: this.filtroAliquotaMax() ?? undefined,
-      competencia: competenciaStr,
-    });
-    this._carregarAliquotas();
+    this._carregarDados(0, 20);
   }
 
   limparFiltros(): void {
@@ -110,17 +110,6 @@ export class MunicipioAliquotasComponent implements OnInit {
     this.filtroAliquotaMax.set(null);
     this.filtroCompetencia.set(null);
     this.aplicarFiltros();
-  }
-
-  onPaginaChange(evento: { first: number; rows: number }): void {
-    // PrimeNG lazy table dispara onLazyLoad ao inicializar — ignorar pois ngOnInit já fez o carregamento inicial
-    if (!this._carregamentoInicialFeito) {
-      this._carregamentoInicialFeito = true;
-      return;
-    }
-    const pagina = Math.floor(evento.first / evento.rows) + 1;
-    this.filtro.update(f => ({ ...f, pagina, tamanhoPagina: evento.rows }));
-    this._carregarAliquotas();
   }
 
   verDetalhe(aliquota: Aliquota): void {
@@ -139,23 +128,58 @@ export class MunicipioAliquotasComponent implements OnInit {
   }
 
   tentarNovamente(): void {
-    this._carregarAliquotas();
+    this._carregarDados(0, 20);
   }
 
-  private _carregarAliquotas(): void {
+  // --- Privados ---
+
+  private _carregarDados(paginaIndex: number, itensPorPagina: number): void {
     this.carregando.set(true);
     this.erro.set('');
-    this._consultaService.listarAliquotas(this.codigoIbge(), this.filtro()).subscribe({
-      next: (resposta) => {
-        this.aliquotas.set(resposta.items);
-        this.totalItens.set(resposta.totalItens);
-        this.totalPaginas.set(resposta.totalPaginas);
+
+    const filtro = this._montarFiltro(paginaIndex, itensPorPagina);
+
+    this._consultaService.listarAliquotas(this.codigoIbge(), filtro)
+      .subscribe({
+        next: (resposta) => {
+          this.pagina.set(this._mapearResposta(resposta));
+        },
+        error: () => {
+          this.erro.set('Erro ao carregar alíquotas. Tente novamente.');
+        },
+      })
+      .add(() => {
         this.carregando.set(false);
-      },
-      error: () => {
-        this.erro.set('Erro ao carregar alíquotas. Tente novamente.');
-        this.carregando.set(false);
-      },
-    });
+      });
+  }
+
+  private _montarFiltro(paginaIndex: number, itensPorPagina: number): FiltroAliquota {
+    const codigoServicoRaw = this.filtroCodigoServico()?.replace(/_/g, '').replace(/\.+$/, '') || '';
+
+    let competenciaStr: string | undefined;
+    const competenciaDate = this.filtroCompetencia();
+    if (competenciaDate) {
+      const ano = competenciaDate.getFullYear();
+      const mes = String(competenciaDate.getMonth() + 1).padStart(2, '0');
+      competenciaStr = `${ano}-${mes}`;
+    }
+
+    return {
+      pagina: paginaIndex,
+      tamanhoPagina: itensPorPagina,
+      codigoServico: codigoServicoRaw || undefined,
+      descricao: this.filtroDescricao() || undefined,
+      aliquotaMin: this.filtroAliquotaMin() ?? undefined,
+      aliquotaMax: this.filtroAliquotaMax() ?? undefined,
+      competencia: competenciaStr,
+    };
+  }
+
+  private _mapearResposta<T>(resposta: RespostaPaginada<T>): Pagina<T> {
+    const pag = new Pagina<T>();
+    pag.conteudo = resposta.items;
+    pag.totalElementos = resposta.totalItens;
+    pag.totalPaginas = resposta.totalPaginas;
+    return pag;
   }
 }

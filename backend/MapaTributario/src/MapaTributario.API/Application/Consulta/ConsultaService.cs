@@ -156,12 +156,24 @@ public class ConsultaService : IConsultaService
             }
         }
 
+        // Quando há filtro de descrição, buscar códigos de serviço correspondentes
+        // na coleção servicos (onde as descrições reais estão armazenadas)
+        IReadOnlyList<string>? codigosServicoPorDescricao = null;
+        if (!string.IsNullOrWhiteSpace(queryParams.Descricao))
+        {
+            var descricaoTrimmed = queryParams.Descricao.Trim();
+            var codigosComPontos = await _servicoRepository.BuscarCodigosPorDescricaoAsync(descricaoTrimmed);
+            codigosServicoPorDescricao = codigosComPontos
+                .Select(c => c.Replace(".", ""))
+                .ToList();
+        }
+
         var (items, total) = await _aliquotaRepository.GetByMunicipioAsync(
             codigoIbge,
             queryParams.Pagina,
             queryParams.TamanhoPagina,
             codigoServicoNormalizado,
-            queryParams.Descricao,
+            codigosServicoPorDescricao,
             queryParams.AliquotaMin,
             queryParams.AliquotaMax,
             queryParams.Competencia);

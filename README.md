@@ -1,7 +1,13 @@
 # Mapa Tributario — Crawler de Aliquotas ISS
 
+[![CI](https://github.com/john182/poc-open-spec/actions/workflows/ci.yml/badge.svg)](https://github.com/john182/poc-open-spec/actions/workflows/ci.yml)
 [![SonarQube Cloud](https://sonarcloud.io/images/project_badges/sonarcloud-light.svg)](https://sonarcloud.io/summary/new_code?id=john182_poc-open-spec)
 [![codecov](https://codecov.io/gh/john182/poc-open-spec/graph/badge.svg)](https://codecov.io/gh/john182/poc-open-spec)
+
+![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
+![Angular 21](https://img.shields.io/badge/Angular-21-DD0031?logo=angular&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-8.0-47A248?logo=mongodb&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
 Um projeto full-stack que coleta periodicamente aliquotas de ISS da API NFS-e (adn.nfse.gov.br) e apresenta os dados atraves de um frontend interativo com navegacao por mapa, estado, municipio e codigo de servico.
 

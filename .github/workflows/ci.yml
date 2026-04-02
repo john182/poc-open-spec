@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main, release/**, feature/**]
+  pull_request:
+    branches: [main, release/**]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (.NET 10)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend/MapaTributario
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restaurar dependências
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Testes unitários
+        run: dotnet test tests/MapaTributario.Tests.Unit --no-build --configuration Release --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage"
+
+      - name: Upload cobertura backend
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/MapaTributario/tests/MapaTributario.Tests.Unit/TestResults/**/coverage.cobertura.xml
+
+      - name: Upload resultados de teste
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: backend/MapaTributario/tests/MapaTributario.Tests.Unit/TestResults/*.trx
+
+  frontend:
+    name: Frontend (Angular 21)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend/MapaTributario-ui
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/MapaTributario-ui/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Lint
+        run: npx ng lint
+
+      - name: Testes unitários
+        run: npx ng test --watch=false --coverage
+
+      - name: Build produção
+        run: npx ng build
+
+      - name: Upload cobertura frontend
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/MapaTributario-ui/coverage/
+
+  codecov:
+    name: Upload Codecov
+    needs: [backend, frontend]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download cobertura backend
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-coverage
+          path: coverage/backend
+
+      - name: Download cobertura frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-coverage
+          path: coverage/frontend
+
+      - name: Upload para Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          directory: coverage/
+          flags: backend,frontend
+          fail_ci_if_error: false

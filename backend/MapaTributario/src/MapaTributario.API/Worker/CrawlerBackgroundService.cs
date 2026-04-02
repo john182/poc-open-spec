@@ -32,13 +32,13 @@ public class CrawlerBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        string cronSchedule = await ObterCronScheduleAsync();
-        _logger.LogInformation("CrawlerBackgroundService started with schedule: {Schedule}", cronSchedule);
+        _logger.LogInformation("CrawlerBackgroundService started");
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            string cronSchedule = await ObterCronScheduleAsync();
             TimeSpan delay = CalculateNextRunDelay(cronSchedule);
-            _logger.LogInformation("Next crawler execution scheduled in {Delay}", delay);
+            _logger.LogInformation("Next crawler execution scheduled in {Delay} (schedule: {Schedule})", delay, cronSchedule);
 
             try
             {
@@ -48,9 +48,6 @@ public class CrawlerBackgroundService : BackgroundService
             {
                 break;
             }
-
-            // Recarregar CronSchedule antes de cada execução (pode ter mudado via admin)
-            cronSchedule = await ObterCronScheduleAsync();
 
             await ExecuteScheduledRunAsync(stoppingToken);
         }
@@ -62,7 +59,7 @@ public class CrawlerBackgroundService : BackgroundService
     {
         try
         {
-            ConfiguracaoCrawler? configuracao = await _configuracaoRepository.ObterAtivaAsync();
+            ConfiguracaoCrawler? configuracao = await _configuracaoRepository.ObterAtualAsync();
             return configuracao?.CronSchedule ?? _cronScheduleFallback;
         }
         catch (Exception ex)
@@ -129,6 +126,10 @@ public class CrawlerBackgroundService : BackgroundService
                 hour = parsedHour;
             }
         }
+
+        // Clamp to valid ranges
+        minute = Math.Clamp(minute, 0, 59);
+        hour = Math.Clamp(hour, 0, 23);
 
         DateTime now = DateTime.UtcNow;
         DateTime nextRun = new DateTime(now.Year, now.Month, now.Day, hour, minute, 0, DateTimeKind.Utc);

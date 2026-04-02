@@ -13,4 +13,16 @@ public class StatusCrawlerResponse
     public int Erros { get; set; }
     public List<string> DetalhesErro { get; set; } = new();
     public bool TemCertificado { get; set; }
+    public string? UfAtual { get; set; }
+    public List<string> UfsProcessadas { get; set; } = new();
+    public Dictionary<string, ProgressoUfResponse> ProgressoUfs { get; set; } = new();
+}
+
+public class ProgressoUfResponse
+{
+    public string Uf { get; set; } = null!;
+    public string Status { get; set; } = null!;
+    public int MunicipiosEncontrados { get; set; }
+    public DateTime? Inicio { get; set; }
+    public DateTime? Fim { get; set; }
 }

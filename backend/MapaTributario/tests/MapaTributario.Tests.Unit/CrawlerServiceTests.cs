@@ -48,7 +48,7 @@ public class CrawlerServiceTests
         _filaRepo.Setup(r => r.UpdateStatusAsync(It.IsAny<FilaProcessamento>())).Returns(Task.CompletedTask);
 
         // Configuração padrão do crawler (retornada pelo repositório)
-        _configuracaoRepo.Setup(r => r.ObterAtivaAsync())
+        _configuracaoRepo.Setup(r => r.ObterAtualAsync())
             .ReturnsAsync(ConfiguracaoCrawler.CriarPadrao());
 
         _sut = new CrawlerService(
@@ -237,7 +237,8 @@ public class CrawlerServiceTests
             .ReturnsAsync((ConvenioNfseResponse?)null);
 
         // Act
-        List<Municipio> result = await _sut.FaseConvenioAsync(null, CancellationToken.None);
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        List<Municipio> result = await _sut.FaseConvenioAsync(execucao, null, CancellationToken.None);
 
         // Assert
         result.Count.ShouldBe(1);
@@ -634,7 +635,8 @@ public class CrawlerServiceTests
             .ReturnsAsync(CriarConvenioAtivo());
 
         // Act
-        List<Municipio> resultado = await _sut.FaseConvenioAsync(null, CancellationToken.None);
+        ExecucaoCrawler execucaoCapitais = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        List<Municipio> resultado = await _sut.FaseConvenioAsync(execucaoCapitais, null, CancellationToken.None);
 
         // Assert
         resultado.Count.ShouldBe(4);
@@ -666,7 +668,8 @@ public class CrawlerServiceTests
             .ReturnsAsync(CriarConvenioAtivo());
 
         // Act
-        List<Municipio> resultado = await _sut.FaseConvenioAsync(null, CancellationToken.None);
+        ExecucaoCrawler execucaoUfs = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        List<Municipio> resultado = await _sut.FaseConvenioAsync(execucaoUfs, null, CancellationToken.None);
 
         // Assert
         resultado.Count.ShouldBe(2);

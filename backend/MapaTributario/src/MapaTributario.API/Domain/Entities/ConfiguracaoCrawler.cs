@@ -12,11 +12,11 @@ public class ConfiguracaoCrawler
     public int OrcamentoDiario { get; private set; } = 50000;
 
     // Lote de certificado (CertificateProtection)
-    public int TamanheLoteCertificado { get; private set; } = 200;
+    public int TamanhoLoteCertificado { get; private set; } = 200;
     public int PausaLoteSegundos { get; private set; } = 5;
 
     // Lote de consulta MongoDB
-    public int TamanheLoteMongo { get; private set; } = 50;
+    public int TamanhoLoteMongo { get; private set; } = 50;
 
     // Crawler Service - parâmetros de processamento
     public int MaxTentativas { get; private set; } = 3;
@@ -57,9 +57,9 @@ public class ConfiguracaoCrawler
             CronSchedule = "0 2 * * *",
             LimiteRequisicoesPorSegundo = 15,
             OrcamentoDiario = 50000,
-            TamanheLoteCertificado = 200,
+            TamanhoLoteCertificado = 200,
             PausaLoteSegundos = 5,
-            TamanheLoteMongo = 50,
+            TamanhoLoteMongo = 50,
             MaxTentativas = 3,
             LimiteParadaAntecipada = 9,
             MaxDesdobramento = 20,
@@ -86,6 +86,19 @@ public class ConfiguracaoCrawler
 
     public void MarcarAtualizado()
     {
+        AtualizadoEm = DateTime.UtcNow;
+    }
+
+    public void AtualizarParcial(
+        int? maxItensParalelos = null,
+        int? tamanhoLoteMongo = null,
+        int? tamanhoLoteCertificado = null,
+        int? maxTentativas = null)
+    {
+        if (maxItensParalelos.HasValue) MaxItensParalelos = maxItensParalelos.Value;
+        if (tamanhoLoteMongo.HasValue) TamanhoLoteMongo = tamanhoLoteMongo.Value;
+        if (tamanhoLoteCertificado.HasValue) TamanhoLoteCertificado = tamanhoLoteCertificado.Value;
+        if (maxTentativas.HasValue) MaxTentativas = maxTentativas.Value;
         AtualizadoEm = DateTime.UtcNow;
     }
 }

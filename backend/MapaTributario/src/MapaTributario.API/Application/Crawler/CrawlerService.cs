@@ -102,13 +102,24 @@ public class CrawlerService : ICrawlerService
         }
 
         // Carregar configuração do MongoDB
-        _configuracao = await _configuracaoRepository.ObterAtivaAsync()
+        _configuracao = await _configuracaoRepository.ObterAtualAsync()
             ?? ConfiguracaoCrawler.CriarPadrao();
 
+        // Verificar se o crawler está ativo
+        if (!_configuracao.Ativo)
+        {
+            _logger.LogWarning("Crawler desativado pela configuração. Abortando execução.");
+            _executionGuard.Release();
+            return Result.Fail<ExecucaoCrawler>(new CrawlerDesativadoError());
+        }
+
+        // Validar configuração carregada
+        ValidarConfiguracao();
+
         _logger.LogInformation(
-            "Configuração do crawler carregada (Id={Id}, TamanheLoteMongo={Lote}, MaxItensParalelos={Paralelos})",
+            "Configuração do crawler carregada (Id={Id}, TamanhoLoteMongo={Lote}, MaxItensParalelos={Paralelos})",
             _configuracao.Id ?? "padrao-em-memoria",
-            _configuracao.TamanheLoteMongo,
+            _configuracao.TamanhoLoteMongo,
             _configuracao.MaxItensParalelos);
 
         _certificateProtection.Reset();
@@ -129,7 +140,10 @@ public class CrawlerService : ICrawlerService
             string competencia = GetCompetenciaAtual();
 
             // Phase 1: Discover active municipalities via convenio endpoint
-            List<Municipio> municipiosAtivos = await FaseConvenioAsync(filtroUfs, cancellationToken);
+            List<Municipio> municipiosAtivos = await FaseConvenioAsync(execucao, filtroUfs, cancellationToken);
+
+            // Persistir progresso de UFs no banco
+            await _execucaoRepository.UpdateAsync(execucao);
 
             if (municipiosAtivos.Count == 0)
             {
@@ -197,6 +211,7 @@ public class CrawlerService : ICrawlerService
     }
 
     internal async Task<List<Municipio>> FaseConvenioAsync(
+        ExecucaoCrawler execucao,
         IReadOnlyList<string>? filtroUfs,
         CancellationToken cancellationToken)
     {
@@ -215,8 +230,13 @@ public class CrawlerService : ICrawlerService
 
         foreach (string uf in ufsParaProcessar)
         {
+            execucao.IniciarProcessamentoUf(uf);
+
             IReadOnlyList<Municipio> porUf = await _municipioRepository.GetByUfAsync(uf);
             todos.AddRange(porUf);
+
+            int municipiosUf = porUf.Count;
+            execucao.FinalizarProcessamentoUf(uf, municipiosUf);
         }
 
         // Priorizar capitais: processar todas as capitais primeiro (de todas as UFs),
@@ -426,7 +446,7 @@ public class CrawlerService : ICrawlerService
                 break;
             }
 
-            IReadOnlyList<FilaProcessamento> batch = await _filaRepository.GetPendingAsync(_configuracao.TamanheLoteMongo);
+            IReadOnlyList<FilaProcessamento> batch = await _filaRepository.GetPendingAsync(_configuracao.TamanhoLoteMongo);
 
             if (batch.Count == 0)
             {
@@ -858,5 +878,38 @@ public class CrawlerService : ICrawlerService
         }
 
         return code;
+    }
+
+    private void ValidarConfiguracao()
+    {
+        ConfiguracaoCrawler padrao = ConfiguracaoCrawler.CriarPadrao();
+
+        if (_configuracao.MaxItensParalelos <= 0)
+        {
+            _logger.LogWarning("MaxItensParalelos inválido ({Valor}), usando padrão ({Padrao})",
+                _configuracao.MaxItensParalelos, padrao.MaxItensParalelos);
+            _configuracao.AtualizarParcial(maxItensParalelos: padrao.MaxItensParalelos);
+        }
+
+        if (_configuracao.TamanhoLoteMongo <= 0)
+        {
+            _logger.LogWarning("TamanhoLoteMongo inválido ({Valor}), usando padrão ({Padrao})",
+                _configuracao.TamanhoLoteMongo, padrao.TamanhoLoteMongo);
+            _configuracao.AtualizarParcial(tamanhoLoteMongo: padrao.TamanhoLoteMongo);
+        }
+
+        if (_configuracao.TamanhoLoteCertificado <= 0)
+        {
+            _logger.LogWarning("TamanhoLoteCertificado inválido ({Valor}), usando padrão ({Padrao})",
+                _configuracao.TamanhoLoteCertificado, padrao.TamanhoLoteCertificado);
+            _configuracao.AtualizarParcial(tamanhoLoteCertificado: padrao.TamanhoLoteCertificado);
+        }
+
+        if (_configuracao.MaxTentativas <= 0)
+        {
+            _logger.LogWarning("MaxTentativas inválido ({Valor}), usando padrão ({Padrao})",
+                _configuracao.MaxTentativas, padrao.MaxTentativas);
+            _configuracao.AtualizarParcial(maxTentativas: padrao.MaxTentativas);
+        }
     }
 }

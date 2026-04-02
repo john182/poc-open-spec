@@ -18,12 +18,11 @@ public class ConfiguracaoCrawlerSeedService
 
     public async Task SeedAsync()
     {
-        ConfiguracaoCrawler? existente = await _repository.ObterAtivaAsync();
-        if (existente is not null)
+        bool existe = await _repository.ExisteAlgumaAsync();
+        if (existe)
         {
             _logger.LogInformation(
-                "Configuração de crawler já existe (Id={Id}). Seed ignorado.",
-                existente.Id);
+                "Configuração de crawler já existe. Seed ignorado.");
             return;
         }
 

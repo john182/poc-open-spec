@@ -16,7 +16,7 @@ public class ConfiguracaoCrawlerSeedServiceTests
     public async Task Given_NenhumaConfiguracaoExistente_Should_CriarConfiguracaoPadrao()
     {
         // Arrange
-        _repository.Setup(r => r.ObterAtivaAsync()).ReturnsAsync((ConfiguracaoCrawler?)null);
+        _repository.Setup(r => r.ExisteAlgumaAsync()).ReturnsAsync(false);
         _repository.Setup(r => r.CriarAsync(It.IsAny<ConfiguracaoCrawler>()))
             .ReturnsAsync((ConfiguracaoCrawler c) => c);
 
@@ -28,7 +28,7 @@ public class ConfiguracaoCrawlerSeedServiceTests
         // Assert
         _repository.Verify(r => r.CriarAsync(It.Is<ConfiguracaoCrawler>(c =>
             c.Ativo == true &&
-            c.TamanheLoteMongo == 50 &&
+            c.TamanhoLoteMongo == 50 &&
             c.MaxTentativas == 3 &&
             c.CronSchedule == "0 2 * * *"
         )), Times.Once);
@@ -38,9 +38,7 @@ public class ConfiguracaoCrawlerSeedServiceTests
     public async Task Given_ConfiguracaoJaExistente_Should_IgnorarSeed()
     {
         // Arrange
-        ConfiguracaoCrawler existente = ConfiguracaoCrawler.CriarPadrao();
-        existente.SetId("abc123");
-        _repository.Setup(r => r.ObterAtivaAsync()).ReturnsAsync(existente);
+        _repository.Setup(r => r.ExisteAlgumaAsync()).ReturnsAsync(true);
 
         var sut = new ConfiguracaoCrawlerSeedService(_repository.Object, _logger.Object);
 

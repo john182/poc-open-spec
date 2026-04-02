@@ -20,6 +20,7 @@ public static class CrawlerMongoMappings
         _registered = true;
 
         RegisterExecucaoCrawler();
+        RegisterProgressoUf();
         RegisterFilaProcessamento();
         RegisterConfiguracaoCrawler();
     }
@@ -44,6 +45,22 @@ public static class CrawlerMongoMappings
             cm.MapMember(e => e.Erros).SetElementName("erros");
             cm.MapMember(e => e.DetalhesErro).SetElementName("detalhesErro");
             cm.MapMember(e => e.UfsProcessadas).SetElementName("ufsProcessadas");
+            cm.MapMember(e => e.UfAtual).SetElementName("ufAtual");
+            cm.MapMember(e => e.ProgressoUfs).SetElementName("progressoUfs");
+            cm.SetIgnoreExtraElements(true);
+        });
+    }
+
+    private static void RegisterProgressoUf()
+    {
+        BsonClassMap.RegisterClassMap<ProgressoUf>(cm =>
+        {
+            cm.AutoMap();
+            cm.MapMember(p => p.Uf).SetElementName("uf");
+            cm.MapMember(p => p.Status).SetElementName("status");
+            cm.MapMember(p => p.MunicipiosEncontrados).SetElementName("municipiosEncontrados");
+            cm.MapMember(p => p.Inicio).SetElementName("inicio");
+            cm.MapMember(p => p.Fim).SetElementName("fim");
             cm.SetIgnoreExtraElements(true);
         });
     }
@@ -82,9 +99,9 @@ public static class CrawlerMongoMappings
             cm.MapMember(c => c.CronSchedule).SetElementName("cronSchedule");
             cm.MapMember(c => c.LimiteRequisicoesPorSegundo).SetElementName("limiteRequisicoesPorSegundo");
             cm.MapMember(c => c.OrcamentoDiario).SetElementName("orcamentoDiario");
-            cm.MapMember(c => c.TamanheLoteCertificado).SetElementName("tamanheLoteCertificado");
+            cm.MapMember(c => c.TamanhoLoteCertificado).SetElementName("tamanhoLoteCertificado");
             cm.MapMember(c => c.PausaLoteSegundos).SetElementName("pausaLoteSegundos");
-            cm.MapMember(c => c.TamanheLoteMongo).SetElementName("tamanheLoteMongo");
+            cm.MapMember(c => c.TamanhoLoteMongo).SetElementName("tamanhoLoteMongo");
             cm.MapMember(c => c.MaxTentativas).SetElementName("maxTentativas");
             cm.MapMember(c => c.LimiteParadaAntecipada).SetElementName("limiteParadaAntecipada");
             cm.MapMember(c => c.MaxDesdobramento).SetElementName("maxDesdobramento");

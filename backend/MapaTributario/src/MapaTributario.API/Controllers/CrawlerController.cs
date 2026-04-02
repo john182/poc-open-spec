@@ -118,7 +118,19 @@ public class CrawlerController : ControllerBase
             Processados = execucao.Processados,
             Erros = execucao.Erros,
             DetalhesErro = execucao.DetalhesErro,
-            TemCertificado = _certificadoStore.HasCertificate()
+            TemCertificado = _certificadoStore.HasCertificate(),
+            UfAtual = execucao.UfAtual,
+            UfsProcessadas = execucao.UfsProcessadas,
+            ProgressoUfs = execucao.ProgressoUfs.ToDictionary(
+                kvp => kvp.Key,
+                kvp => new ProgressoUfResponse
+                {
+                    Uf = kvp.Value.Uf,
+                    Status = kvp.Value.Status,
+                    MunicipiosEncontrados = kvp.Value.MunicipiosEncontrados,
+                    Inicio = kvp.Value.Inicio,
+                    Fim = kvp.Value.Fim
+                })
         };
     }
 }

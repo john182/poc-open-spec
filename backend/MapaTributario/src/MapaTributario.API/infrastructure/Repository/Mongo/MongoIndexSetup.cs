@@ -122,8 +122,10 @@ public sealed class MongoIndexSetup
     {
         var collection = _database.GetCollection<ConfiguracaoCrawler>("configuracoesCrawler");
 
-        var ativoIndex = Builders<ConfiguracaoCrawler>.IndexKeys.Ascending(c => c.Ativo);
+        var compostoIndex = Builders<ConfiguracaoCrawler>.IndexKeys
+            .Ascending(c => c.Ativo)
+            .Descending(c => c.CriadoEm);
         await collection.Indexes.CreateOneAsync(
-            new CreateIndexModel<ConfiguracaoCrawler>(ativoIndex));
+            new CreateIndexModel<ConfiguracaoCrawler>(compostoIndex));
     }
 }

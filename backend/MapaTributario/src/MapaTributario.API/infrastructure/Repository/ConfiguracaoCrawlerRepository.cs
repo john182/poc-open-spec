@@ -13,12 +13,17 @@ public class ConfiguracaoCrawlerRepository : IConfiguracaoCrawlerRepository
         _configuracoes = database.GetCollection<ConfiguracaoCrawler>("configuracoesCrawler");
     }
 
-    public async Task<ConfiguracaoCrawler?> ObterAtivaAsync()
+    public async Task<ConfiguracaoCrawler?> ObterAtualAsync()
     {
         return await _configuracoes
-            .Find(c => c.Ativo)
+            .Find(_ => true)
             .SortByDescending(c => c.CriadoEm)
             .FirstOrDefaultAsync();
+    }
+
+    public async Task<bool> ExisteAlgumaAsync()
+    {
+        return await _configuracoes.Find(_ => true).AnyAsync();
     }
 
     public async Task<ConfiguracaoCrawler> CriarAsync(ConfiguracaoCrawler configuracao)

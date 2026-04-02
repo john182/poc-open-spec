@@ -36,7 +36,7 @@ public class CrawlerBackgroundServiceTests
 
         // Setup padrão: configuração do crawler com CronSchedule do parâmetro
         ConfiguracaoCrawler configuracao = ConfiguracaoCrawler.CriarPadrao();
-        _configuracaoRepo.Setup(r => r.ObterAtivaAsync()).ReturnsAsync(configuracao);
+        _configuracaoRepo.Setup(r => r.ObterAtualAsync()).ReturnsAsync(configuracao);
 
         // Setup service scope
         Mock<IServiceScope> scope = new();

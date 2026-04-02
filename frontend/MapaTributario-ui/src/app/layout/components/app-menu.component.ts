@@ -35,6 +35,7 @@ export class AppMenuComponent {
         { label: 'Crawler', icon: 'pi pi-cog', routerLink: ['/admin/crawler/status'] },
         { label: 'Certificado', icon: 'pi pi-shield', routerLink: ['/admin/crawler/certificado'] },
         { label: 'Execuções', icon: 'pi pi-history', routerLink: ['/admin/crawler/execucoes'] },
+        { label: 'Configuração', icon: 'pi pi-sliders-h', routerLink: ['/admin/crawler/configuracao'] },
       ],
     },
   ];

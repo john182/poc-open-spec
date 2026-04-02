@@ -20,7 +20,9 @@ public static class CrawlerMongoMappings
         _registered = true;
 
         RegisterExecucaoCrawler();
+        RegisterProgressoUf();
         RegisterFilaProcessamento();
+        RegisterConfiguracaoCrawler();
     }
 
     private static void RegisterExecucaoCrawler()
@@ -43,6 +45,22 @@ public static class CrawlerMongoMappings
             cm.MapMember(e => e.Erros).SetElementName("erros");
             cm.MapMember(e => e.DetalhesErro).SetElementName("detalhesErro");
             cm.MapMember(e => e.UfsProcessadas).SetElementName("ufsProcessadas");
+            cm.MapMember(e => e.UfAtual).SetElementName("ufAtual");
+            cm.MapMember(e => e.ProgressoUfs).SetElementName("progressoUfs");
+            cm.SetIgnoreExtraElements(true);
+        });
+    }
+
+    private static void RegisterProgressoUf()
+    {
+        BsonClassMap.RegisterClassMap<ProgressoUf>(cm =>
+        {
+            cm.AutoMap();
+            cm.MapMember(p => p.Uf).SetElementName("uf");
+            cm.MapMember(p => p.Status).SetElementName("status");
+            cm.MapMember(p => p.MunicipiosEncontrados).SetElementName("municipiosEncontrados");
+            cm.MapMember(p => p.Inicio).SetElementName("inicio");
+            cm.MapMember(p => p.Fim).SetElementName("fim");
             cm.SetIgnoreExtraElements(true);
         });
     }
@@ -66,6 +84,40 @@ public static class CrawlerMongoMappings
             cm.MapMember(f => f.ExecucaoId).SetElementName("execucaoId");
             cm.MapMember(f => f.CriadoEm).SetElementName("criadoEm");
             cm.MapMember(f => f.AtualizadoEm).SetElementName("atualizadoEm");
+            cm.SetIgnoreExtraElements(true);
+        });
+    }
+
+    private static void RegisterConfiguracaoCrawler()
+    {
+        BsonClassMap.RegisterClassMap<ConfiguracaoCrawler>(cm =>
+        {
+            cm.AutoMap();
+            cm.MapIdMember(c => c.Id)
+                .SetIdGenerator(StringObjectIdGenerator.Instance)
+                .SetSerializer(new StringSerializer(BsonType.ObjectId));
+            cm.MapMember(c => c.CronSchedule).SetElementName("cronSchedule");
+            cm.MapMember(c => c.LimiteRequisicoesPorSegundo).SetElementName("limiteRequisicoesPorSegundo");
+            cm.MapMember(c => c.OrcamentoDiario).SetElementName("orcamentoDiario");
+            cm.MapMember(c => c.TamanhoLoteCertificado).SetElementName("tamanhoLoteCertificado");
+            cm.MapMember(c => c.PausaLoteSegundos).SetElementName("pausaLoteSegundos");
+            cm.MapMember(c => c.TamanhoLoteMongo).SetElementName("tamanhoLoteMongo");
+            cm.MapMember(c => c.MaxTentativas).SetElementName("maxTentativas");
+            cm.MapMember(c => c.LimiteParadaAntecipada).SetElementName("limiteParadaAntecipada");
+            cm.MapMember(c => c.MaxDesdobramento).SetElementName("maxDesdobramento");
+            cm.MapMember(c => c.MaxDetalhamento).SetElementName("maxDetalhamento");
+            cm.MapMember(c => c.MaxFalhasConsecutivasDetalhamento).SetElementName("maxFalhasConsecutivasDetalhamento");
+            cm.MapMember(c => c.MaxFalhasConsecutivasDesdobramento).SetElementName("maxFalhasConsecutivasDesdobramento");
+            cm.MapMember(c => c.MaxItensParalelos).SetElementName("maxItensParalelos");
+            cm.MapMember(c => c.CodigosSondagem).SetElementName("codigosSondagem");
+            cm.MapMember(c => c.ValidadeDiasProcessamento).SetElementName("validadeDiasProcessamento");
+            cm.MapMember(c => c.CircuitBreakerLimiarErroPercent).SetElementName("circuitBreakerLimiarErroPercent");
+            cm.MapMember(c => c.CircuitBreakerJanelaAvaliacaoSegundos).SetElementName("circuitBreakerJanelaAvaliacaoSegundos");
+            cm.MapMember(c => c.CircuitBreakerPausaSegundos).SetElementName("circuitBreakerPausaSegundos");
+            cm.MapMember(c => c.CircuitBreakerAmostraMinima).SetElementName("circuitBreakerAmostraMinima");
+            cm.MapMember(c => c.Ativo).SetElementName("ativo");
+            cm.MapMember(c => c.CriadoEm).SetElementName("criadoEm");
+            cm.MapMember(c => c.AtualizadoEm).SetElementName("atualizadoEm");
             cm.SetIgnoreExtraElements(true);
         });
     }

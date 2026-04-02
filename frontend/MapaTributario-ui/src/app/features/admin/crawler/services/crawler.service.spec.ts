@@ -89,4 +89,76 @@ describe('CrawlerService', () => {
     expect(req.request.method).toBe('DELETE');
     req.flush(respostaMock);
   });
+
+  it('deve obter configuracao do crawler', () => {
+    const configuracaoMock = {
+      id: '1',
+      cronSchedule: '0 2 * * *',
+      limiteRequisicoesPorSegundo: 15,
+      orcamentoDiario: 50000,
+      tamanhoLoteCertificado: 200,
+      pausaLoteSegundos: 5,
+      tamanhoLoteMongo: 50,
+      maxTentativas: 3,
+      limiteParadaAntecipada: 9,
+      maxDesdobramento: 20,
+      maxDetalhamento: 99,
+      maxFalhasConsecutivasDetalhamento: 2,
+      maxFalhasConsecutivasDesdobramento: 2,
+      maxItensParalelos: 10,
+      codigosSondagem: ['01.01.01', '07.02.01'],
+      validadeDiasProcessamento: 7,
+      circuitBreakerLimiarErroPercent: 50,
+      circuitBreakerJanelaAvaliacaoSegundos: 60,
+      circuitBreakerPausaSegundos: 300,
+      circuitBreakerAmostraMinima: 10,
+      ativo: true,
+      criadoEm: '2026-03-01T10:00:00Z',
+      atualizadoEm: '2026-03-01T10:00:00Z',
+    };
+    service.obterConfiguracao().subscribe(configuracao => {
+      expect(configuracao).toEqual(configuracaoMock);
+    });
+    const req = httpTesting.expectOne('/api/v1/crawler/configuracao');
+    expect(req.request.method).toBe('GET');
+    req.flush(configuracaoMock);
+  });
+
+  it('deve atualizar configuracao do crawler', () => {
+    const requestMock = {
+      cronSchedule: '0 3 * * *',
+      limiteRequisicoesPorSegundo: 20,
+      orcamentoDiario: 60000,
+      tamanhoLoteCertificado: 250,
+      pausaLoteSegundos: 10,
+      tamanhoLoteMongo: 100,
+      maxTentativas: 5,
+      limiteParadaAntecipada: 12,
+      maxDesdobramento: 30,
+      maxDetalhamento: 50,
+      maxFalhasConsecutivasDetalhamento: 3,
+      maxFalhasConsecutivasDesdobramento: 3,
+      maxItensParalelos: 15,
+      codigosSondagem: ['01.01.01'],
+      validadeDiasProcessamento: 14,
+      circuitBreakerLimiarErroPercent: 60,
+      circuitBreakerJanelaAvaliacaoSegundos: 120,
+      circuitBreakerPausaSegundos: 600,
+      circuitBreakerAmostraMinima: 20,
+      ativo: false,
+    };
+    const respostaMock = {
+      ...requestMock,
+      id: '1',
+      criadoEm: '2026-03-01T10:00:00Z',
+      atualizadoEm: '2026-03-02T10:00:00Z',
+    };
+    service.atualizarConfiguracao(requestMock).subscribe(configuracao => {
+      expect(configuracao).toEqual(respostaMock);
+    });
+    const req = httpTesting.expectOne('/api/v1/crawler/configuracao');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual(requestMock);
+    req.flush(respostaMock);
+  });
 });

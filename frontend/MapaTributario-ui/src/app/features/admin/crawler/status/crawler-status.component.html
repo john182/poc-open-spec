@@ -63,6 +63,52 @@
             </ul>
           </div>
         }
+
+        <!-- Progresso por UF -->
+        @if (statusAtual()!.ufAtual || listaProgressoUfs().length > 0) {
+          <div class="secao-progresso-uf" data-cy="progresso-ufs">
+            <h4>
+              Progresso por UF
+              @if (statusAtual()!.ufAtual) {
+                <span class="uf-atual-badge">
+                  <i class="pi pi-spin pi-spinner"></i>
+                  Processando: {{ statusAtual()!.ufAtual }}
+                </span>
+              }
+            </h4>
+            @if (ufsConcluidasLista().length > 0) {
+              <div class="ufs-resumo">
+                <span class="ufs-resumo-label">UFs concluídas:</span>
+                <span class="ufs-resumo-valor">{{ ufsConcluidasLista().length }} / {{ statusAtual()!.ufsProcessadas.length }}</span>
+              </div>
+              <div class="ufs-processadas-lista">
+                @for (uf of ufsConcluidasLista(); track uf) {
+                  <p-tag [value]="uf" severity="success" />
+                }
+              </div>
+            }
+            @if (listaProgressoUfs().length > 0) {
+              <div class="progresso-uf-grid">
+                @for (progresso of listaProgressoUfs(); track progresso.uf) {
+                  <div class="progresso-uf-card" [attr.data-cy]="'progresso-uf-' + progresso.uf">
+                    <div class="progresso-uf-header">
+                      <span class="progresso-uf-sigla">{{ progresso.uf }}</span>
+                      <p-tag [value]="progresso.status"
+                             [severity]="obterSeveridadeProgressoUf(progresso.status)" />
+                    </div>
+                    <div class="progresso-uf-detalhes">
+                      <span>Municípios: {{ progresso.municipiosEncontrados }}</span>
+                      <span>Início: {{ progresso.inicio | date:'HH:mm:ss' }}</span>
+                      @if (progresso.fim) {
+                        <span>Fim: {{ progresso.fim | date:'HH:mm:ss' }}</span>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
       } @else {
         <app-empty-state
           titulo="Nenhuma execução encontrada"
@@ -100,12 +146,29 @@
                            display="chip" />
           </div>
         </div>
-        <p-button
-          label="Executar crawler"
-          icon="pi pi-play"
-          data-cy="btn-executar"
-          [loading]="executando()"
-          (onClick)="executarCrawler()" />
+        <div class="execucao-botoes">
+          <div class="execucao-botao-grupo">
+            <p-button
+              label="Executar crawler"
+              icon="pi pi-play"
+              data-cy="btn-executar"
+              [loading]="executando()"
+              [disabled]="executandoCapitais()"
+              (onClick)="executarCrawler()" />
+            <small class="execucao-botao-descricao">Executa as UFs selecionadas acima (ou todas, se nenhuma for selecionada).</small>
+          </div>
+          <div class="execucao-botao-grupo">
+            <p-button
+              label="Executar capitais primeiro"
+              icon="pi pi-star"
+              severity="help"
+              data-cy="btn-executar-capitais"
+              [loading]="executandoCapitais()"
+              [disabled]="executando()"
+              (onClick)="executarCapitaisPrimeiro()" />
+            <small class="execucao-botao-descricao">Processa primeiro as 27 capitais estaduais. Ao concluir, processa automaticamente os demais municípios.</small>
+          </div>
+        </div>
       </div>
       @if (mensagemExecucao()) {
         <div class="mensagem-sucesso" data-cy="msg-execucao-sucesso">

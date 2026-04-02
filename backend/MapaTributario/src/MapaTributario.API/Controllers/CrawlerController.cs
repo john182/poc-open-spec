@@ -1,5 +1,7 @@
+using FluentValidation;
 using MapaTributario.API.Application.Crawler;
 using MapaTributario.API.Application.Crawler.Contracts;
+using MapaTributario.API.Application.Errors;
 using MapaTributario.API.Domain.Entities;
 using MapaTributario.API.Domain.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -16,17 +18,20 @@ public class CrawlerController : ControllerBase
     private readonly IExecucaoCrawlerRepository _execucaoRepository;
     private readonly IServiceProvider _serviceProvider;
     private readonly ICertificadoStore _certificadoStore;
+    private readonly IConfiguracaoCrawlerAppService _configuracaoAppService;
 
     public CrawlerController(
         ICrawlerExecutionGuard executionGuard,
         IExecucaoCrawlerRepository execucaoRepository,
         IServiceProvider serviceProvider,
-        ICertificadoStore certificadoStore)
+        ICertificadoStore certificadoStore,
+        IConfiguracaoCrawlerAppService configuracaoAppService)
     {
         _executionGuard = executionGuard;
         _execucaoRepository = execucaoRepository;
         _serviceProvider = serviceProvider;
         _certificadoStore = certificadoStore;
+        _configuracaoAppService = configuracaoAppService;
     }
 
     [HttpPost("executar")]
@@ -123,6 +128,76 @@ public class CrawlerController : ControllerBase
         IReadOnlyList<ExecucaoCrawler> recentes = await _execucaoRepository.GetRecentAsync(20);
 
         return Ok(recentes.Select(MapToResponse).ToList());
+    }
+
+    [HttpGet("configuracao")]
+    public async Task<IActionResult> ObterConfiguracao()
+    {
+        var resultado = await _configuracaoAppService.ObterConfiguracaoAtualAsync();
+
+        if (resultado.IsFailed)
+        {
+            if (resultado.Errors.OfType<NotFoundError>().Any())
+            {
+                return NotFound(new { erro = resultado.Errors.First().Message });
+            }
+
+            return BadRequest(new { erro = resultado.Errors.First().Message });
+        }
+
+        return Ok(resultado.Value);
+    }
+
+    [HttpPut("configuracao")]
+    public async Task<IActionResult> AtualizarConfiguracao(
+        [FromBody] AtualizarConfiguracaoCrawlerRequest request,
+        [FromServices] IValidator<AtualizarConfiguracaoCrawlerRequest> validator)
+    {
+        var validacao = await validator.ValidateAsync(request);
+        if (!validacao.IsValid)
+        {
+            return BadRequest(new { erro = "Validação falhou", detalhes = validacao.Errors.Select(e => e.ErrorMessage).ToArray() });
+        }
+
+        var resultado = await _configuracaoAppService.AtualizarConfiguracaoAsync(request);
+
+        if (resultado.IsFailed)
+        {
+            if (resultado.Errors.OfType<NotFoundError>().Any())
+            {
+                return NotFound(new { erro = resultado.Errors.First().Message });
+            }
+
+            return BadRequest(new { erro = resultado.Errors.First().Message });
+        }
+
+        return Ok(resultado.Value);
+    }
+
+    [HttpPatch("configuracao")]
+    public async Task<IActionResult> AtualizarParcialConfiguracao(
+        [FromBody] AtualizarParcialConfiguracaoCrawlerRequest request,
+        [FromServices] IValidator<AtualizarParcialConfiguracaoCrawlerRequest> validator)
+    {
+        var validacao = await validator.ValidateAsync(request);
+        if (!validacao.IsValid)
+        {
+            return BadRequest(new { erro = "Validação falhou", detalhes = validacao.Errors.Select(e => e.ErrorMessage).ToArray() });
+        }
+
+        var resultado = await _configuracaoAppService.AtualizarParcialmenteAsync(request);
+
+        if (resultado.IsFailed)
+        {
+            if (resultado.Errors.OfType<NotFoundError>().Any())
+            {
+                return NotFound(new { erro = resultado.Errors.First().Message });
+            }
+
+            return BadRequest(new { erro = resultado.Errors.First().Message });
+        }
+
+        return Ok(resultado.Value);
     }
 
     private StatusCrawlerResponse MapToResponse(ExecucaoCrawler execucao)

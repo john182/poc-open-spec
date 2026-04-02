@@ -27,6 +27,9 @@ public static class ApplicationServiceExtensions
         services.AddScoped<ICrawlerService, CrawlerService>();
         services.AddSingleton<ICrawlerExecutionGuard, CrawlerExecutionGuard>();
 
+        // Configuração Crawler (CRUD)
+        services.AddScoped<IConfiguracaoCrawlerAppService, ConfiguracaoCrawlerAppService>();
+
         // Resilience components (singletons for shared state)
         RegisterResilienceComponents(services, configuration);
 

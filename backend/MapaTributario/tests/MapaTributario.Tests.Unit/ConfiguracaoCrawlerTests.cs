@@ -77,4 +77,92 @@ public class ConfiguracaoCrawlerTests
         // Assert
         configuracao.Id.ShouldBe("abc123");
     }
+
+    [Fact]
+    public void Atualizar_Deve_AtualizarTodasPropriedades()
+    {
+        // Arrange
+        ConfiguracaoCrawler configuracao = ConfiguracaoCrawler.CriarPadrao();
+        var novosCodigosSondagem = new List<string> { "01.01.01", "07.02.01" };
+
+        // Act
+        configuracao.Atualizar(
+            cronSchedule: "0 5 * * *",
+            limiteRequisicoesPorSegundo: 25,
+            orcamentoDiario: 80000,
+            tamanheLoteCertificado: 400,
+            pausaLoteSegundos: 15,
+            tamanheLoteMongo: 75,
+            maxTentativas: 6,
+            limiteParadaAntecipada: 15,
+            maxDesdobramento: 40,
+            maxDetalhamento: 120,
+            maxFalhasConsecutivasDetalhamento: 5,
+            maxFalhasConsecutivasDesdobramento: 5,
+            maxItensParalelos: 20,
+            codigosSondagem: novosCodigosSondagem,
+            validadeDiasProcessamento: 10,
+            circuitBreakerLimiarErroPercent: 80,
+            circuitBreakerJanelaAvaliacaoSegundos: 90,
+            circuitBreakerPausaSegundos: 500,
+            circuitBreakerAmostraMinima: 15,
+            ativo: false);
+
+        // Assert
+        configuracao.CronSchedule.ShouldBe("0 5 * * *");
+        configuracao.LimiteRequisicoesPorSegundo.ShouldBe(25);
+        configuracao.OrcamentoDiario.ShouldBe(80000);
+        configuracao.TamanheLoteCertificado.ShouldBe(400);
+        configuracao.PausaLoteSegundos.ShouldBe(15);
+        configuracao.TamanheLoteMongo.ShouldBe(75);
+        configuracao.MaxTentativas.ShouldBe(6);
+        configuracao.LimiteParadaAntecipada.ShouldBe(15);
+        configuracao.MaxDesdobramento.ShouldBe(40);
+        configuracao.MaxDetalhamento.ShouldBe(120);
+        configuracao.MaxFalhasConsecutivasDetalhamento.ShouldBe(5);
+        configuracao.MaxFalhasConsecutivasDesdobramento.ShouldBe(5);
+        configuracao.MaxItensParalelos.ShouldBe(20);
+        configuracao.CodigosSondagem.ShouldBe(novosCodigosSondagem);
+        configuracao.ValidadeDiasProcessamento.ShouldBe(10);
+        configuracao.CircuitBreakerLimiarErroPercent.ShouldBe(80);
+        configuracao.CircuitBreakerJanelaAvaliacaoSegundos.ShouldBe(90);
+        configuracao.CircuitBreakerPausaSegundos.ShouldBe(500);
+        configuracao.CircuitBreakerAmostraMinima.ShouldBe(15);
+        configuracao.Ativo.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void AtualizarParcial_Deve_AtualizarApenasCamposInformados()
+    {
+        // Arrange
+        ConfiguracaoCrawler configuracao = ConfiguracaoCrawler.CriarPadrao();
+
+        // Act
+        configuracao.AtualizarParcial(
+            cronSchedule: "0 4 * * *",
+            maxTentativas: 7);
+
+        // Assert — campos alterados
+        configuracao.CronSchedule.ShouldBe("0 4 * * *");
+        configuracao.MaxTentativas.ShouldBe(7);
+
+        // Assert — campos inalterados (valores padrão)
+        configuracao.LimiteRequisicoesPorSegundo.ShouldBe(15);
+        configuracao.OrcamentoDiario.ShouldBe(50000);
+        configuracao.TamanheLoteCertificado.ShouldBe(200);
+        configuracao.PausaLoteSegundos.ShouldBe(5);
+        configuracao.TamanheLoteMongo.ShouldBe(50);
+        configuracao.LimiteParadaAntecipada.ShouldBe(9);
+        configuracao.MaxDesdobramento.ShouldBe(20);
+        configuracao.MaxDetalhamento.ShouldBe(99);
+        configuracao.MaxFalhasConsecutivasDetalhamento.ShouldBe(2);
+        configuracao.MaxFalhasConsecutivasDesdobramento.ShouldBe(2);
+        configuracao.MaxItensParalelos.ShouldBe(10);
+        configuracao.ValidadeDiasProcessamento.ShouldBe(7);
+        configuracao.CircuitBreakerLimiarErroPercent.ShouldBe(50);
+        configuracao.CircuitBreakerJanelaAvaliacaoSegundos.ShouldBe(60);
+        configuracao.CircuitBreakerPausaSegundos.ShouldBe(300);
+        configuracao.CircuitBreakerAmostraMinima.ShouldBe(10);
+        configuracao.Ativo.ShouldBeTrue();
+    }
 }

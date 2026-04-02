@@ -36,6 +36,7 @@ public static class InfrastructureServiceExtensions
         services.AddSingleton<IAliquotaRepository, AliquotaRepository>();
         services.AddSingleton<IExecucaoCrawlerRepository, ExecucaoCrawlerRepository>();
         services.AddSingleton<IFilaProcessamentoRepository, FilaProcessamentoRepository>();
+        services.AddSingleton<IConfiguracaoCrawlerRepository, ConfiguracaoCrawlerRepository>();
 
         // Auth infrastructure
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
@@ -48,6 +49,7 @@ public static class InfrastructureServiceExtensions
         services.AddTransient<IbgeSeedService>();
         services.AddTransient<ServicoSeedService>();
         services.AddTransient<AdminSeedService>();
+        services.AddTransient<ConfiguracaoCrawlerSeedService>();
 
         // NFS-e API Client with certificate support
         RegisterNfseApiClient(services, configuration);
@@ -67,6 +69,9 @@ public static class InfrastructureServiceExtensions
 
         var adminSeed = scope.ServiceProvider.GetRequiredService<AdminSeedService>();
         await adminSeed.SeedAsync();
+
+        var configuracaoCrawlerSeed = scope.ServiceProvider.GetRequiredService<ConfiguracaoCrawlerSeedService>();
+        await configuracaoCrawlerSeed.SeedAsync();
     }
 
     public static async Task ApplyMongoIndexesAsync(this WebApplication app)

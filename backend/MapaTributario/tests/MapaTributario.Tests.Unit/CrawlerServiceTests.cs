@@ -19,6 +19,7 @@ public class CrawlerServiceTests
     private readonly Mock<IMunicipioRepository> _municipioRepo = new();
     private readonly Mock<IServicoRepository> _servicoRepo = new();
     private readonly Mock<IAliquotaRepository> _aliquotaRepo = new();
+    private readonly Mock<IConfiguracaoCrawlerRepository> _configuracaoRepo = new();
     private readonly Mock<INfseApiClient> _nfseClient = new();
     private readonly Mock<IRateLimiter> _rateLimiter = new();
     private readonly Mock<ICircuitBreaker> _circuitBreaker = new();
@@ -46,12 +47,17 @@ public class CrawlerServiceTests
         _filaRepo.Setup(r => r.InsertManyAsync(It.IsAny<IEnumerable<FilaProcessamento>>())).Returns(Task.CompletedTask);
         _filaRepo.Setup(r => r.UpdateStatusAsync(It.IsAny<FilaProcessamento>())).Returns(Task.CompletedTask);
 
+        // Configuração padrão do crawler (retornada pelo repositório)
+        _configuracaoRepo.Setup(r => r.ObterAtivaAsync())
+            .ReturnsAsync(ConfiguracaoCrawler.CriarPadrao());
+
         _sut = new CrawlerService(
             _execucaoRepo.Object,
             _filaRepo.Object,
             _municipioRepo.Object,
             _servicoRepo.Object,
             _aliquotaRepo.Object,
+            _configuracaoRepo.Object,
             _nfseClient.Object,
             _rateLimiter.Object,
             _circuitBreaker.Object,

@@ -1,6 +1,7 @@
 using FluentResults;
 using MapaTributario.API.Application.Crawler;
 using MapaTributario.API.Domain.Entities;
+using MapaTributario.API.Domain.Interfaces;
 
 namespace MapaTributario.API.Worker;
 
@@ -9,30 +10,34 @@ public class CrawlerBackgroundService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ICrawlerExecutionGuard _executionGuard;
     private readonly ICertificadoStore _certificadoStore;
+    private readonly IConfiguracaoCrawlerRepository _configuracaoRepository;
     private readonly ILogger<CrawlerBackgroundService> _logger;
-    private readonly string _cronSchedule;
+    private readonly string _cronScheduleFallback;
 
     public CrawlerBackgroundService(
         IServiceProvider serviceProvider,
         ICrawlerExecutionGuard executionGuard,
         ICertificadoStore certificadoStore,
+        IConfiguracaoCrawlerRepository configuracaoRepository,
         ILogger<CrawlerBackgroundService> logger,
         IConfiguration configuration)
     {
         _serviceProvider = serviceProvider;
         _executionGuard = executionGuard;
         _certificadoStore = certificadoStore;
+        _configuracaoRepository = configuracaoRepository;
         _logger = logger;
-        _cronSchedule = configuration["Crawler:CronSchedule"] ?? "0 2 * * *";
+        _cronScheduleFallback = configuration["Crawler:CronSchedule"] ?? "0 2 * * *";
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("CrawlerBackgroundService started with schedule: {Schedule}", _cronSchedule);
+        string cronSchedule = await ObterCronScheduleAsync();
+        _logger.LogInformation("CrawlerBackgroundService started with schedule: {Schedule}", cronSchedule);
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            TimeSpan delay = CalculateNextRunDelay();
+            TimeSpan delay = CalculateNextRunDelay(cronSchedule);
             _logger.LogInformation("Next crawler execution scheduled in {Delay}", delay);
 
             try
@@ -44,10 +49,29 @@ public class CrawlerBackgroundService : BackgroundService
                 break;
             }
 
+            // Recarregar CronSchedule antes de cada execução (pode ter mudado via admin)
+            cronSchedule = await ObterCronScheduleAsync();
+
             await ExecuteScheduledRunAsync(stoppingToken);
         }
 
         _logger.LogInformation("CrawlerBackgroundService is stopping");
+    }
+
+    internal async Task<string> ObterCronScheduleAsync()
+    {
+        try
+        {
+            ConfiguracaoCrawler? configuracao = await _configuracaoRepository.ObterAtivaAsync();
+            return configuracao?.CronSchedule ?? _cronScheduleFallback;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "Falha ao obter CronSchedule do MongoDB. Usando fallback: {Fallback}",
+                _cronScheduleFallback);
+            return _cronScheduleFallback;
+        }
     }
 
     internal async Task ExecuteScheduledRunAsync(CancellationToken stoppingToken)
@@ -84,14 +108,15 @@ public class CrawlerBackgroundService : BackgroundService
         }
     }
 
-    internal TimeSpan CalculateNextRunDelay()
+    internal TimeSpan CalculateNextRunDelay(string? cronSchedule = null)
     {
+        string schedule = cronSchedule ?? _cronScheduleFallback;
         // Parse simple daily CRON: "0 H * * *"
         // Default: 02:00 UTC
         int hour = 2;
         int minute = 0;
 
-        string[] parts = _cronSchedule.Split(' ');
+        string[] parts = schedule.Split(' ');
         if (parts.Length >= 2)
         {
             if (int.TryParse(parts[0], out int parsedMinute))

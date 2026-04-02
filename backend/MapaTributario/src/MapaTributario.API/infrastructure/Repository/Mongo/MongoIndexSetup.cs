@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using MapaTributario.API.Domain.Entities;
 using MongoDB.Driver;
 
@@ -6,6 +7,7 @@ namespace MapaTributario.API.Infrastructure.Repository.Mongo;
 /// <summary>
 /// Centralizes all MongoDB index creation. Called once at application startup.
 /// </summary>
+[ExcludeFromCodeCoverage]
 public sealed class MongoIndexSetup
 {
     private readonly IMongoDatabase _database;

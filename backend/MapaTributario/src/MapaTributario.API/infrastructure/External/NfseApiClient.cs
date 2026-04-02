@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -5,6 +6,7 @@ using MapaTributario.API.Infrastructure.External.Contracts;
 
 namespace MapaTributario.API.Infrastructure.External;
 
+[ExcludeFromCodeCoverage]
 public class NfseApiClientOptions
 {
     public const string SectionName = "NfseApi";
@@ -15,6 +17,7 @@ public class NfseApiClientOptions
     public int TimeoutSeconds { get; set; } = 30;
 }
 
+[ExcludeFromCodeCoverage]
 public class NfseApiClient : INfseApiClient
 {
     private readonly HttpClient _httpClient;

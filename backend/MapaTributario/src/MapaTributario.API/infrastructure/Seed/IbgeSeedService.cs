@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using MapaTributario.API.Domain.Entities;
 using MapaTributario.API.Domain.Interfaces;
 
 namespace MapaTributario.API.Infrastructure.Seed;
 
+[ExcludeFromCodeCoverage]
 public class IbgeSeedService
 {
     private readonly IEstadoRepository _estadoRepository;

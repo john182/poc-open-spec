@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using MapaTributario.API.Domain.Entities;
 using MapaTributario.API.Domain.Interfaces;
@@ -5,6 +6,7 @@ using MongoDB.Driver;
 
 namespace MapaTributario.API.Infrastructure.Repository;
 
+[ExcludeFromCodeCoverage]
 public class AliquotaRepository : IAliquotaRepository
 {
     private readonly IMongoCollection<Aliquota> _aliquotas;

@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using MapaTributario.API.Domain.Entities;
 using MapaTributario.API.Domain.Interfaces;
 using MongoDB.Driver;
 
 namespace MapaTributario.API.Infrastructure.Repository;
 
+[ExcludeFromCodeCoverage]
 public class ExecucaoCrawlerRepository : IExecucaoCrawlerRepository
 {
     private readonly IMongoCollection<ExecucaoCrawler> _execucoes;

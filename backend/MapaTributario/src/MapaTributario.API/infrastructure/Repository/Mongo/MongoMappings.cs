@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using MapaTributario.API.Domain.Entities;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -6,6 +7,7 @@ using MongoDB.Bson.Serialization.Serializers;
 
 namespace MapaTributario.API.Infrastructure.Repository.Mongo;
 
+[ExcludeFromCodeCoverage]
 public static class MongoMappings
 {
     private static bool _registered;

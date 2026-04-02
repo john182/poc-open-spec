@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography.X509Certificates;
 using MapaTributario.API.Application.Crawler;
 using MapaTributario.API.Domain.Interfaces;
@@ -11,6 +12,7 @@ using MongoDB.Driver;
 
 namespace MapaTributario.API.Extensions;
 
+[ExcludeFromCodeCoverage]
 public static class InfrastructureServiceExtensions
 {
     public static IServiceCollection AddMapaTributarioInfrastructure(

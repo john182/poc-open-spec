@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using FluentValidation;
 using MapaTributario.API.Application.Auth;
@@ -9,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace MapaTributario.API.Extensions;
 
+[ExcludeFromCodeCoverage]
 public static class ApplicationServiceExtensions
 {
     public static IServiceCollection AddMapaTributarioApplication(

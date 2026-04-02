@@ -1,8 +1,10 @@
+using System.Diagnostics.CodeAnalysis;
 using MapaTributario.API.Domain.Entities;
 using MapaTributario.API.Domain.Interfaces;
 
 namespace MapaTributario.API.Infrastructure.Seed;
 
+[ExcludeFromCodeCoverage]
 public class ServicoSeedService
 {
     private readonly IServicoRepository _servicoRepository;

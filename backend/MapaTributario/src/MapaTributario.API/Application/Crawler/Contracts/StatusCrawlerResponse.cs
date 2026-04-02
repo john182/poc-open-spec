@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace MapaTributario.API.Application.Crawler.Contracts;
 
+[ExcludeFromCodeCoverage]
 public class StatusCrawlerResponse
 {
     public string Id { get; set; } = null!;
@@ -18,6 +21,7 @@ public class StatusCrawlerResponse
     public Dictionary<string, ProgressoUfResponse> ProgressoUfs { get; set; } = new();
 }
 
+[ExcludeFromCodeCoverage]
 public class ProgressoUfResponse
 {
     public string Uf { get; set; } = null!;

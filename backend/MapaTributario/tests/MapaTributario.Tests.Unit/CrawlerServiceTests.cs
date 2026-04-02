@@ -966,7 +966,7 @@ public class CrawlerServiceTests
         // Assert — nenhum município ativo retornado
         resultado.Count.ShouldBe(0);
         execucao.ProgressoUfs.ShouldContainKey("SE");
-        execucao.ProgressoUfs["SE"].Status.ShouldBe("Falha");
+        execucao.ProgressoUfs["SE"].Status.ShouldBe(StatusProgressoUf.Falha);
         execucao.ProgressoUfs["SE"].MunicipiosEncontrados.ShouldBe(2);
         execucao.ProgressoUfs["SE"].MunicipiosAtivos.ShouldBe(0);
     }
@@ -1005,7 +1005,7 @@ public class CrawlerServiceTests
 
         // Assert — RO deve estar "Interrompido" (halt ativou após 1º município)
         execucao.ProgressoUfs.ShouldContainKey("RO");
-        execucao.ProgressoUfs["RO"].Status.ShouldBe("Interrompido");
+        execucao.ProgressoUfs["RO"].Status.ShouldBe(StatusProgressoUf.Interrompido);
         execucao.ProgressoUfs["RO"].MunicipiosEncontrados.ShouldBe(3);
         execucao.ProgressoUfs["RO"].MunicipiosAtivos.ShouldBe(1); // Apenas Alta Floresta verificada
 
@@ -1033,7 +1033,7 @@ public class CrawlerServiceTests
 
         // Assert
         resultado.Count.ShouldBe(0);
-        execucao.ProgressoUfs["DF"].Status.ShouldBe("Concluido");
+        execucao.ProgressoUfs["DF"].Status.ShouldBe(StatusProgressoUf.Concluido);
         execucao.ProgressoUfs["DF"].MunicipiosEncontrados.ShouldBe(1);
         execucao.ProgressoUfs["DF"].MunicipiosAtivos.ShouldBe(0);
     }
@@ -1059,7 +1059,7 @@ public class CrawlerServiceTests
 
         // Assert
         resultado.Count.ShouldBe(2);
-        execucao.ProgressoUfs["SE"].Status.ShouldBe("Concluido");
+        execucao.ProgressoUfs["SE"].Status.ShouldBe(StatusProgressoUf.Concluido);
         execucao.ProgressoUfs["SE"].MunicipiosEncontrados.ShouldBe(2);
         execucao.ProgressoUfs["SE"].MunicipiosAtivos.ShouldBe(2);
     }
@@ -1094,7 +1094,7 @@ public class CrawlerServiceTests
         // Assert — apenas Aracaju é ativo
         resultado.Count.ShouldBe(1);
         resultado[0].CodigoIbge.ShouldBe("2800308");
-        execucao.ProgressoUfs["SE"].Status.ShouldBe("Concluido"); // Não é "Falha" porque nem todos falharam
+        execucao.ProgressoUfs["SE"].Status.ShouldBe(StatusProgressoUf.Concluido); // Não é "Falha" porque nem todos falharam
         execucao.ProgressoUfs["SE"].MunicipiosEncontrados.ShouldBe(3);
         execucao.ProgressoUfs["SE"].MunicipiosAtivos.ShouldBe(1);
     }
@@ -1134,11 +1134,11 @@ public class CrawlerServiceTests
 
         // Assert
         // AC: processa Rio Branco antes do halt → Concluido
-        execucao.ProgressoUfs["AC"].Status.ShouldBe("Concluido");
+        execucao.ProgressoUfs["AC"].Status.ShouldBe(StatusProgressoUf.Concluido);
         execucao.ProgressoUfs["AC"].MunicipiosAtivos.ShouldBe(1);
 
         // AL: halt já ativo ao entrar no loop → interrompida sem verificar nenhum município
-        execucao.ProgressoUfs["AL"].Status.ShouldBe("Interrompido");
+        execucao.ProgressoUfs["AL"].Status.ShouldBe(StatusProgressoUf.Interrompido);
         execucao.ProgressoUfs["AL"].MunicipiosAtivos.ShouldBe(0);
 
         // AM: não foi iniciada — não deve existir no dicionário

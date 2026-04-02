@@ -59,8 +59,10 @@ public static class CrawlerMongoMappings
         {
             cm.AutoMap();
             cm.MapMember(p => p.Uf).SetElementName("uf");
-            cm.MapMember(p => p.Status).SetElementName("status");
+            cm.MapMember(p => p.Status).SetElementName("status")
+                .SetSerializer(new EnumSerializer<StatusProgressoUf>(BsonType.String));
             cm.MapMember(p => p.MunicipiosEncontrados).SetElementName("municipiosEncontrados");
+            cm.MapMember(p => p.MunicipiosAtivos).SetElementName("municipiosAtivos");
             cm.MapMember(p => p.Inicio).SetElementName("inicio");
             cm.MapMember(p => p.Fim).SetElementName("fim");
             cm.SetIgnoreExtraElements(true);

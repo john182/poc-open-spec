@@ -278,8 +278,9 @@ public class CrawlerService : ICrawlerService
 
                 try
                 {
-                    await _rateLimiter.WaitAsync(cancellationToken);
-                    await _circuitBreaker.WaitIfOpenAsync(cancellationToken);
+                    await Task.WhenAll(
+                        _rateLimiter.WaitAsync(cancellationToken),
+                        _circuitBreaker.WaitIfOpenAsync(cancellationToken));
 
                     Stopwatch sw = Stopwatch.StartNew();
                     ConvenioNfseResponse? convenio =
@@ -358,8 +359,9 @@ public class CrawlerService : ICrawlerService
 
                 try
                 {
-                    await _rateLimiter.WaitAsync(cancellationToken);
-                    await _circuitBreaker.WaitIfOpenAsync(cancellationToken);
+                    await Task.WhenAll(
+                        _rateLimiter.WaitAsync(cancellationToken),
+                        _circuitBreaker.WaitIfOpenAsync(cancellationToken));
 
                     Stopwatch sw = Stopwatch.StartNew();
                     // NfseApiClient.FormatarCodigoServico adds ".000" desdobramento automatically
@@ -604,8 +606,9 @@ public class CrawlerService : ICrawlerService
         System.Collections.Concurrent.ConcurrentDictionary<string, int> consecutiveMissesByGroup,
         CancellationToken cancellationToken)
     {
-        await _rateLimiter.WaitAsync(cancellationToken);
-        await _circuitBreaker.WaitIfOpenAsync(cancellationToken);
+                    await Task.WhenAll(
+                        _rateLimiter.WaitAsync(cancellationToken),
+                        _circuitBreaker.WaitIfOpenAsync(cancellationToken));
 
         Stopwatch sw = Stopwatch.StartNew();
         AliquotaNfseResponse? result =
@@ -690,8 +693,9 @@ public class CrawlerService : ICrawlerService
             string codigoDetalhamento = $"{itemPart}.{subitemPart}.{det:D2}";
             string codigoCompleto = $"{codigoDetalhamento}.000";
 
-            await _rateLimiter.WaitAsync(cancellationToken);
-            await _circuitBreaker.WaitIfOpenAsync(cancellationToken);
+            await Task.WhenAll(
+                _rateLimiter.WaitAsync(cancellationToken),
+                _circuitBreaker.WaitIfOpenAsync(cancellationToken));
 
             Stopwatch sw = Stopwatch.StartNew();
             AliquotaNfseResponse? result =
@@ -739,8 +743,9 @@ public class CrawlerService : ICrawlerService
 
                 string codigoDesdobramento = $"{codigoDetalhamento}.{desdobramento:D3}";
 
-                await _rateLimiter.WaitAsync(cancellationToken);
-                await _circuitBreaker.WaitIfOpenAsync(cancellationToken);
+                await Task.WhenAll(
+                    _rateLimiter.WaitAsync(cancellationToken),
+                    _circuitBreaker.WaitIfOpenAsync(cancellationToken));
 
                 Stopwatch swDesdobramento = Stopwatch.StartNew();
                 AliquotaNfseResponse? resultDesdobramento =

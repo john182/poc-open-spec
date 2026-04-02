@@ -27,6 +27,7 @@ public class ProgressoUfResponse
     public string Uf { get; set; } = null!;
     public string Status { get; set; } = null!;
     public int MunicipiosEncontrados { get; set; }
+    public int MunicipiosAtivos { get; set; }
     public DateTime? Inicio { get; set; }
     public DateTime? Fim { get; set; }
 }

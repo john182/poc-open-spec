@@ -101,7 +101,7 @@ public class ExecucaoCrawlerTests
 
         execucao.FinalizarProcessamentoUf("SP", municipiosEncontrados: 100, municipiosAtivos: 42);
 
-        execucao.ProgressoUfs["SP"].Status.ShouldBe("Concluido");
+        execucao.ProgressoUfs["SP"].Status.ShouldBe(StatusProgressoUf.Concluido);
         execucao.ProgressoUfs["SP"].MunicipiosEncontrados.ShouldBe(100);
         execucao.ProgressoUfs["SP"].MunicipiosAtivos.ShouldBe(42);
         execucao.ProgressoUfs["SP"].Fim.ShouldNotBeNull();
@@ -116,7 +116,7 @@ public class ExecucaoCrawlerTests
 
         execucao.FalharProcessamentoUf("RJ", municipiosEncontrados: 50);
 
-        execucao.ProgressoUfs["RJ"].Status.ShouldBe("Falha");
+        execucao.ProgressoUfs["RJ"].Status.ShouldBe(StatusProgressoUf.Falha);
         execucao.ProgressoUfs["RJ"].MunicipiosEncontrados.ShouldBe(50);
         execucao.ProgressoUfs["RJ"].MunicipiosAtivos.ShouldBe(0);
         execucao.ProgressoUfs["RJ"].Fim.ShouldNotBeNull();
@@ -131,7 +131,7 @@ public class ExecucaoCrawlerTests
 
         execucao.InterromperProcessamentoUf("MG", municipiosEncontrados: 80, municipiosAtivosAteAgora: 15);
 
-        execucao.ProgressoUfs["MG"].Status.ShouldBe("Interrompido");
+        execucao.ProgressoUfs["MG"].Status.ShouldBe(StatusProgressoUf.Interrompido);
         execucao.ProgressoUfs["MG"].MunicipiosEncontrados.ShouldBe(80);
         execucao.ProgressoUfs["MG"].MunicipiosAtivos.ShouldBe(15);
         execucao.ProgressoUfs["MG"].Fim.ShouldNotBeNull();
@@ -139,11 +139,11 @@ public class ExecucaoCrawlerTests
     }
 
     [Fact]
-    public void ProgressoUf_StatusInicial_DeveSePendente()
+    public void ProgressoUf_StatusInicial_DeveSerPendente()
     {
         ProgressoUf progresso = new();
 
-        progresso.Status.ShouldBe("Pendente");
+        progresso.Status.ShouldBe(StatusProgressoUf.Pendente);
         progresso.MunicipiosEncontrados.ShouldBe(0);
         progresso.MunicipiosAtivos.ShouldBe(0);
     }
@@ -156,7 +156,7 @@ public class ExecucaoCrawlerTests
         execucao.IniciarProcessamentoUf("SE");
 
         execucao.ProgressoUfs.ShouldContainKey("SE");
-        execucao.ProgressoUfs["SE"].Status.ShouldBe("EmAndamento");
+        execucao.ProgressoUfs["SE"].Status.ShouldBe(StatusProgressoUf.EmAndamento);
         execucao.ProgressoUfs["SE"].Inicio.ShouldNotBeNull();
         execucao.UfAtual.ShouldBe("SE");
     }

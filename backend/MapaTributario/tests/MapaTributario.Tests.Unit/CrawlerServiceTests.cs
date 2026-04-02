@@ -19,6 +19,7 @@ public class CrawlerServiceTests
     private readonly Mock<IMunicipioRepository> _municipioRepo = new();
     private readonly Mock<IServicoRepository> _servicoRepo = new();
     private readonly Mock<IAliquotaRepository> _aliquotaRepo = new();
+    private readonly Mock<IConfiguracaoCrawlerRepository> _configuracaoRepo = new();
     private readonly Mock<INfseApiClient> _nfseClient = new();
     private readonly Mock<IRateLimiter> _rateLimiter = new();
     private readonly Mock<ICircuitBreaker> _circuitBreaker = new();
@@ -46,12 +47,17 @@ public class CrawlerServiceTests
         _filaRepo.Setup(r => r.InsertManyAsync(It.IsAny<IEnumerable<FilaProcessamento>>())).Returns(Task.CompletedTask);
         _filaRepo.Setup(r => r.UpdateStatusAsync(It.IsAny<FilaProcessamento>())).Returns(Task.CompletedTask);
 
+        // Configuração padrão do crawler (retornada pelo repositório)
+        _configuracaoRepo.Setup(r => r.ObterAtualAsync())
+            .ReturnsAsync(ConfiguracaoCrawler.CriarPadrao());
+
         _sut = new CrawlerService(
             _execucaoRepo.Object,
             _filaRepo.Object,
             _municipioRepo.Object,
             _servicoRepo.Object,
             _aliquotaRepo.Object,
+            _configuracaoRepo.Object,
             _nfseClient.Object,
             _rateLimiter.Object,
             _circuitBreaker.Object,
@@ -231,7 +237,8 @@ public class CrawlerServiceTests
             .ReturnsAsync((ConvenioNfseResponse?)null);
 
         // Act
-        List<Municipio> result = await _sut.FaseConvenioAsync(null, CancellationToken.None);
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        List<Municipio> result = await _sut.FaseConvenioAsync(execucao, null, null, CancellationToken.None);
 
         // Assert
         result.Count.ShouldBe(1);
@@ -628,7 +635,8 @@ public class CrawlerServiceTests
             .ReturnsAsync(CriarConvenioAtivo());
 
         // Act
-        List<Municipio> resultado = await _sut.FaseConvenioAsync(null, CancellationToken.None);
+        ExecucaoCrawler execucaoCapitais = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        List<Municipio> resultado = await _sut.FaseConvenioAsync(execucaoCapitais, null, null, CancellationToken.None);
 
         // Assert
         resultado.Count.ShouldBe(4);
@@ -660,7 +668,8 @@ public class CrawlerServiceTests
             .ReturnsAsync(CriarConvenioAtivo());
 
         // Act
-        List<Municipio> resultado = await _sut.FaseConvenioAsync(null, CancellationToken.None);
+        ExecucaoCrawler execucaoUfs = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        List<Municipio> resultado = await _sut.FaseConvenioAsync(execucaoUfs, null, null, CancellationToken.None);
 
         // Assert
         resultado.Count.ShouldBe(2);
@@ -678,6 +687,91 @@ public class CrawlerServiceTests
         // Assert
         capital.EhCapital.ShouldBeTrue();
         naoCapital.EhCapital.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Given_FiltroCapitalTrue_Should_RetornarApenasCapitais()
+    {
+        // Arrange
+        Municipio capitalMG = Municipio.Create("3106200", "Belo Horizonte", "MG", ehCapital: true);
+        Municipio interiorMG = Municipio.Create("3170206", "Uberlândia", "MG");
+        Municipio capitalSP = Municipio.Create("3550308", "São Paulo", "SP", ehCapital: true);
+        Municipio interiorSP = Municipio.Create("3509502", "Campinas", "SP");
+
+        _municipioRepo.Setup(r => r.GetByUfAsync("MG"))
+            .ReturnsAsync(new List<Municipio> { interiorMG, capitalMG });
+        _municipioRepo.Setup(r => r.GetByUfAsync("SP"))
+            .ReturnsAsync(new List<Municipio> { interiorSP, capitalSP });
+        _municipioRepo.Setup(r => r.GetByUfAsync(It.Is<string>(s => s != "MG" && s != "SP")))
+            .ReturnsAsync(new List<Municipio>());
+
+        _nfseClient.Setup(c => c.GetConvenioAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CriarConvenioAtivo());
+
+        // Act
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        List<Municipio> resultado = await _sut.FaseConvenioAsync(execucao, null, true, CancellationToken.None);
+
+        // Assert
+        resultado.Count.ShouldBe(2);
+        resultado.ShouldAllBe(m => m.EhCapital);
+        resultado[0].CodigoIbge.ShouldBe("3106200"); // BH (capital MG)
+        resultado[1].CodigoIbge.ShouldBe("3550308"); // SP (capital SP)
+    }
+
+    [Fact]
+    public async Task Given_FiltroCapitalFalse_Should_RetornarApenasNaoCapitais()
+    {
+        // Arrange
+        Municipio capitalMG = Municipio.Create("3106200", "Belo Horizonte", "MG", ehCapital: true);
+        Municipio interiorMG = Municipio.Create("3170206", "Uberlândia", "MG");
+        Municipio capitalSP = Municipio.Create("3550308", "São Paulo", "SP", ehCapital: true);
+        Municipio interiorSP = Municipio.Create("3509502", "Campinas", "SP");
+
+        _municipioRepo.Setup(r => r.GetByUfAsync("MG"))
+            .ReturnsAsync(new List<Municipio> { interiorMG, capitalMG });
+        _municipioRepo.Setup(r => r.GetByUfAsync("SP"))
+            .ReturnsAsync(new List<Municipio> { interiorSP, capitalSP });
+        _municipioRepo.Setup(r => r.GetByUfAsync(It.Is<string>(s => s != "MG" && s != "SP")))
+            .ReturnsAsync(new List<Municipio>());
+
+        _nfseClient.Setup(c => c.GetConvenioAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CriarConvenioAtivo());
+
+        // Act
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        List<Municipio> resultado = await _sut.FaseConvenioAsync(execucao, null, false, CancellationToken.None);
+
+        // Assert
+        resultado.Count.ShouldBe(2);
+        resultado.ShouldAllBe(m => !m.EhCapital);
+        resultado[0].CodigoIbge.ShouldBe("3170206"); // Uberlândia (interior MG — MG vem antes de SP por UF)
+        resultado[1].CodigoIbge.ShouldBe("3509502"); // Campinas (interior SP)
+    }
+
+    [Fact]
+    public async Task Given_FiltroCapitalNull_Should_RetornarTodosMunicipios()
+    {
+        // Arrange
+        Municipio capitalMG = Municipio.Create("3106200", "Belo Horizonte", "MG", ehCapital: true);
+        Municipio interiorMG = Municipio.Create("3170206", "Uberlândia", "MG");
+
+        _municipioRepo.Setup(r => r.GetByUfAsync("MG"))
+            .ReturnsAsync(new List<Municipio> { interiorMG, capitalMG });
+        _municipioRepo.Setup(r => r.GetByUfAsync(It.Is<string>(s => s != "MG")))
+            .ReturnsAsync(new List<Municipio>());
+
+        _nfseClient.Setup(c => c.GetConvenioAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CriarConvenioAtivo());
+
+        // Act
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        List<Municipio> resultado = await _sut.FaseConvenioAsync(execucao, null, null, CancellationToken.None);
+
+        // Assert
+        resultado.Count.ShouldBe(2);
+        resultado[0].EhCapital.ShouldBeTrue();  // Capital primeiro (ordenação)
+        resultado[1].EhCapital.ShouldBeFalse(); // Interior depois
     }
 
     #endregion

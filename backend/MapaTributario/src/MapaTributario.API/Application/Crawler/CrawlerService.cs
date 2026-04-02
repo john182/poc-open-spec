@@ -18,6 +18,7 @@ public class CrawlerService : ICrawlerService
     private readonly IMunicipioRepository _municipioRepository;
     private readonly IServicoRepository _servicoRepository;
     private readonly IAliquotaRepository _aliquotaRepository;
+    private readonly IConfiguracaoCrawlerRepository _configuracaoRepository;
     private readonly INfseApiClient _nfseApiClient;
     private readonly IRateLimiter _rateLimiter;
     private readonly ICircuitBreaker _circuitBreaker;
@@ -27,19 +28,8 @@ public class CrawlerService : ICrawlerService
     private readonly string? _caminhoArquivoCertificado;
     private readonly ILogger<CrawlerService> _logger;
 
-    private static readonly string[] ProbeServiceCodes = new[]
-    {
-        "01.01.01", "07.02.01", "14.01.01", "17.01.01", "25.01.01"
-    };
-
-    private const int MaxRetries = 3;
-    private const int EarlyStopThreshold = 9;
-    private const int BatchSize = 50;
-    private const int MaxDesdobramento = 20;
-    private const int MaxDetalhamento = 99;
-    private const int MaxConsecutiveDetalhamentoMisses = 2;
-    private const int MaxConsecutiveDesdobramentoMisses = 2;
-    private const int MaxParallelItems = 10;
+    // Configuração carregada do MongoDB no início de cada execução
+    private ConfiguracaoCrawler _configuracao = ConfiguracaoCrawler.CriarPadrao();
 
     public CrawlerService(
         IExecucaoCrawlerRepository execucaoRepository,
@@ -47,6 +37,7 @@ public class CrawlerService : ICrawlerService
         IMunicipioRepository municipioRepository,
         IServicoRepository servicoRepository,
         IAliquotaRepository aliquotaRepository,
+        IConfiguracaoCrawlerRepository configuracaoRepository,
         INfseApiClient nfseApiClient,
         IRateLimiter rateLimiter,
         ICircuitBreaker circuitBreaker,
@@ -61,6 +52,7 @@ public class CrawlerService : ICrawlerService
         _municipioRepository = municipioRepository;
         _servicoRepository = servicoRepository;
         _aliquotaRepository = aliquotaRepository;
+        _configuracaoRepository = configuracaoRepository;
         _nfseApiClient = nfseApiClient;
         _rateLimiter = rateLimiter;
         _circuitBreaker = circuitBreaker;
@@ -94,6 +86,7 @@ public class CrawlerService : ICrawlerService
         TipoExecucao tipo,
         bool forcarReprocessamento = false,
         IReadOnlyList<string>? filtroUfs = null,
+        bool? filtroCapital = null,
         CancellationToken cancellationToken = default)
     {
         if (!CertificadoDisponivel())
@@ -108,6 +101,27 @@ public class CrawlerService : ICrawlerService
         {
             return Result.Fail<ExecucaoCrawler>(new ExecucaoEmAndamentoError());
         }
+
+        // Carregar configuração do MongoDB
+        _configuracao = await _configuracaoRepository.ObterAtualAsync()
+            ?? ConfiguracaoCrawler.CriarPadrao();
+
+        // Verificar se o crawler está ativo
+        if (!_configuracao.Ativo)
+        {
+            _logger.LogWarning("Crawler desativado pela configuração. Abortando execução.");
+            _executionGuard.Release();
+            return Result.Fail<ExecucaoCrawler>(new CrawlerDesativadoError());
+        }
+
+        // Validar configuração carregada
+        ValidarConfiguracao();
+
+        _logger.LogInformation(
+            "Configuração do crawler carregada (Id={Id}, TamanhoLoteMongo={Lote}, MaxItensParalelos={Paralelos})",
+            _configuracao.Id ?? "padrao-em-memoria",
+            _configuracao.TamanhoLoteMongo,
+            _configuracao.MaxItensParalelos);
 
         _certificateProtection.Reset();
         _circuitBreaker.Reset();
@@ -127,7 +141,10 @@ public class CrawlerService : ICrawlerService
             string competencia = GetCompetenciaAtual();
 
             // Phase 1: Discover active municipalities via convenio endpoint
-            List<Municipio> municipiosAtivos = await FaseConvenioAsync(filtroUfs, cancellationToken);
+            List<Municipio> municipiosAtivos = await FaseConvenioAsync(execucao, filtroUfs, filtroCapital, cancellationToken);
+
+            // Persistir progresso de UFs no banco
+            await _execucaoRepository.UpdateAsync(execucao);
 
             if (municipiosAtivos.Count == 0)
             {
@@ -195,7 +212,9 @@ public class CrawlerService : ICrawlerService
     }
 
     internal async Task<List<Municipio>> FaseConvenioAsync(
+        ExecucaoCrawler execucao,
         IReadOnlyList<string>? filtroUfs,
+        bool? filtroCapital,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Phase 1: Discovering municipalities via convenio endpoint");
@@ -213,8 +232,27 @@ public class CrawlerService : ICrawlerService
 
         foreach (string uf in ufsParaProcessar)
         {
+            execucao.IniciarProcessamentoUf(uf);
+
             IReadOnlyList<Municipio> porUf = await _municipioRepository.GetByUfAsync(uf);
             todos.AddRange(porUf);
+
+            int municipiosUf = porUf.Count;
+            execucao.FinalizarProcessamentoUf(uf, municipiosUf);
+        }
+
+        // Filtrar por capital quando solicitado:
+        // filtroCapital = true  → somente capitais estaduais
+        // filtroCapital = false → somente municípios que NÃO são capitais
+        // filtroCapital = null  → sem filtro (todos os municípios)
+        if (filtroCapital.HasValue)
+        {
+            int antesDoFiltro = todos.Count;
+            todos = todos.Where(m => m.EhCapital == filtroCapital.Value).ToList();
+
+            _logger.LogInformation(
+                "Filtro por capital aplicado (somenteCapitais={Filtro}): {Antes} → {Depois} municípios",
+                filtroCapital.Value, antesDoFiltro, todos.Count);
         }
 
         // Priorizar capitais: processar todas as capitais primeiro (de todas as UFs),
@@ -299,7 +337,7 @@ public class CrawlerService : ICrawlerService
 
             bool temDados = false;
 
-            foreach (string probeCode in ProbeServiceCodes)
+            foreach (string probeCode in _configuracao.CodigosSondagem)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -402,11 +440,11 @@ public class CrawlerService : ICrawlerService
         string competencia,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Phase 3: Processing work queue with {Parallelism} parallel workers", MaxParallelItems);
+        _logger.LogInformation("Phase 3: Processing work queue with {Parallelism} parallel workers", _configuracao.MaxItensParalelos);
 
         // Track consecutive misses for early-stop per group (XX.XX.XX) — thread-safe
         System.Collections.Concurrent.ConcurrentDictionary<string, int> consecutiveMissesByGroup = new();
-        SemaphoreSlim semaphore = new(MaxParallelItems, MaxParallelItems);
+        SemaphoreSlim semaphore = new(_configuracao.MaxItensParalelos, _configuracao.MaxItensParalelos);
 
         while (true)
         {
@@ -424,7 +462,7 @@ public class CrawlerService : ICrawlerService
                 break;
             }
 
-            IReadOnlyList<FilaProcessamento> batch = await _filaRepository.GetPendingAsync(BatchSize);
+            IReadOnlyList<FilaProcessamento> batch = await _filaRepository.GetPendingAsync(_configuracao.TamanhoLoteMongo);
 
             if (batch.Count == 0)
             {
@@ -444,7 +482,7 @@ public class CrawlerService : ICrawlerService
 
                 // Early-stop check
                 string group = ExtractGroup(item.CodigoServico);
-                if (consecutiveMissesByGroup.TryGetValue(group, out int misses) && misses >= EarlyStopThreshold)
+                if (consecutiveMissesByGroup.TryGetValue(group, out int misses) && misses >= _configuracao.LimiteParadaAntecipada)
                 {
                     item.MarcarConcluido();
                     await _filaRepository.UpdateStatusAsync(item);
@@ -509,9 +547,9 @@ public class CrawlerService : ICrawlerService
 
             bool isRetryable = statusCode >= 500 || statusCode == 0;
 
-            if (isRetryable && item.PodeRetentar(MaxRetries))
+            if (isRetryable && item.PodeRetentar(_configuracao.MaxTentativas))
             {
-                item.MarcarErro(ex.Message, MaxRetries);
+                item.MarcarErro(ex.Message, _configuracao.MaxTentativas);
             }
             else
             {
@@ -524,9 +562,9 @@ public class CrawlerService : ICrawlerService
         }
         catch (TaskCanceledException)
         {
-            if (item.PodeRetentar(MaxRetries))
+            if (item.PodeRetentar(_configuracao.MaxTentativas))
             {
-                item.MarcarErro("Timeout", MaxRetries);
+                item.MarcarErro("Timeout", _configuracao.MaxTentativas);
             }
             else
             {
@@ -616,7 +654,7 @@ public class CrawlerService : ICrawlerService
         int totalAliquotasSalvas = 0;
         int consecutiveDetalhamentoMisses = 0;
 
-        for (int det = 1; det <= MaxDetalhamento; det++)
+        for (int det = 1; det <= _configuracao.MaxDetalhamento; det++)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -625,7 +663,7 @@ public class CrawlerService : ICrawlerService
                 break;
             }
 
-            if (consecutiveDetalhamentoMisses >= MaxConsecutiveDetalhamentoMisses)
+            if (consecutiveDetalhamentoMisses >= _configuracao.MaxFalhasConsecutivasDetalhamento)
             {
                 _logger.LogDebug(
                     "Stopping detalhamento iteration for {Item}.{Subitem} at {Det:D2} after {Misses} consecutive misses",
@@ -670,7 +708,7 @@ public class CrawlerService : ICrawlerService
             // Now iterate desdobramentos 001, 002, ... for this detalhamento
             int consecutiveDesdobramentoMisses = 0;
 
-            for (int desdobramento = 1; desdobramento <= MaxDesdobramento; desdobramento++)
+            for (int desdobramento = 1; desdobramento <= _configuracao.MaxDesdobramento; desdobramento++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -679,7 +717,7 @@ public class CrawlerService : ICrawlerService
                     break;
                 }
 
-                if (consecutiveDesdobramentoMisses >= MaxConsecutiveDesdobramentoMisses)
+                if (consecutiveDesdobramentoMisses >= _configuracao.MaxFalhasConsecutivasDesdobramento)
                 {
                     break;
                 }
@@ -856,5 +894,38 @@ public class CrawlerService : ICrawlerService
         }
 
         return code;
+    }
+
+    private void ValidarConfiguracao()
+    {
+        ConfiguracaoCrawler padrao = ConfiguracaoCrawler.CriarPadrao();
+
+        if (_configuracao.MaxItensParalelos <= 0)
+        {
+            _logger.LogWarning("MaxItensParalelos inválido ({Valor}), usando padrão ({Padrao})",
+                _configuracao.MaxItensParalelos, padrao.MaxItensParalelos);
+            _configuracao.AtualizarParcial(maxItensParalelos: padrao.MaxItensParalelos);
+        }
+
+        if (_configuracao.TamanhoLoteMongo <= 0)
+        {
+            _logger.LogWarning("TamanhoLoteMongo inválido ({Valor}), usando padrão ({Padrao})",
+                _configuracao.TamanhoLoteMongo, padrao.TamanhoLoteMongo);
+            _configuracao.AtualizarParcial(tamanhoLoteMongo: padrao.TamanhoLoteMongo);
+        }
+
+        if (_configuracao.TamanhoLoteCertificado <= 0)
+        {
+            _logger.LogWarning("TamanhoLoteCertificado inválido ({Valor}), usando padrão ({Padrao})",
+                _configuracao.TamanhoLoteCertificado, padrao.TamanhoLoteCertificado);
+            _configuracao.AtualizarParcial(tamanhoLoteCertificado: padrao.TamanhoLoteCertificado);
+        }
+
+        if (_configuracao.MaxTentativas <= 0)
+        {
+            _logger.LogWarning("MaxTentativas inválido ({Valor}), usando padrão ({Padrao})",
+                _configuracao.MaxTentativas, padrao.MaxTentativas);
+            _configuracao.AtualizarParcial(maxTentativas: padrao.MaxTentativas);
+        }
     }
 }

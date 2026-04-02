@@ -43,6 +43,7 @@ public class CrawlerController : ControllerBase
         }
 
         bool forcar = request?.ForcarReprocessamento ?? false;
+        bool capitaisPrimeiro = request?.CapitaisPrimeiro ?? false;
         List<string>? ufs = request?.Ufs;
 
         // Fire-and-forget with a new scope (CrawlerService is Scoped)
@@ -52,10 +53,26 @@ public class CrawlerController : ControllerBase
             ICrawlerService crawlerService = scope.ServiceProvider.GetRequiredService<ICrawlerService>();
             try
             {
-                var resultado = await crawlerService.ExecutarAsync(Domain.Entities.TipoExecucao.Manual, forcar, ufs);
-                if (resultado.IsFailed)
+                if (capitaisPrimeiro)
                 {
-                    // Logged inside CrawlerService
+                    // Fase 1: somente capitais estaduais (EhCapital = true)
+                    var resultadoCapitais = await crawlerService.ExecutarAsync(
+                        TipoExecucao.Manual, forcar, filtroUfs: null, filtroCapital: true);
+
+                    if (resultadoCapitais.IsFailed)
+                    {
+                        // Logged inside CrawlerService — aborta a segunda fase
+                        return;
+                    }
+
+                    // Fase 2: somente municípios não-capitais (EhCapital = false)
+                    await crawlerService.ExecutarAsync(
+                        TipoExecucao.Manual, forcar, filtroUfs: null, filtroCapital: false);
+                }
+                else
+                {
+                    // Execução normal: processa tudo junto, com filtro de UFs opcional
+                    await crawlerService.ExecutarAsync(TipoExecucao.Manual, forcar, ufs);
                 }
             }
             catch (Exception)
@@ -64,9 +81,13 @@ public class CrawlerController : ControllerBase
             }
         });
 
+        string mensagem = capitaisPrimeiro
+            ? "Execução iniciada: capitais primeiro, depois demais municípios"
+            : "Execucao iniciada com sucesso";
+
         return Accepted(new ExecutarCrawlerResponse
         {
-            Mensagem = "Execucao iniciada com sucesso"
+            Mensagem = mensagem
         });
     }
 
@@ -118,7 +139,19 @@ public class CrawlerController : ControllerBase
             Processados = execucao.Processados,
             Erros = execucao.Erros,
             DetalhesErro = execucao.DetalhesErro,
-            TemCertificado = _certificadoStore.HasCertificate()
+            TemCertificado = _certificadoStore.HasCertificate(),
+            UfAtual = execucao.UfAtual,
+            UfsProcessadas = execucao.UfsProcessadas,
+            ProgressoUfs = execucao.ProgressoUfs.ToDictionary(
+                kvp => kvp.Key,
+                kvp => new ProgressoUfResponse
+                {
+                    Uf = kvp.Value.Uf,
+                    Status = kvp.Value.Status,
+                    MunicipiosEncontrados = kvp.Value.MunicipiosEncontrados,
+                    Inicio = kvp.Value.Inicio,
+                    Fim = kvp.Value.Fim
+                })
         };
     }
 }

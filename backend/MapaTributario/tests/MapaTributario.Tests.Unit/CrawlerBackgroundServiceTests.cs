@@ -1,6 +1,7 @@
 using FluentResults;
 using MapaTributario.API.Application.Crawler;
 using MapaTributario.API.Domain.Entities;
+using MapaTributario.API.Domain.Interfaces;
 using MapaTributario.API.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +16,7 @@ public class CrawlerBackgroundServiceTests
     private readonly Mock<IServiceProvider> _serviceProvider = new();
     private readonly Mock<ICrawlerExecutionGuard> _executionGuard = new();
     private readonly Mock<ICertificadoStore> _certificadoStore = new();
+    private readonly Mock<IConfiguracaoCrawlerRepository> _configuracaoRepo = new();
     private readonly Mock<ILogger<CrawlerBackgroundService>> _logger = new();
     private readonly Mock<ICrawlerService> _crawlerService = new();
 
@@ -32,6 +34,10 @@ public class CrawlerBackgroundServiceTests
         // Setup padrão: certificado disponível
         _certificadoStore.Setup(s => s.HasCertificate()).Returns(true);
 
+        // Setup padrão: configuração do crawler com CronSchedule do parâmetro
+        ConfiguracaoCrawler configuracao = ConfiguracaoCrawler.CriarPadrao();
+        _configuracaoRepo.Setup(r => r.ObterAtualAsync()).ReturnsAsync(configuracao);
+
         // Setup service scope
         Mock<IServiceScope> scope = new();
         Mock<IServiceScopeFactory> scopeFactory = new();
@@ -44,7 +50,13 @@ public class CrawlerBackgroundServiceTests
         _serviceProvider.Setup(s => s.GetService(typeof(IServiceScopeFactory)))
             .Returns(scopeFactory.Object);
 
-        return new CrawlerBackgroundService(_serviceProvider.Object, _executionGuard.Object, _certificadoStore.Object, _logger.Object, configuration);
+        return new CrawlerBackgroundService(
+            _serviceProvider.Object,
+            _executionGuard.Object,
+            _certificadoStore.Object,
+            _configuracaoRepo.Object,
+            _logger.Object,
+            configuration);
     }
 
     [Fact]
@@ -74,13 +86,13 @@ public class CrawlerBackgroundServiceTests
     {
         CrawlerBackgroundService sut = CreateSut();
         _executionGuard.Setup(g => g.IsRunning).Returns(false);
-        _crawlerService.Setup(c => c.ExecutarAsync(TipoExecucao.Agendado, false, null, It.IsAny<CancellationToken>()))
+        _crawlerService.Setup(c => c.ExecutarAsync(TipoExecucao.Agendado, false, null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Ok(ExecucaoCrawler.Create(TipoExecucao.Agendado)));
 
         await sut.ExecuteScheduledRunAsync(CancellationToken.None);
 
         _crawlerService.Verify(c => c.ExecutarAsync(
-            TipoExecucao.Agendado, false, null, It.IsAny<CancellationToken>()), Times.Once);
+            TipoExecucao.Agendado, false, null, null, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -92,7 +104,7 @@ public class CrawlerBackgroundServiceTests
         await sut.ExecuteScheduledRunAsync(CancellationToken.None);
 
         _crawlerService.Verify(c => c.ExecutarAsync(
-            It.IsAny<TipoExecucao>(), It.IsAny<bool>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()), Times.Never);
+            It.IsAny<TipoExecucao>(), It.IsAny<bool>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<bool?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -100,7 +112,7 @@ public class CrawlerBackgroundServiceTests
     {
         CrawlerBackgroundService sut = CreateSut();
         _executionGuard.Setup(g => g.IsRunning).Returns(false);
-        _crawlerService.Setup(c => c.ExecutarAsync(It.IsAny<TipoExecucao>(), It.IsAny<bool>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
+        _crawlerService.Setup(c => c.ExecutarAsync(It.IsAny<TipoExecucao>(), It.IsAny<bool>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<bool?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Database error"));
 
         // Should not throw

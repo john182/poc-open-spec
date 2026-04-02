@@ -24,6 +24,7 @@ public sealed class MongoIndexSetup
         await CreateAliquotaIndexesAsync();
         await CreateExecucaoCrawlerIndexesAsync();
         await CreateFilaProcessamentoIndexesAsync();
+        await CreateConfiguracaoCrawlerIndexesAsync();
     }
 
     private async Task CreateUserIndexesAsync()
@@ -115,5 +116,16 @@ public sealed class MongoIndexSetup
             .Ascending(f => f.ExecucaoId);
         await collection.Indexes.CreateOneAsync(
             new CreateIndexModel<FilaProcessamento>(execucaoIndex));
+    }
+
+    private async Task CreateConfiguracaoCrawlerIndexesAsync()
+    {
+        var collection = _database.GetCollection<ConfiguracaoCrawler>("configuracoesCrawler");
+
+        var compostoIndex = Builders<ConfiguracaoCrawler>.IndexKeys
+            .Ascending(c => c.Ativo)
+            .Descending(c => c.CriadoEm);
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<ConfiguracaoCrawler>(compostoIndex));
     }
 }

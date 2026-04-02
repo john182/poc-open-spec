@@ -18,6 +18,8 @@ public class ExecucaoCrawler
 
     public List<string> DetalhesErro { get; private set; } = new();
     public List<string> UfsProcessadas { get; private set; } = new();
+    public string? UfAtual { get; private set; }
+    public Dictionary<string, ProgressoUf> ProgressoUfs { get; private set; } = new();
 
     private ExecucaoCrawler() { }
 
@@ -33,7 +35,9 @@ public class ExecucaoCrawler
             Processados = 0,
             Erros = 0,
             DetalhesErro = new List<string>(),
-            UfsProcessadas = new List<string>()
+            UfsProcessadas = new List<string>(),
+            UfAtual = null,
+            ProgressoUfs = new Dictionary<string, ProgressoUf>()
         };
     }
 
@@ -68,6 +72,42 @@ public class ExecucaoCrawler
         Status = status;
         Fim = DateTime.UtcNow;
     }
+
+    public void IniciarProcessamentoUf(string uf)
+    {
+        UfAtual = uf.ToUpperInvariant();
+        if (!ProgressoUfs.ContainsKey(UfAtual))
+        {
+            ProgressoUfs[UfAtual] = new ProgressoUf
+            {
+                Uf = UfAtual,
+                Status = "EmAndamento",
+                Inicio = DateTime.UtcNow
+            };
+        }
+        else
+        {
+            ProgressoUfs[UfAtual].Status = "EmAndamento";
+            ProgressoUfs[UfAtual].Inicio = DateTime.UtcNow;
+        }
+    }
+
+    public void FinalizarProcessamentoUf(string uf, int municipiosEncontrados)
+    {
+        string ufNormalizada = uf.ToUpperInvariant();
+        if (ProgressoUfs.ContainsKey(ufNormalizada))
+        {
+            ProgressoUfs[ufNormalizada].Status = "Concluido";
+            ProgressoUfs[ufNormalizada].MunicipiosEncontrados = municipiosEncontrados;
+            ProgressoUfs[ufNormalizada].Fim = DateTime.UtcNow;
+        }
+
+        // Limpar UfAtual se era esta UF
+        if (UfAtual == ufNormalizada)
+        {
+            UfAtual = null;
+        }
+    }
 }
 
 public enum StatusExecucao
@@ -82,4 +122,13 @@ public enum TipoExecucao
 {
     Agendado,
     Manual
+}
+
+public class ProgressoUf
+{
+    public string Uf { get; set; } = null!;
+    public string Status { get; set; } = "Pendente";
+    public int MunicipiosEncontrados { get; set; }
+    public DateTime? Inicio { get; set; }
+    public DateTime? Fim { get; set; }
 }

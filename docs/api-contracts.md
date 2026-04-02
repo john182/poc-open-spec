@@ -24,6 +24,9 @@
   - [POST /api/v1/crawler/certificado](#post-apiv1crawlercertificado)
   - [GET /api/v1/crawler/certificado](#get-apiv1crawlercertificado)
   - [DELETE /api/v1/crawler/certificado](#delete-apiv1crawlercertificado)
+  - [GET /api/v1/crawler/configuracao](#get-apiv1crawlerconfiguracao)
+  - [PUT /api/v1/crawler/configuracao](#put-apiv1crawlerconfiguracao)
+  - [PATCH /api/v1/crawler/configuracao](#patch-apiv1crawlerconfiguracao)
 - [Health Check](#health-check)
   - [GET /health](#get-health)
 - [Formato Padrao de Erro](#formato-padrao-de-erro)
@@ -573,7 +576,8 @@ Dispara uma execucao manual do crawler.
 ```json
 {
   "forcarReprocessamento": false,
-  "ufs": ["SE", "MG"]
+  "ufs": ["SP", "RJ"],
+  "capitaisPrimeiro": true
 }
 ```
 
@@ -581,6 +585,9 @@ Dispara uma execucao manual do crawler.
 |-------|------|---------|-----------|
 | forcarReprocessamento | boolean | false | Se `true`, regenera a fila completa ignorando dados ja coletados na competencia atual |
 | ufs | string[] | null | Lista de UFs para filtrar a execucao. Se null ou vazio, processa todas as 27 UFs |
+| capitaisPrimeiro | boolean | false | Se `true`, processa primeiro as 27 capitais estaduais e depois os demais municipios |
+
+> **Nota:** Quando `capitaisPrimeiro` e `true`, o crawler processa primeiro as 27 capitais estaduais e em seguida automaticamente os demais municipios. O campo `ufs` e ignorado quando `capitaisPrimeiro` e `true`.
 
 **Respostas:**
 
@@ -896,6 +903,228 @@ Remove o certificado PFX atualmente carregado.
 ```http
 DELETE /api/v1/crawler/certificado HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+---
+
+### Configuracao do Crawler
+
+Endpoints para gerenciamento da configuracao do crawler. Requerem autenticacao JWT e role Admin.
+
+---
+
+### GET /api/v1/crawler/configuracao
+
+Retorna a configuracao atual do crawler.
+
+**Autenticacao:** JWT Bearer + role Admin
+
+**Parametros:** Nenhum
+
+**Respostas:**
+
+| Status | Descricao |
+|--------|-----------|
+| 200 OK | Configuracao atual do crawler |
+| 401 Unauthorized | Token ausente ou invalido |
+| 403 Forbidden | Usuario nao possui role Admin |
+
+**Response Body (200):**
+
+```json
+{
+  "id": "string",
+  "ativo": true,
+  "cronSchedule": "0 2 * * 0",
+  "timeoutSegundos": 30,
+  "tentativasMaximas": 3,
+  "tamanhoPaginacao": 50,
+  "tamanhoLote": 100,
+  "pausaLoteSegundos": 2,
+  "limiteParadaAntecipada": 10,
+  "paralelismo": 5,
+  "criadoEm": "2026-01-01T00:00:00Z",
+  "atualizadoEm": "2026-01-01T00:00:00Z"
+}
+```
+
+| Campo | Tipo | Descricao |
+|-------|------|-----------|
+| id | string | Identificador unico da configuracao |
+| ativo | boolean | Se o agendamento automatico esta ativo |
+| cronSchedule | string | Expressao CRON do agendamento |
+| timeoutSegundos | integer | Timeout em segundos para cada requisicao |
+| tentativasMaximas | integer | Numero maximo de tentativas por requisicao |
+| tamanhoPaginacao | integer | Tamanho da paginacao para consultas |
+| tamanhoLote | integer | Tamanho do lote de processamento |
+| pausaLoteSegundos | integer | Pausa em segundos entre lotes |
+| limiteParadaAntecipada | integer | Limite de erros consecutivos para parada antecipada |
+| paralelismo | integer | Numero de requisicoes paralelas |
+| criadoEm | string (ISO 8601) | Data/hora de criacao |
+| atualizadoEm | string (ISO 8601) | Data/hora da ultima atualizacao |
+
+**Exemplo de requisicao:**
+
+```http
+GET /api/v1/crawler/configuracao HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+---
+
+### PUT /api/v1/crawler/configuracao
+
+Atualiza a configuracao completa do crawler. Todos os campos sao obrigatorios.
+
+**Autenticacao:** JWT Bearer + role Admin
+
+**Request Body:**
+
+```json
+{
+  "ativo": true,
+  "cronSchedule": "0 2 * * 0",
+  "timeoutSegundos": 30,
+  "tentativasMaximas": 3,
+  "tamanhoPaginacao": 50,
+  "tamanhoLote": 100,
+  "pausaLoteSegundos": 2,
+  "limiteParadaAntecipada": 10,
+  "paralelismo": 5
+}
+```
+
+| Campo | Tipo | Obrigatorio | Validacao |
+|-------|------|-------------|-----------|
+| ativo | boolean | Sim | - |
+| cronSchedule | string | Sim | Deve ser uma expressao CRON valida |
+| timeoutSegundos | integer | Sim | Min: 1, Max: 300 |
+| tentativasMaximas | integer | Sim | Min: 1, Max: 10 |
+| tamanhoPaginacao | integer | Sim | Min: 1, Max: 200 |
+| tamanhoLote | integer | Sim | Min: 1, Max: 5000 |
+| pausaLoteSegundos | integer | Sim | Min: 0, Max: 60 |
+| limiteParadaAntecipada | integer | Sim | Min: 1, Max: 100 |
+| paralelismo | integer | Sim | Min: 1, Max: 20 |
+
+**Respostas:**
+
+| Status | Descricao |
+|--------|-----------|
+| 200 OK | Configuracao atualizada com sucesso |
+| 400 Bad Request | Validacao falhou |
+| 401 Unauthorized | Token ausente ou invalido |
+| 403 Forbidden | Usuario nao possui role Admin |
+
+**Response Body (200):**
+
+Mesma estrutura do `GET /api/v1/crawler/configuracao`.
+
+**Response Body (400):**
+
+```json
+{
+  "erro": "Validacao falhou",
+  "detalhes": [
+    "cronSchedule deve ser uma expressao CRON valida",
+    "timeoutSegundos deve ser entre 1 e 300"
+  ]
+}
+```
+
+**Exemplo de requisicao:**
+
+```http
+PUT /api/v1/crawler/configuracao HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+Content-Type: application/json
+
+{
+  "ativo": true,
+  "cronSchedule": "0 3 * * 1",
+  "timeoutSegundos": 60,
+  "tentativasMaximas": 5,
+  "tamanhoPaginacao": 100,
+  "tamanhoLote": 200,
+  "pausaLoteSegundos": 5,
+  "limiteParadaAntecipada": 20,
+  "paralelismo": 10
+}
+```
+
+---
+
+### PATCH /api/v1/crawler/configuracao
+
+Atualiza parcialmente a configuracao do crawler. Todos os campos sao opcionais, mas pelo menos um deve ser informado.
+
+**Autenticacao:** JWT Bearer + role Admin
+
+**Request Body:**
+
+```json
+{
+  "timeoutSegundos": 60,
+  "paralelismo": 10
+}
+```
+
+| Campo | Tipo | Obrigatorio | Validacao |
+|-------|------|-------------|-----------|
+| ativo | boolean | Nao | - |
+| cronSchedule | string | Nao | Deve ser uma expressao CRON valida |
+| timeoutSegundos | integer | Nao | Min: 1, Max: 300 |
+| tentativasMaximas | integer | Nao | Min: 1, Max: 10 |
+| tamanhoPaginacao | integer | Nao | Min: 1, Max: 200 |
+| tamanhoLote | integer | Nao | Min: 1, Max: 5000 |
+| pausaLoteSegundos | integer | Nao | Min: 0, Max: 60 |
+| limiteParadaAntecipada | integer | Nao | Min: 1, Max: 100 |
+| paralelismo | integer | Nao | Min: 1, Max: 20 |
+
+> **Nota:** Pelo menos um campo deve ser informado no body. Campos nao enviados permanecem inalterados.
+
+**Respostas:**
+
+| Status | Descricao |
+|--------|-----------|
+| 200 OK | Configuracao atualizada com sucesso |
+| 400 Bad Request | Nenhum campo informado ou validacao falhou |
+| 401 Unauthorized | Token ausente ou invalido |
+| 403 Forbidden | Usuario nao possui role Admin |
+
+**Response Body (200):**
+
+Mesma estrutura do `GET /api/v1/crawler/configuracao`.
+
+**Response Body (400 - nenhum campo):**
+
+```json
+{
+  "erro": "Pelo menos um campo deve ser informado"
+}
+```
+
+**Response Body (400 - validacao):**
+
+```json
+{
+  "erro": "Validacao falhou",
+  "detalhes": [
+    "paralelismo deve ser entre 1 e 20"
+  ]
+}
+```
+
+**Exemplo de requisicao:**
+
+```http
+PATCH /api/v1/crawler/configuracao HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+Content-Type: application/json
+
+{
+  "timeoutSegundos": 60,
+  "paralelismo": 10
+}
 ```
 
 ---

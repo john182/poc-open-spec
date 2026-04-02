@@ -113,6 +113,11 @@ Embora o Mapa Tributario seja uma aplicacao **gratuita** e com **endpoints de co
 | **Expectativa** | Interface administrativa clara com status do crawler, historico de execucoes e gestao de certificado |
 | **Nivel tecnico** | Alto; entende de infraestrutura, APIs e certificados digitais |
 
+**User Stories do Administrador:**
+
+- "Como administrador, quero configurar o comportamento do crawler (timeouts, tentativas, paralelismo) para otimizar a coleta de dados sem sobrecarregar a API externa"
+- "Como administrador, quero executar o crawler processando capitais primeiro para ter dados das cidades mais consultadas o mais rapido possivel"
+
 ---
 
 ## 4. Fluxos de Usuario
@@ -316,6 +321,11 @@ flowchart TD
 | **Worker** | Trigger manual via endpoint (Admin) | Should-have |
 | **Worker** | Processamento incremental | Must-have |
 | **Worker** | Gerenciamento de certificado PFX via API (Admin) | Must-have |
+| **Administracao do Crawler** | Configuracao parametrizavel (timeouts, retry, paralelismo, CRON schedule, ativo/inativo) | Must-have |
+| **Administracao do Crawler** | Tela Angular para visualizar e editar configuracao | Must-have |
+| **Administracao do Crawler** | Execucao manual com opcao "capitais primeiro" — processa capitais estaduais antes dos demais municipios | Must-have |
+| **Administracao do Crawler** | Progresso em tempo real por UF (polling 5s) | Must-have |
+| **Administracao do Crawler** | Restaurar padrao via API | Should-have |
 | **Infra** | Docker Compose (frontend, backend, MongoDB) | Must-have |
 | **Infra** | Dockerfiles multi-stage | Must-have |
 | **E2E** | Testes Cypress para fluxos criticos | Must-have |
@@ -444,3 +454,4 @@ O MVP nao cobrira todos os 5.570 municipios brasileiros. A estrategia e:
 | Data | Versao | Descricao |
 |------|--------|-----------|
 | 2026-03-31 | 1.0 | Versao inicial do documento de produto |
+| 2026-04-02 | 1.1 | Round 3: Administracao do Crawler — configuracao parametrizavel, execucao capitais-primeiro, progresso por UF, restaurar padrao |

@@ -51,7 +51,7 @@ graph TB
         end
 
         subgraph "Container: MongoDB 7 - porta 27017"
-            DB["MongoDB<br/>7 colecoes"]
+            DB["MongoDB<br/>8 colecoes"]
         end
 
         subgraph "Container: Cypress - apenas dev/CI"
@@ -133,6 +133,7 @@ erDiagram
     EXECUCOES_CRAWLER ||--o{ ALIQUOTAS : "origina"
     FILA_PROCESSAMENTO }|--|| MUNICIPIOS : "referencia"
     FILA_PROCESSAMENTO }|--|| SERVICOS : "referencia"
+    CONFIGURACOES_CRAWLER ||--|| CONFIGURACOES_CRAWLER : "singleton ativo"
 
     ESTADOS {
         ObjectId _id PK
@@ -204,6 +205,21 @@ erDiagram
         string nome
         datetime dataCriacao
         bool ativo
+    }
+
+    CONFIGURACOES_CRAWLER {
+        ObjectId _id PK
+        bool ativo
+        string cronSchedule
+        int timeoutSegundos
+        int tentativasMaximas
+        int tamanhoPaginacao
+        int tamanhoLote
+        int pausaLoteSegundos
+        int limiteParadaAntecipada
+        int paralelismo
+        datetime criadoEm
+        datetime atualizadoEm
     }
 ```
 
@@ -356,6 +372,30 @@ Usuarios autenticados da aplicacao.
 
 ---
 
+#### `configuracoesCrawler`
+
+Configuracoes de comportamento do crawler (timeouts, retry, paralelismo, CRON, etc). Compound index `Ativo` + `CriadoEm` desc. Seed automatico com valores padrao.
+
+| Campo | Tipo | Descricao | Exemplo |
+|-------|------|-----------|---------|
+| `_id` | ObjectId | Identificador da configuracao | - |
+| `ativo` | bool | Se esta configuracao esta ativa | `true` |
+| `cronSchedule` | string | Expressao CRON para agendamento | `"0 2 * * *"` |
+| `timeoutSegundos` | int | Timeout por chamada a API NFS-e | `30` |
+| `tentativasMaximas` | int | Maximo de tentativas por item | `3` |
+| `tamanhoPaginacao` | int | Tamanho da paginacao de municipios | `50` |
+| `tamanhoLote` | int | Tamanho do lote de processamento | `100` |
+| `pausaLoteSegundos` | int | Pausa entre lotes (segundos) | `5` |
+| `limiteParadaAntecipada` | int | Limite de erros consecutivos para parada antecipada | `10` |
+| `paralelismo` | int | Maximo de chamadas simultaneas a API NFS-e | `3` |
+| `criadoEm` | datetime | Timestamp de criacao da configuracao | `2026-03-15T00:00:00Z` |
+| `atualizadoEm` | datetime | Timestamp da ultima atualizacao | `2026-03-20T14:30:00Z` |
+
+**Indices:**
+- `{ ativo: 1, criadoEm: -1 }` - compound para buscar configuracao ativa mais recente
+
+---
+
 ## 4. Fluxo de Autenticacao JWT
 
 ### 4.1 Registro e Login
@@ -495,7 +535,7 @@ sequenceDiagram
 flowchart TD
     START([Inicio do Ciclo]) --> CHECK_TRIGGER{Trigger?}
     CHECK_TRIGGER -->|CRON agendado| CRON[CRON Schedule<br/>Default: diario 02:00 UTC]
-    CHECK_TRIGGER -->|Manual via API| MANUAL["POST /api/v1/crawler/executar"]
+    CHECK_TRIGGER -->|Manual via API| MANUAL["POST /api/v1/crawler/executar<br/>Parametro opcional: filtroCapital"]
 
     CRON --> CHECK_RUNNING{Ja existe ciclo<br/>em andamento?}
     MANUAL --> CHECK_RUNNING
@@ -572,7 +612,15 @@ flowchart TD
     STATUS_FAIL --> WAIT_NEXT
 ```
 
+**Parametro `filtroCapital` no `ExecutarAsync`:**
+- `filtroCapital: true` — processa apenas municipios que sao capitais
+- `filtroCapital: false` — processa apenas municipios que nao sao capitais
+- `filtroCapital: null` — processa todos os municipios (comportamento padrao)
+- Quando o request possui `CapitaisPrimeiro=true`, o controller orquestra duas chamadas sequenciais ao `ExecutarAsync`: primeiro com `filtroCapital: true`, depois com `filtroCapital: false`
+
 ### 5.2 Parametros de Configuracao do Worker
+
+> **Nota:** O `CrawlerBackgroundService` agora le configuracao dinamica da colecao `configuracoesCrawler` via `ObterAtualAsync()`. O CRON schedule e recarregado a cada inicio de ciclo a partir do banco. Valores de configuracao sao limitados a faixas seguras com `Math.Clamp`. Quando a configuracao possui `Ativo=false`, o worker respeita o erro `CrawlerDesativadoError` e nao inicia o ciclo.
 
 | Parametro | Default | Descricao |
 |-----------|---------|-----------|
@@ -834,7 +882,8 @@ backend/MapaTributario/
 │       │   │   ├── Aliquota.cs
 │       │   │   ├── User.cs
 │       │   │   ├── ExecucaoCrawler.cs
-│       │   │   └── FilaProcessamento.cs
+│       │   │   ├── FilaProcessamento.cs
+│       │   │   └── ConfiguracaoCrawler.cs # Configuracao do crawler; factory CriarPadrao(), metodos Atualizar() e AtualizarParcial()
 │       │   ├── ValueObjects/
 │       │   │   ├── CodigoServico.cs       # Normalizacao com/sem pontos
 │       │   │   └── Competencia.cs         # Normalizacao de formato YYYYMM
@@ -850,6 +899,7 @@ backend/MapaTributario/
 │       │       ├── IUserRepository.cs
 │       │       ├── IExecucaoCrawlerRepository.cs
 │       │       ├── IFilaProcessamentoRepository.cs
+│       │       ├── IConfiguracaoCrawlerRepository.cs
 │       │       └── INfseApiClient.cs
 │       │
 │       ├── Application/                   # Camada de Aplicacao
@@ -889,6 +939,8 @@ backend/MapaTributario/
 │       │   │   ├── CircuitBreaker.cs      # Implementacao do circuit breaker
 │       │   │   ├── IRateLimiter.cs        # Interface do rate limiter
 │       │   │   ├── RateLimiter.cs         # Implementacao do rate limiter
+│       │   │   ├── ConfiguracaoCrawlerAppService.cs # CRUD para configuracao do crawler
+│       │   │   ├── RegrasValidacaoConfiguracao.cs   # Validacao compartilhada entre PUT e PATCH
 │       │   │   └── Contracts/
 │       │   │       ├── ExecutarCrawlerRequest.cs
 │       │   │       ├── ExecutarCrawlerResponse.cs
@@ -896,7 +948,8 @@ backend/MapaTributario/
 │       │   │       └── CertificadoStatusResponse.cs
 │       │   └── Errors/
 │       │       ├── NotFoundError.cs       # Erro de entidade nao encontrada
-│       │       └── ValidationError.cs     # Erro de validacao
+│       │       ├── ValidationError.cs     # Erro de validacao
+│       │       └── CrawlerDesativadoError.cs # Erro quando config tem Ativo=false
 │       │
 │       ├── Infrastructure/                # Camada de Infraestrutura (adapters)
 │       │   ├── Repository/
@@ -910,7 +963,8 @@ backend/MapaTributario/
 │       │   │   ├── AliquotaRepository.cs
 │       │   │   ├── UserRepository.cs
 │       │   │   ├── ExecucaoCrawlerRepository.cs
-│       │   │   └── FilaProcessamentoRepository.cs
+│       │   │   ├── FilaProcessamentoRepository.cs
+│       │   │   └── ConfiguracaoCrawlerRepository.cs
 │       │   ├── External/
 │       │   │   └── NfseApiClient.cs       # HttpClient + PFX + mTLS
 │       │   ├── Auth/
@@ -919,7 +973,8 @@ backend/MapaTributario/
 │       │   ├── Seed/
 │       │   │   ├── EstadosSeed.cs         # 27 UFs
 │       │   │   ├── MunicipiosSeed.cs      # ~5.570 municipios IBGE
-│       │   │   └── ServicosSeed.cs        # Codigos LC 116/2003
+│       │   │   ├── ServicosSeed.cs        # Codigos LC 116/2003
+│       │   │   └── ConfiguracaoCrawlerSeed.cs # Seed automatico com valores padrao via CriarPadrao()
 │       │   ├── Resilience/
 │       │   │   ├── RateLimiter.cs
 │       │   │   └── CircuitBreaker.cs
@@ -962,7 +1017,7 @@ backend/MapaTributario/
 
 - **Projeto unico com separacao por pastas:** As camadas Domain, Application, Infrastructure e API/Host coexistem em um unico projeto (`MapaTributario.API`). A separacao e logica, via pastas e namespaces. Isso simplifica build e deploy sem sacrificar organizacao.
 - **DI por camada:** O `Program.cs` chama `AddMapaTributarioInfrastructure()` (MongoDB, repositorios, auth infra, certificado, seed, API client) e `AddMapaTributarioApplication()` (services, use cases, resiliencia, JWT auth, FluentValidation, background service). Cada extension registra apenas os componentes de sua camada.
-- **Indices centralizados:** A classe `MongoIndexSetup` cria todos os indices de todas as 7 colecoes em um unico ponto, chamado na inicializacao via `app.ApplyMongoIndexesAsync()`. Repositorios nao criam indices em seus construtores.
+- **Indices centralizados:** A classe `MongoIndexSetup` cria todos os indices de todas as 8 colecoes em um unico ponto, chamado na inicializacao via `app.ApplyMongoIndexesAsync()`. Repositorios nao criam indices em seus construtores.
 - **Endpoints de consulta publicos:** Os endpoints `/api/v1/estados`, `/api/v1/estados/:uf/municipios`, `/api/v1/municipios/:codigoIbge/aliquotas` e `/api/v1/municipios/:codigoIbge/aliquotas/:codigoServico` nao possuem `[Authorize]`. Os endpoints do crawler e certificado exigem JWT (`[Authorize]`), mas sem validacao de role Admin no backend; a restricao por perfil e aplicada pelo frontend.
 
 ### 8.2 Frontend Angular - Feature Modules

@@ -554,9 +554,33 @@ Os registros de execucao sao mantidos indefinidamente. O endpoint `GET /api/v1/c
 
 ## Configuracao
 
-Todas as configuracoes do worker sao expostas via `appsettings.json` e podem ser sobrescritas por variaveis de ambiente.
+A configuracao do worker e **dinamica**, armazenada na colecao `configuracoesCrawler` do MongoDB. O worker le a configuracao no inicio de cada ciclo via `ObterAtualAsync()`, sem necessidade de restart para aplicar mudancas.
 
-### Parametros configuraveis
+### Entidade `ConfiguracaoCrawler`
+
+| Campo | Tipo | Default | Descricao |
+|-------|------|---------|-----------|
+| Ativo | bool | true | Quando `false`, o worker pula a execucao e retorna `CrawlerDesativadoError` |
+| CronSchedule | string | `0 2 * * *` | Expressao CRON para agendamento (recarregada dinamicamente) |
+| TimeoutSegundos | int | 30 | Timeout por requisicao individual a API |
+| TentativasMaximas | int | 3 | Maximo de tentativas por item |
+| TamanhoPaginacao | int | 20 | Tamanho de paginacao para consultas |
+| TamanhoLote | int | 50 | Tamanho do lote de processamento |
+| PausaLoteSegundos | int | 2 | Pausa entre lotes para evitar sobrecarga |
+| LimiteParadaAntecipada | int | 100 | Limite de erros consecutivos para parada antecipada |
+| Paralelismo | int | 3 | Numero maximo de chamadas simultaneas a API NFS-e |
+
+### Comportamento
+
+- Todos os valores sao validados com `Math.Clamp` para garantir ranges seguros
+- A configuracao padrao e criada pelo seed via `CriarPadrao()` na primeira execucao
+- O admin pode atualizar via **PUT** (substituicao completa) ou **PATCH** (atualizacao parcial) nos endpoints da API
+- Quando `Ativo=false`, o worker detecta no inicio do ciclo, registra `CrawlerDesativadoError` e aguarda o proximo ciclo CRON
+- O CronSchedule e recarregado dinamicamente a cada ciclo — alterar o CRON nao requer restart do worker
+
+### Parametros legados (appsettings.json)
+
+Os parametros abaixo permanecem em `appsettings.json` por serem relacionados a infraestrutura e resiliencia, nao a operacao do crawler:
 
 ```json
 {
@@ -585,7 +609,7 @@ Todas as configuracoes do worker sao expostas via `appsettings.json` e podem ser
 }
 ```
 
-### Descricao dos parametros
+### Descricao dos parametros legados
 
 | Parametro | Default | Descricao |
 |-----------|---------|-----------|
@@ -614,6 +638,77 @@ Worker__MaxConcurrency=5
 Worker__Retry__MaxAttempts=5
 Worker__CircuitBreaker__ErrorThresholdPercent=60
 ```
+
+---
+
+## Execucao por Capitais (capitais-primeiro)
+
+O worker suporta um modo de execucao que prioriza as 27 capitais estaduais, garantindo que os dados das cidades mais consultadas estejam disponiveis o mais rapido possivel.
+
+### Request
+
+O campo `CapitaisPrimeiro: bool` no request de execucao manual controla este comportamento.
+
+### Fluxo de orquestracao
+
+Quando `CapitaisPrimeiro=true`, o controller orquestra **duas chamadas sequenciais**:
+
+1. `ExecutarAsync(..., filtroCapital: true)` — processa apenas municipios com `EhCapital=true`
+2. `ExecutarAsync(..., filtroCapital: false)` — processa apenas municipios com `EhCapital=false`
+
+### Filtro na fase de convenio
+
+`FaseConvenioAsync` aplica o filtro de capital na query de municipios:
+
+```
+.Where(m => m.EhCapital == filtroCapital.Value)
+```
+
+### Seed de capitais
+
+Todas as 27 capitais estaduais sao semeadas com `EhCapital=true` pelo `IbgeSeedService`.
+
+### Ordenacao
+
+Independente do modo de execucao, a ordenacao da fila sempre prioriza capitais:
+
+```
+.OrderByDescending(m => m.EhCapital)
+.ThenBy(m => m.SiglaEstado)
+.ThenBy(m => m.Nome)
+```
+
+---
+
+## Tracking por UF
+
+O worker rastreia o progresso de execucao por Unidade Federativa (UF), permitindo que o frontend exiba o andamento em tempo real.
+
+### Entidade `ExecucaoCrawler` — campos de tracking
+
+| Campo | Tipo | Descricao |
+|-------|------|-----------|
+| UfAtual | string | Sigla da UF sendo processada no momento |
+| ProgressoUfs | Dictionary\<string, ProgressoUf\> | Mapa de progresso por UF |
+
+### Entidade `ProgressoUf`
+
+| Campo | Tipo | Descricao |
+|-------|------|-----------|
+| Uf | string | Sigla da UF |
+| Status | enum | `EmAndamento`, `Concluido`, `Falha` |
+| MunicipiosEncontrados | int | Total de municipios processados na UF |
+| Inicio | DateTime | Timestamp de inicio do processamento da UF |
+| Fim | DateTime? | Timestamp de finalizacao (null se em andamento) |
+
+### Metodos de tracking
+
+- `IniciarProcessamentoUf(uf)` — registra inicio do processamento de uma UF, define `Status=EmAndamento` e `Inicio=agora`
+- `FinalizarProcessamentoUf(uf, municipiosEncontrados)` — registra finalizacao, define `Status=Concluido`, `MunicipiosEncontrados` e `Fim=agora`
+
+### Polling no frontend
+
+O frontend consulta o progresso da execucao a cada **5 segundos** enquanto o status da execucao for `EmAndamento`. Quando a execucao finaliza, o polling e interrompido.
 
 ---
 

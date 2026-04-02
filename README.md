@@ -147,7 +147,7 @@ dotnet test
 
 # Frontend — unit
 cd frontend/MapaTributario-ui
-npx vitest run
+npx ng test --watch=false
 
 # E2E — Cypress
 cd cypress
@@ -179,12 +179,15 @@ npx cypress run
 
 | Metodo | Endpoint | Descricao |
 |--------|----------|-----------|
-| POST | /api/v1/crawler/executar | Trigger manual do crawler (com filtro por UF) |
+| POST | /api/v1/crawler/executar | Trigger manual (filtro UF, capitais primeiro) |
 | GET | /api/v1/crawler/status | Status da ultima execucao |
 | GET | /api/v1/crawler/execucoes | Historico de execucoes |
 | POST | /api/v1/crawler/certificado | Upload de certificado PFX |
 | GET | /api/v1/crawler/certificado | Status do certificado |
 | DELETE | /api/v1/crawler/certificado | Remover certificado |
+| GET | /api/v1/crawler/configuracao | Obter configuracao atual do crawler |
+| PUT | /api/v1/crawler/configuracao | Atualizar configuracao completa |
+| PATCH | /api/v1/crawler/configuracao | Atualizar campos especificos da configuracao |
 
 ### Infra
 
@@ -212,6 +215,15 @@ npx cypress run
 - [x] **Frontend Crawler Admin** — Status, execucao manual, certificado, historico de execucoes
 - [x] **E2E Cypress** — Testes de auth, layout, navegacao, consulta e crawler admin
 - [x] **Docs** — Contratos, especificacoes, estrategias documentadas
+
+### Round 3 — Concluido
+
+- [x] **Collection configuracoesCrawler** — Entidade, repositorio, seed, compound index, constante UfsBrasil
+- [x] **API CRUD Configuracao** — GET/PUT/PATCH com validacao compartilhada FluentValidation
+- [x] **Tela Angular Admin** — Configuracao do crawler, tooltips, labels sem detalhes de implementacao
+- [x] **Tracking por UF** — Progresso por UF com polling 5s na tela de status
+- [x] **Capitais Primeiro** — Botao que processa capitais estaduais primeiro, depois demais municipios
+- [x] **Testes** — 230 unit backend, 210 unit frontend, 7 specs E2E Cypress
 
 ---
 

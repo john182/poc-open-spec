@@ -235,6 +235,7 @@ frontend/
         services/
           auth.service.ts
           consulta.service.ts
+          crawler.service.ts
           storage.service.ts
         models/
           user.model.ts
@@ -243,6 +244,7 @@ frontend/
           servico.model.ts
           aliquota.model.ts
           api-response.model.ts
+          crawler.model.ts
 
       layout/                        # Shell da aplicacao
         components/
@@ -308,6 +310,14 @@ frontend/
           municipio/
             municipio.component.ts
             municipio.component.spec.ts
+        admin/
+          crawler/
+            status/
+              crawler-status.component.ts
+              crawler-status.component.spec.ts
+            configuracao/
+              crawler-configuracao.component.ts
+              crawler-configuracao.component.spec.ts
         errors/
           not-found/
             not-found.component.ts
@@ -429,6 +439,28 @@ interface FilterConfig {
 
 Content projection: `<ng-content>` para o input/dropdown/etc.
 
+### CrawlerConfiguracaoComponent
+
+**Responsabilidade:** Formulario completo para editar configuracao do crawler (timeouts, retry, paralelismo, CRON, ativo/inativo). Usa signals para estado, PrimeNG InputNumber/Checkbox/InputText. Tem botao "Restaurar padrao" que recarrega configuracao original via API.
+
+**Comportamento:**
+- Carrega configuracao atual via `CrawlerService.obterConfiguracao()` no init
+- Formulario reativo com todos os campos de `ConfiguracaoCrawler`
+- Salvar envia `AtualizarConfiguracaoRequest` via `CrawlerService.atualizarConfiguracao()`
+- Botao "Restaurar padrao" chama `CrawlerService.restaurarPadrao()` e recarrega o formulario
+- Feedback via toast (sucesso/erro)
+
+### CrawlerStatusComponent (melhorias)
+
+**Responsabilidade:** Monitoramento do status do crawler com progresso por UF.
+
+**Melhorias adicionadas:**
+- Progresso por UF com polling a cada 5 segundos via `interval` + `switchMap`
+- Dois botoes de execucao: "Executar crawler" e "Executar capitais primeiro"
+- Desabilitacao mutua entre os botoes durante execucao
+- Tags de UFs concluidas exibidas com PrimeNG Tag
+- Botao "Executar capitais primeiro" envia `ExecutarCrawlerRequest` com `capitaisPrimeiro: true`
+
 ---
 
 ## Form Helpers
@@ -513,6 +545,11 @@ export const routes: Routes = [
         path: 'consulta',
         loadChildren: () => import('./pages/consulta/consulta.routes')
           .then(m => m.CONSULTA_ROUTES)
+      },
+      {
+        path: 'admin',
+        loadChildren: () => import('./pages/admin/admin.routes')
+          .then(m => m.ADMIN_ROUTES)
       }
     ]
   },
@@ -543,6 +580,37 @@ export const routes: Routes = [
   }
 ];
 ```
+
+### Rotas de Admin (Crawler)
+
+```typescript
+// pages/admin/admin.routes.ts
+
+export const ADMIN_ROUTES: Routes = [
+  {
+    path: 'crawler',
+    children: [
+      {
+        path: 'status',
+        loadComponent: () => import('./crawler/status/crawler-status.component')
+          .then(m => m.CrawlerStatusComponent),
+        data: { breadcrumb: 'Status do Crawler' }
+      },
+      {
+        path: 'configuracao',
+        loadComponent: () => import('./crawler/configuracao/crawler-configuracao.component')
+          .then(m => m.CrawlerConfiguracaoComponent),
+        data: { breadcrumb: 'Configuracao do Crawler' }
+      }
+    ]
+  }
+];
+```
+
+| Rota | Componente | Descricao |
+|------|-----------|-----------|
+| `/admin/crawler/status` | `CrawlerStatusComponent` | Status do crawler com progresso por UF, polling 5s e botao "Executar capitais primeiro" |
+| `/admin/crawler/configuracao` | `CrawlerConfiguracaoComponent` | Tela de configuracao do crawler (timeouts, retry, paralelismo, CRON, ativo/inativo) |
 
 ### Rotas de Consulta
 
@@ -640,3 +708,106 @@ export class AuthService {
 3. **Nao duplicar estado** - cada dado tem um unico dono
 4. **Computed signals** para derivar estado, nunca armazenar dados derivados
 5. **Effects** com cautela - preferir computed quando possivel
+
+---
+
+## CrawlerService - Detalhamento
+
+O `CrawlerService` centraliza todas as operacoes de comunicacao com a API do crawler. Usa `inject(HttpClient)` e retorna `Observable<T>`.
+
+```typescript
+@Injectable({ providedIn: 'root' })
+export class CrawlerService {
+  private http = inject(HttpClient);
+
+  // Status e execucao
+  obterStatus(): Observable<StatusCrawler> { /* ... */ }
+  executarCrawler(request: ExecutarCrawlerRequest): Observable<void> { /* ... */ }
+  obterProgressoUfs(): Observable<ProgressoUf[]> { /* ... */ }
+
+  // Configuracao
+  obterConfiguracao(): Observable<ConfiguracaoCrawler> { /* ... */ }
+  atualizarConfiguracao(request: AtualizarConfiguracaoRequest): Observable<ConfiguracaoCrawler> { /* ... */ }
+  atualizarParcialConfiguracao(request: AtualizarParcialConfiguracaoRequest): Observable<ConfiguracaoCrawler> { /* ... */ }
+  restaurarPadrao(): Observable<ConfiguracaoCrawler> { /* ... */ }
+}
+```
+
+---
+
+## Models do Crawler
+
+### ConfiguracaoCrawler
+
+```typescript
+export interface ConfiguracaoCrawler {
+  timeoutRequisicaoMs: number;
+  timeoutPaginaMs: number;
+  maximoTentativas: number;
+  intervaloEntreTentativasMs: number;
+  maximoParalelismo: number;
+  expressaoCron: string;
+  ativo: boolean;
+}
+```
+
+### DTOs de Configuracao
+
+```typescript
+export interface AtualizarConfiguracaoRequest {
+  timeoutRequisicaoMs: number;
+  timeoutPaginaMs: number;
+  maximoTentativas: number;
+  intervaloEntreTentativasMs: number;
+  maximoParalelismo: number;
+  expressaoCron: string;
+  ativo: boolean;
+}
+
+export interface AtualizarParcialConfiguracaoRequest {
+  timeoutRequisicaoMs?: number;
+  timeoutPaginaMs?: number;
+  maximoTentativas?: number;
+  intervaloEntreTentativasMs?: number;
+  maximoParalelismo?: number;
+  expressaoCron?: string;
+  ativo?: boolean;
+}
+```
+
+### ExecutarCrawlerRequest (atualizado)
+
+```typescript
+export interface ExecutarCrawlerRequest {
+  ufs?: string[];
+  capitaisPrimeiro?: boolean;
+}
+```
+
+### ProgressoUf
+
+```typescript
+export interface ProgressoUf {
+  uf: string;
+  totalMunicipios: number;
+  municipiosConcluidos: number;
+  percentual: number;
+  status: 'pendente' | 'em-progresso' | 'concluido' | 'erro';
+}
+```
+
+---
+
+## Testes
+
+### Cobertura Atual
+
+- **210 testes unitarios** passando (Vitest + Testing Library)
+- Build de producao sem erros
+
+### Testes do Crawler
+
+| Componente | Linhas de teste | Cenarios cobertos |
+|------------|-----------------|-------------------|
+| `CrawlerConfiguracaoComponent` | 161 | Carregamento de configuracao, salvar, restaurar padrao, validacao de campos, feedback de erro/sucesso |
+| `CrawlerStatusComponent` (novos) | 77 | Execucao capitais primeiro, progresso por UF com polling, desabilitacao mutua de botoes, tags de UFs concluidas |

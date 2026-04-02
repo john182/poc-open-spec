@@ -47,9 +47,9 @@ graph LR
     end
 
     subgraph MongoDB
-        FP[(fila_processamento)]
+        FP[(filaProcessamento)]
         ALQ[(aliquotas)]
-        EXC[(execucoes_crawler)]
+        EXC[(execucoesCrawler)]
     end
 
     subgraph Backend API
@@ -167,7 +167,7 @@ O endpoint `GET /cnc/consulta/cad/{municipio}` pode retornar informacoes sobre q
 
 ## Fila de Processamento
 
-A fila de processamento e persistida na colecao `fila_processamento` do MongoDB. Cada documento representa uma combinacao unica de municipio + servico + competencia a ser consultada.
+A fila de processamento e persistida na colecao `filaProcessamento` do MongoDB. Cada documento representa uma combinacao unica de municipio + servico + competencia a ser consultada.
 
 ### Schema do documento
 
@@ -191,10 +191,10 @@ A fila de processamento e persistida na colecao `fila_processamento` do MongoDB.
 
 | Campo | Tipo | Descricao |
 |-------|------|-----------|
-| codigoMunicipio | int | Codigo IBGE do municipio |
+| codigoMunicipio | string | Codigo IBGE do municipio |
 | codigoServico | string | Codigo numerico do servico (sem pontos) |
 | competencia | string | Competencia no formato YYYY-MM-01 |
-| status | string | Estado atual: `pendente`, `processando`, `concluido`, `erro` |
+| status | string | Estado atual: `Pendente`, `Processando`, `Concluido`, `Erro` |
 | tentativas | int | Numero de tentativas realizadas |
 | ultimoErro | string ou null | Mensagem do ultimo erro |
 | proximaTentativa | DateTime ou null | Quando o item pode ser retentado |
@@ -462,7 +462,7 @@ A persistencia da fila no MongoDB permite que o worker retome o processamento ap
 
 ```mermaid
 flowchart TD
-    A[Worker reinicia] --> B[Verificar fila_processamento]
+    A[Worker reinicia] --> B[Verificar filaProcessamento]
     B --> C{Itens com status<br/>pendente ou erro?}
     C -->|Sim| D[Retomar processamento<br/>sem regenerar fila]
     C -->|Nao| E{Itens com status<br/>processando?}
@@ -507,7 +507,7 @@ O reprocessamento forcado ignora a logica incremental e recria a fila completa.
 
 ## Registro de Execucoes
 
-Cada ciclo de execucao do worker e registrado na colecao `execucoes_crawler` para rastreabilidade e monitoramento.
+Cada ciclo de execucao do worker e registrado na colecao `execucoesCrawler` para rastreabilidade e monitoramento.
 
 ### Schema do registro
 
@@ -516,19 +516,14 @@ Cada ciclo de execucao do worker e registrado na colecao `execucoes_crawler` par
   "_id": "ObjectId",
   "inicio": "2026-03-15T02:00:00Z",
   "fim": "2026-03-15T03:45:22Z",
-  "status": "concluido",
-  "tipo": "agendado",
+  "status": "Concluido",
+  "tipo": "Agendado",
   "totalMunicipios": 27,
   "totalServicos": 598,
   "processados": 16146,
   "erros": 12,
   "detalhesErro": [
-    {
-      "codigoMunicipio": 1302603,
-      "codigoServico": "010101001",
-      "erro": "Timeout apos 30s",
-      "tentativas": 3
-    }
+    "Timeout municipio 1302603 servico 010101001 apos 30s (3 tentativas)"
   ]
 }
 ```
@@ -537,10 +532,10 @@ Cada ciclo de execucao do worker e registrado na colecao `execucoes_crawler` par
 
 | Status | Descricao |
 |--------|-----------|
-| `em_andamento` | Execucao em progresso |
-| `concluido` | Todos os itens processados (com ou sem erros nao retryable) |
-| `falha_parcial` | Execucao concluiu mas ha itens com erro apos max retries |
-| `falha` | Execucao interrompida por falha critica ou parada do worker |
+| `EmAndamento` | Execucao em progresso |
+| `Concluido` | Todos os itens processados (com ou sem erros nao retryable) |
+| `FalhaParcial` | Execucao concluiu mas ha itens com erro apos max retries |
+| `Falha` | Execucao interrompida por falha critica ou parada do worker |
 
 ### Metricas calculadas ao finalizar
 
@@ -583,8 +578,9 @@ Todas as configuracoes do worker sao expostas via `appsettings.json` e podem ser
     },
     "MunicipalityRediscoveryDays": 30,
     "EnableHistoricalCollection": false,
-    "CertificatePath": "/certs/client.pfx",
-    "CertificatePassword": ""
+    "Certificate": {
+      "Note": "Gerenciado via API (POST/GET/DELETE /api/v1/crawler/certificado)"
+    }
   }
 }
 ```
@@ -606,8 +602,7 @@ Todas as configuracoes do worker sao expostas via `appsettings.json` e podem ser
 | CircuitBreaker.MinimumSamples | 10 | Minimo de amostras para avaliar o circuito |
 | MunicipalityRediscoveryDays | 30 | Dias para reverificar municipios inativos |
 | EnableHistoricalCollection | false | Habilitar coleta historica de aliquotas |
-| CertificatePath | `/certs/client.pfx` | Caminho do certificado PFX no container |
-| CertificatePassword | (vazio) | Senha do certificado PFX (usar secrets em producao) |
+| Certificate (via API) | - | O certificado PFX e gerenciado via endpoints REST: `POST /api/v1/crawler/certificado` (upload), `GET /api/v1/crawler/certificado` (status), `DELETE /api/v1/crawler/certificado` (remover). Nao requer variavel de ambiente. |
 
 ### Variaveis de ambiente
 
@@ -818,7 +813,7 @@ stateDiagram-v2
 2. Circuit breaker abre rapidamente (100% de falha)
 3. Worker entra em loop de pausa de 5 minutos com probe
 
-**Recuperacao:** Manual. Requer substituicao do certificado e restart do container. O worker retoma automaticamente apos o restart com certificado valido.
+**Recuperacao:** O administrador faz upload de um novo certificado via POST /api/v1/crawler/certificado. O worker detecta o novo certificado na proxima execucao ou probe, sem necessidade de restart.
 
 ---
 
@@ -857,7 +852,7 @@ flowchart LR
     end
 
     subgraph Falhas Manuais
-        D[Certificado invalido] -->|Troca + restart| R4[Retomada apos correcao]
+        D[Certificado invalido] -->|Upload via API| R4[Retomada automatica]
         E[Formato API mudou] -->|Fix + reprocessamento| R5[Retomada apos correcao]
         F[Seed incompleto] -->|Atualizar seed| R6[Reprocessamento forcado]
     end

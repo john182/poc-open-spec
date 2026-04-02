@@ -1,15 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: States endpoint
-The backend SHALL expose `GET /api/v1/estados` returning a list of all 27 Brazilian states with: codigo, nome, sigla, regiao. The endpoint MUST require authentication (valid JWT).
+The backend SHALL expose `GET /api/v1/estados` returning a list of all 27 Brazilian states with: codigo, nome, sigla, regiao. The endpoint SHALL be **public** (no authentication required).
 
 #### Scenario: List all states
-- **WHEN** an authenticated user calls `GET /api/v1/estados`
+- **WHEN** any user (authenticated or not) calls `GET /api/v1/estados`
 - **THEN** the system returns HTTP 200 with an array of 27 states sorted alphabetically by name
-
-#### Scenario: Unauthenticated access
-- **WHEN** a request without a valid JWT calls `GET /api/v1/estados`
-- **THEN** the system returns HTTP 401 Unauthorized
 
 ---
 
@@ -17,7 +13,7 @@ The backend SHALL expose `GET /api/v1/estados` returning a list of all 27 Brazil
 The backend SHALL expose `GET /api/v1/estados/:uf/municipios` returning municipalities for the given state. Each municipality SHALL include: codigoIbge, nome, siglaEstado.
 
 #### Scenario: List municipalities
-- **WHEN** an authenticated user calls `GET /api/v1/estados/MG/municipios`
+- **WHEN** any user calls `GET /api/v1/estados/MG/municipios`
 - **THEN** the system returns HTTP 200 with municipalities of Minas Gerais sorted alphabetically
 
 #### Scenario: Invalid state code
@@ -30,7 +26,7 @@ The backend SHALL expose `GET /api/v1/estados/:uf/municipios` returning municipa
 The backend SHALL expose `GET /api/v1/municipios/:codigoIbge/aliquotas` returning a paginated list of services and tax rates for the given municipality. The endpoint SHALL support query parameters: pagina, tamanhoPagina, codigoServico, descricao, aliquotaMin, aliquotaMax, competencia.
 
 #### Scenario: List tax rates with defaults
-- **WHEN** an authenticated user calls `GET /api/v1/municipios/3106200/aliquotas`
+- **WHEN** any user calls `GET /api/v1/municipios/3106200/aliquotas`
 - **THEN** the system returns HTTP 200 with page 1, default 20 items, sorted by service code
 
 #### Scenario: Filter by service code partial match
@@ -59,7 +55,7 @@ The backend SHALL expose `GET /api/v1/municipios/:codigoIbge/aliquotas` returnin
 The backend SHALL expose `GET /api/v1/municipios/:codigoIbge/aliquotas/:codigoServico` returning detailed tax rate information for a specific service in a municipality.
 
 #### Scenario: Detail found
-- **WHEN** an authenticated user calls `GET /api/v1/municipios/3106200/aliquotas/01.01.01.001`
+- **WHEN** any user calls `GET /api/v1/municipios/3106200/aliquotas/01.01.01.001`
 - **THEN** the system returns HTTP 200 with: codigoMunicipio, nomeMunicipio, codigoServico, codigoServicoFormatado, descricaoServico, aliquota, competencia, coletadoEm
 
 #### Scenario: Detail not found

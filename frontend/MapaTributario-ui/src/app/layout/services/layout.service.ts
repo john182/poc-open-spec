@@ -18,7 +18,7 @@ export class LayoutService {
   private _document = inject(DOCUMENT);
 
   layoutConfig = signal<LayoutConfig>({
-    darkTheme: false,
+    darkTheme: this._loadDarkTheme(),
     menuMode: 'static',
   });
 
@@ -34,16 +34,16 @@ export class LayoutService {
     () => this.layoutState().overlayMenuActive || this.layoutState().mobileMenuActive
   );
 
-  private _initialized = false;
-
   constructor() {
+    // Apply saved dark mode on startup
+    if (isPlatformBrowser(this._platformId)) {
+      this.applyDarkMode(this.layoutConfig().darkTheme);
+    }
+
     effect(() => {
       const config = this.layoutConfig();
-      if (!this._initialized) {
-        this._initialized = true;
-        return;
-      }
       this.applyDarkMode(config.darkTheme);
+      this._saveDarkTheme(config.darkTheme);
     });
   }
 
@@ -87,6 +87,19 @@ export class LayoutService {
       this._document.documentElement.classList.add('app-dark');
     } else {
       this._document.documentElement.classList.remove('app-dark');
+    }
+  }
+
+  private _loadDarkTheme(): boolean {
+    if (!isPlatformBrowser(this._platformId)) {
+      return false;
+    }
+    return localStorage.getItem('darkTheme') === 'true';
+  }
+
+  private _saveDarkTheme(dark: boolean): void {
+    if (isPlatformBrowser(this._platformId)) {
+      localStorage.setItem('darkTheme', String(dark));
     }
   }
 }

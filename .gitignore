@@ -24,3 +24,7 @@ Thumbs.db
 
 # Docker
 mongo-data/coverage/
+nul
+
+# Playwright MCP
+.playwright-mcp/

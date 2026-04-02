@@ -2,7 +2,7 @@ services:
   mongodb:
     image: mongo:7
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
       - mongo-data:/data/db
     healthcheck:
@@ -13,8 +13,8 @@ services:
 
   backend:
     build:
-      context: ./backend/MapaTributário
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/MapaTributario/Dockerfile
     ports:
       - "5000:5000"
     env_file:
@@ -26,6 +26,7 @@ services:
       - ASPNETCORE_URLS=http://+:5000
       - MONGO_URI=mongodb://mongodb:27017
       - MONGO_DB=mapa_tributario
+      - JWT__Secret=${JWT_SECRET:?JWT_SECRET environment variable is required}
 
   frontend:
     build:

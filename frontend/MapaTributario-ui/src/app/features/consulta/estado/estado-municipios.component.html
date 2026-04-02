@@ -1,0 +1,65 @@
+<app-page-header [titulo]="'Municípios — ' + uf()" [migalhas]="migalhas()" />
+
+<div class="estado-municipios-container" data-cy="estado-municipios">
+  @if (carregando()) {
+    <app-loading-spinner mensagem="Carregando municípios..." />
+  } @else if (erro()) {
+    <app-error-state [mensagem]="erro()" (tentarNovamente)="tentarNovamente()" />
+  } @else if (statusEmProcessamento() && !exibirListaMunicipios()) {
+    <div class="status-processamento" data-cy="status-processamento">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p class="status-mensagem">{{ mensagemProcessamento() }}</p>
+      <p class="status-dica">A página será atualizada automaticamente.</p>
+    </div>
+  } @else if (semCertificado() && (statusProcessamento() === 'aguardandoProcessamento') && municipios().length === 0) {
+    <div class="status-processamento status-sem-certificado" data-cy="status-sem-certificado">
+      <i class="pi pi-exclamation-triangle"></i>
+      <p class="status-mensagem">{{ mensagemProcessamento() }}</p>
+    </div>
+  } @else {
+    @if (exibindoDadosVencidos()) {
+      <div class="aviso-vencido" data-cy="aviso-vencido">
+        <i class="pi pi-exclamation-triangle"></i>
+        <span>{{ mensagemProcessamento() }}</span>
+      </div>
+    }
+
+    @if (statusProcessamento() === 'processando' && municipios().length > 0) {
+      <div class="aviso-parcial" data-cy="aviso-parcial">
+        <i class="pi pi-spin pi-spinner"></i>
+        <span>{{ mensagemProcessamento() }}</span>
+      </div>
+    }
+
+    <div class="busca-container">
+      <p-iconfield>
+        <p-inputicon styleClass="pi pi-search" />
+        <input
+          pInputText
+          type="text"
+          data-cy="busca-municipio"
+          placeholder="Buscar município..."
+          [ngModel]="textoBusca()"
+          (ngModelChange)="textoBusca.set($event)" />
+      </p-iconfield>
+      <span class="total-resultados">{{ municipiosFiltrados().length }} municípios</span>
+    </div>
+
+    @if (municipiosFiltrados().length === 0) {
+      <app-empty-state
+        titulo="Nenhum município encontrado"
+        mensagem="Nenhum município com dados de alíquota foi encontrado para este estado." />
+    } @else {
+      <div class="municipios-lista">
+        @for (municipio of municipiosFiltrados(); track municipio.codigoIbge) {
+          <a class="municipio-card"
+             [attr.data-cy]="'municipio-' + municipio.codigoIbge"
+             (click)="onMunicipioClick(municipio.codigoIbge)">
+            <span class="municipio-nome">{{ municipio.nome }}</span>
+            <span class="municipio-codigo">{{ municipio.codigoIbge }}</span>
+          </a>
+        }
+      </div>
+    }
+  }
+</div>

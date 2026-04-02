@@ -1,0 +1,41 @@
+.consulta-mapa-container {
+  padding: 1rem;
+}
+
+.instrucao {
+  text-align: center;
+  color: var(--text-color-secondary);
+  margin-bottom: 1.5rem;
+}
+
+.estados-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.estado-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: var(--surface-hover);
+  }
+}
+
+.estado-sigla {
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.estado-nome {
+  color: var(--text-color);
+}

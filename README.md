@@ -1,76 +1,225 @@
-# Crawler de Alíquotas com Frontend de Seleção de Cidades
+# Mapa Tributario — Crawler de Aliquotas ISS
 
-Um projeto greenfield que periodicamente coleta alíquotas de impostos municipais brasileiros da API NFS-e e apresenta através de um frontend interativo onde usuários podem navegar pelas informações tributárias (somente ISS retornado pela API do ADN) por cidade e código de serviço.
-
-**Desafio em Equipe**: A stack tecnológica é decidida pela sua equipe. Esta arquitetura é agnóstica a linguagens e frameworks. O projeto deve estar disponível em uma imagem (dockerizado).
+Um projeto full-stack que coleta periodicamente aliquotas de ISS da API NFS-e (adn.nfse.gov.br) e apresenta os dados atraves de um frontend interativo com navegacao por mapa, estado, municipio e codigo de servico.
 
 ---
 
-## Visão Geral do Projeto
+## Quick Start
 
-### O Que Faz
+```bash
+# 1. Clone
+git clone https://github.com/john182/poc-open-spec.git
+cd poc-open-spec
 
-1. **Crawler**: Busca automaticamente as alíquotas atuais para municípios e códigos de serviço predefinidos da API NFS-e
-2. **API Backend**: Serve dados de alíquotas em cache com capacidades de consulta rápida
-3. **Frontend**: UI interativa onde os usuários:
-   - Selecionam uma cidade de uma lista de municípios
-   - Visualizam todos os códigos de serviço disponíveis para aquela cidade
-   - Selecionam um código de serviço específico para ver informações detalhadas sobre a alíquota
+# 2. Configure
+cp .env.example .env
 
-### Arquitetura
+# 3. Suba tudo
+docker compose up --build
+```
+
+**URLs locais:**
+
+| Servico | URL |
+|---------|-----|
+| Frontend | http://localhost:4200 |
+| Backend API | http://localhost:5000/api/v1 |
+| Health Check | http://localhost:5000/health |
+
+---
+
+## Arquitetura
 
 ```
 ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
-│   Crawler    │────────▶│  Data Store  │◀────────│  Backend API │
-│   Worker     │         │ (BD ou Em    │         │              │
-│  (Agendado)  │         │   Memória)   │         └───────┬──────┘
-└──────────────┘         └──────────────┘                 │
-                                                           │ HTTP
+│   Crawler    │────────> │   MongoDB    │ <───────│  Backend API │
+│   Worker     │         │              │         │  (.NET 10)   │
+│(BackgroundSvc)│         └──────────────┘         └───────┬──────┘
+└──────────────┘                                           │ HTTP
                                                            │
-                                                    ┌──────▼──────┐
+                                                    ┌──────v──────┐
                                                     │  Frontend   │
-                                                    │     UI      │
+                                                    │ (Angular 21)│
                                                     └─────────────┘
 ```
 
-**Arquitetura 3 Camadas**:
-- **Crawler Worker**: Serviço agendado que busca dados da API NFS-e e popula o armazenamento de dados
-- **Backend API**: API REST servindo dados em cache para o frontend
-- **Frontend**: Interface do usuário para seleção de cidade e código de serviço com exibição de alíquotas
+**Stack:**
+- **Backend:** .NET 10, ASP.NET Core, MongoDB Driver, JWT Bearer, FluentValidation, FluentResults
+- **Worker:** BackgroundService .NET com CRON, mTLS/PFX para API NFS-e
+- **Frontend:** Angular 21, PrimeNG, Tailwind CSS
+- **Banco:** MongoDB
+- **Infra:** Docker Compose, Nginx reverse proxy
+- **Testes:** xUnit + Moq + Testcontainers (backend), Vitest + Testing Library (frontend), Cypress (E2E)
 
 ---
 
-## Fluxo de Experiência do Usuário
+## Estrutura do Projeto
 
-1. **Seleção de Cidade**: Usuário abre o app e vê uma lista de municípios disponíveis (formato de exibição: decisão da equipe)
-2. **Lista de Códigos de Serviço**: Após selecionar uma cidade, usuário vê todos os códigos de serviço disponíveis para aquele município
-3. **Detalhes da Alíquota**: Usuário seleciona um código de serviço específico e visualiza informações tributárias detalhadas (alíquota, competência, etc.)
+```
+├── backend/MapaTributario/
+│   ├── src/MapaTributario.API/
+│   │   ├── Application/          # Use cases e DTOs
+│   │   ├── Controllers/          # Endpoints REST
+│   │   ├── Domain/               # Entidades e interfaces
+│   │   ├── Extensions/           # DI service extensions
+│   │   ├── Infrastructure/       # Repositorios MongoDB, auth, external clients
+│   │   ├── Middleware/           # Error handling
+│   │   ├── Validators/          # FluentValidation
+│   │   └── Worker/              # BackgroundService (crawler)
+│   └── tests/
+│       ├── MapaTributario.Tests.Unit/
+│       └── MapaTributario.Tests.Integration/
+├── frontend/MapaTributario-ui/
+│   └── src/app/
+│       ├── core/                # Auth, guards, interceptors
+│       ├── features/            # Auth, consulta, admin, errors
+│       ├── layout/              # Layout components (topbar, sidebar, menu, footer)
+│       └── shared/              # Componentes reutilizaveis
+├── cypress/                     # Testes E2E
+├── context/                     # Dados de referencia (municipios.json)
+├── openspec/                    # Specs e docs do projeto
+├── docker-compose.yml
+└── .env.example
+```
 
 ---
 
-## Referência da API
+## Documentacao
 
-### API NFS-e (Externa - Fonte de Dados)
+| Documento | Descricao |
+|-----------|-----------|
+| [Produto](docs/product-doc.md) | Visao geral do produto, personas, motivacao para autenticacao, escopo MVP |
+| [Arquitetura Tecnica](docs/technical-doc.md) | Stack, decisoes arquiteturais (ADRs), estrutura de camadas, seguranca |
+| [Contratos da API](docs/api-contracts.md) | Endpoints, payloads, codigos de resposta, exemplos de requisicao |
+| [Estrategia de Testes](docs/test-strategy.md) | Piramide de testes, cobertura, convencoes de nomenclatura |
+| [Estrategia do Worker](docs/worker-strategy.md) | Crawler: fases de execucao, early-stop, protecao do certificado |
+| [Fundacao Frontend](docs/frontend-foundation.md) | Estrutura Angular, componentes de layout, design tokens, rotas |
+| [Design System](docs/design-system.md) | Componentes visuais, paleta de cores, tipografia |
+| [Design Tokens](docs/design-tokens.md) | Tokens CSS, variaveis de tema, personalizacao PrimeNG |
+| [Estrategia de PRs](docs/pr-strategy.md) | Fluxo de branches, convencao de commits, processo de review |
+| [API Externa NFS-e](docs/external-api-analysis.md) | Analise da API adn.nfse.gov.br, endpoints, autenticacao mTLS |
 
-**URL Base**: (da coleção Bruno)
+---
 
-#### Obter Alíquota Atual
+## Desenvolvimento Local
+
+### Pre-requisitos
+
+- .NET 10 SDK
+- Node.js 22+
+- MongoDB (local ou via Docker)
+- Angular CLI (`npm install -g @angular/cli`)
+
+### Backend
+
+```bash
+cd backend/MapaTributario
+dotnet restore
+dotnet run --project src/MapaTributario.API
+# API disponivel em https://localhost:5001
+```
+
+### Frontend
+
+```bash
+cd frontend/MapaTributario-ui
+npm install
+ng serve
+# App disponivel em http://localhost:4200
+```
+
+### MongoDB (standalone)
+
+```bash
+docker run -d -p 27017:27017 --name mongo mongo:8
+```
+
+---
+
+## Testes
+
+```bash
+# Backend — unit + integration
+cd backend/MapaTributario
+dotnet test
+
+# Frontend — unit
+cd frontend/MapaTributario-ui
+npx vitest run
+
+# E2E — Cypress
+cd cypress
+npx cypress run
+```
+
+---
+
+## API Endpoints
+
+### Autenticacao (publicos)
+
+| Metodo | Endpoint | Descricao |
+|--------|----------|-----------|
+| POST | /api/v1/auth/register | Cadastro de usuario |
+| POST | /api/v1/auth/login | Login (retorna JWT) |
+| POST | /api/v1/auth/refresh | Refresh do access token |
+
+### Consulta (publicos)
+
+| Metodo | Endpoint | Descricao |
+|--------|----------|-----------|
+| GET | /api/v1/estados | Lista 27 estados |
+| GET | /api/v1/estados/:uf/municipios | Municipios por UF |
+| GET | /api/v1/municipios/:ibge/aliquotas | Aliquotas paginadas com filtros |
+| GET | /api/v1/municipios/:ibge/aliquotas/:servico | Detalhe de aliquota |
+
+### Crawler (requerem JWT + role Admin)
+
+| Metodo | Endpoint | Descricao |
+|--------|----------|-----------|
+| POST | /api/v1/crawler/executar | Trigger manual do crawler (com filtro por UF) |
+| GET | /api/v1/crawler/status | Status da ultima execucao |
+| GET | /api/v1/crawler/execucoes | Historico de execucoes |
+| POST | /api/v1/crawler/certificado | Upload de certificado PFX |
+| GET | /api/v1/crawler/certificado | Status do certificado |
+| DELETE | /api/v1/crawler/certificado | Remover certificado |
+
+### Infra
+
+| Metodo | Endpoint | Descricao |
+|--------|----------|-----------|
+| GET | /health | Health check (inclui MongoDB) |
+
+---
+
+## Status do Projeto
+
+### Round 1 — Concluido
+
+- [x] **Infra Docker** — Docker Compose, Dockerfiles, Nginx, .env
+- [x] **Backend Auth** — JWT auth (register/login/refresh), DDD, FluentResults, FluentValidation, 97% coverage
+- [x] **Frontend Foundation** — Layout PrimeNG, design tokens, componentes base, rotas, Vitest + Cypress base
+
+### Round 2 — Concluido
+
+- [x] **Backend Consulta** — Seed IBGE + endpoints de consulta com filtros e paginacao
+- [x] **Worker Crawler** — Crawler com protecao do certificado, 3 fases, early-stop, filtro por UF
+- [x] **Frontend Auth** — AuthService, guards, interceptor JWT, paginas login/signup reais
+- [x] **Frontend Role Control** — RoleService, AdminGuard, menu condicional por role
+- [x] **Frontend Consulta** — Mapa do Brasil, selecao estado/municipio, listagem aliquotas com filtros
+- [x] **Frontend Crawler Admin** — Status, execucao manual, certificado, historico de execucoes
+- [x] **E2E Cypress** — Testes de auth, layout, navegacao, consulta e crawler admin
+- [x] **Docs** — Contratos, especificacoes, estrategias documentadas
+
+---
+
+## Referencia da API Externa
+
+**API NFS-e:** `adn.nfse.gov.br` (requer certificado PFX/mTLS)
+
 ```
 GET /parametrizacao/{municipio}/{servico}/{competencia}/aliquota
+GET /parametrizacao/{municipio}/convenio
 ```
 
-**Parâmetros**:
-- `municipio`: Código IBGE do município (ex: 3106200 para Belo Horizonte)
-- `servico`: Código de serviço seguindo LC 116/2003 (ex: 01.01.01.001).
-- `competencia`: Data no formato YYYYMM (ex: 202603 para Março de 2026)
-
-**Exemplo de Resposta**:
-```json
-{
-  "codigoMunicipio": "3106200",
-  "codigoServico": "01.01.01.001",
-  "aliquota": 3.5,
-  "competencia": "202603",
-  "descricaoServico": "Análise e desenvolvimento de sistemas"
-}
-```
+Consulte `openspec/changes/full-stack-aliquotas-municipais/docs/external-api-analysis.md` para detalhes completos.

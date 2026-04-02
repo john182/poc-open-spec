@@ -1,0 +1,39 @@
+.brazil-map-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.brazil-map-svg {
+  width: 100%;
+  height: auto;
+}
+
+.estado-group {
+  cursor: pointer;
+
+  .estado-path {
+    fill: var(--surface-200, #e2e8f0);
+    stroke: transparent;
+    stroke-width: 2px;
+    stroke-dasharray: 180%;
+    stroke-dashoffset: -120%;
+    transition: fill 0.3s ease, stroke 0.8s ease, stroke-dashoffset 0.8s ease;
+  }
+
+  &:hover .estado-path {
+    fill: var(--primary-200, #93c5fd);
+    stroke: var(--primary-500, #3b82f6);
+    stroke-dashoffset: 0%;
+  }
+
+  &.selecionado .estado-path {
+    fill: var(--primary-500, #3b82f6);
+    stroke: var(--primary-700, #1d4ed8);
+    stroke-dashoffset: 0%;
+    stroke-width: 2px;
+  }
+}

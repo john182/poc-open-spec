@@ -1,0 +1,122 @@
+<app-page-header titulo="Status do Crawler" [migalhas]="migalhas" />
+
+<div class="crawler-status-container" data-cy="crawler-status">
+  @if (carregando()) {
+    <app-loading-spinner mensagem="Carregando status..." />
+  } @else if (erro()) {
+    <app-error-state [mensagem]="erro()" (tentarNovamente)="tentarNovamente()" />
+  } @else {
+    <!-- Aviso de certificado -->
+    @if (statusAtual() && !statusAtual()!.temCertificado) {
+      <div class="aviso-certificado" data-cy="aviso-certificado">
+        <i class="pi pi-exclamation-triangle"></i>
+        <span>Nenhum certificado digital configurado. O crawler não conseguirá processar dados. Faça o upload na seção <strong>Certificado</strong>.</span>
+      </div>
+    }
+
+    <!-- Última execução -->
+    <div class="secao" data-cy="ultima-execucao">
+      <h3>Última execução</h3>
+      @if (statusAtual() && statusAtual()!.status !== 'NenhumaExecucao') {
+        <div class="metricas-grid">
+          <div class="metrica-card">
+            <span class="metrica-label">Status</span>
+            <p-tag [value]="statusAtual()!.status"
+                   [severity]="obterSeveridadeStatus(statusAtual()!.status)" />
+          </div>
+          <div class="metrica-card">
+            <span class="metrica-label">Tipo</span>
+            <span class="metrica-valor">{{ statusAtual()!.tipo }}</span>
+          </div>
+          <div class="metrica-card">
+            <span class="metrica-label">Início</span>
+            <span class="metrica-valor">{{ statusAtual()!.inicio | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+          <div class="metrica-card">
+            <span class="metrica-label">Fim</span>
+            <span class="metrica-valor">{{ statusAtual()!.fim ? (statusAtual()!.fim | date:'dd/MM/yyyy HH:mm') : 'Em andamento' }}</span>
+          </div>
+          <div class="metrica-card">
+            <span class="metrica-label">Municípios</span>
+            <span class="metrica-valor">{{ statusAtual()!.totalMunicipios }}</span>
+          </div>
+          <div class="metrica-card">
+            <span class="metrica-label">Serviços</span>
+            <span class="metrica-valor">{{ statusAtual()!.totalServicos }}</span>
+          </div>
+          <div class="metrica-card">
+            <span class="metrica-label">Processados</span>
+            <span class="metrica-valor">{{ statusAtual()!.processados }}</span>
+          </div>
+          <div class="metrica-card">
+            <span class="metrica-label">Erros</span>
+            <span class="metrica-valor erro">{{ statusAtual()!.erros }}</span>
+          </div>
+        </div>
+        @if (statusAtual()!.detalhesErro.length > 0) {
+          <div class="detalhes-erro" data-cy="detalhes-erro">
+            <h4>Detalhes dos erros</h4>
+            <ul>
+              @for (detalhe of statusAtual()!.detalhesErro; track detalhe) {
+                <li>{{ detalhe }}</li>
+              }
+            </ul>
+          </div>
+        }
+      } @else {
+        <app-empty-state
+          titulo="Nenhuma execução encontrada"
+          mensagem="O crawler ainda não foi executado." />
+      }
+    </div>
+
+    <!-- Executar manualmente -->
+    <div class="secao" data-cy="executar-crawler">
+      <h3>Executar manualmente</h3>
+      <div class="execucao-form">
+        <div class="execucao-opcoes">
+          <div class="opcao-campo">
+            <p-checkbox
+              [(ngModel)]="forcarReprocessamento"
+              [binary]="true"
+              inputId="forcarReprocessamento"
+              data-cy="checkbox-forcar" />
+            <label for="forcarReprocessamento">Forçar reprocessamento</label>
+            <i class="pi pi-info-circle"
+               pTooltip="Quando marcado, reprocessa todos os serviços mesmo que já tenham dados recentes. Sem marcar, apenas serviços sem dados ou com dados expirados serão processados."
+               tooltipPosition="top"
+               style="margin-left: 0.5rem; cursor: help;"></i>
+          </div>
+          <div class="opcao-campo">
+            <label for="ufs">Filtrar por UFs</label>
+            <p-multiSelect id="ufs"
+                           [options]="opcoesUf"
+                           [(ngModel)]="filtroUfs"
+                           placeholder="Todas as UFs"
+                           [showClear]="true"
+                           [filter]="true"
+                           filterPlaceHolder="Buscar UF..."
+                           data-cy="input-ufs"
+                           display="chip" />
+          </div>
+        </div>
+        <p-button
+          label="Executar crawler"
+          icon="pi pi-play"
+          data-cy="btn-executar"
+          [loading]="executando()"
+          (onClick)="executarCrawler()" />
+      </div>
+      @if (mensagemExecucao()) {
+        <div class="mensagem-sucesso" data-cy="msg-execucao-sucesso">
+          <i class="pi pi-check-circle"></i> {{ mensagemExecucao() }}
+        </div>
+      }
+      @if (erroExecucao()) {
+        <div class="mensagem-erro" data-cy="msg-execucao-erro">
+          <i class="pi pi-times-circle"></i> {{ erroExecucao() }}
+        </div>
+      }
+    </div>
+  }
+</div>

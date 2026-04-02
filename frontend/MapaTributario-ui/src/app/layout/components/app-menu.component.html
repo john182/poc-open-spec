@@ -1,5 +1,5 @@
 <ul class="layout-menu" data-cy="app-menu">
-  @for (item of model; track item.label) {
+  @for (item of model(); track item.label) {
     <li class="layout-root-menuitem">
       <div class="layout-menuitem-root-text">{{ item.label }}</div>
       <ul>

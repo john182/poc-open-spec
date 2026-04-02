@@ -5,9 +5,9 @@ public class AtualizarParcialConfiguracaoCrawlerRequest
     public string? CronSchedule { get; set; }
     public int? LimiteRequisicoesPorSegundo { get; set; }
     public int? OrcamentoDiario { get; set; }
-    public int? TamanheLoteCertificado { get; set; }
+    public int? TamanhoLoteCertificado { get; set; }
     public int? PausaLoteSegundos { get; set; }
-    public int? TamanheLoteMongo { get; set; }
+    public int? TamanhoLoteMongo { get; set; }
     public int? MaxTentativas { get; set; }
     public int? LimiteParadaAntecipada { get; set; }
     public int? MaxDesdobramento { get; set; }

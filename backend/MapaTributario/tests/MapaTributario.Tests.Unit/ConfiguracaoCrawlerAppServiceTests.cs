@@ -29,7 +29,7 @@ public class ConfiguracaoCrawlerAppServiceTests
         configuracao.SetId("test-id");
 
         _repository
-            .Setup(r => r.ObterAtivaAsync())
+            .Setup(r => r.ObterAtualAsync())
             .ReturnsAsync(configuracao);
 
         // Act
@@ -43,9 +43,9 @@ public class ConfiguracaoCrawlerAppServiceTests
         resposta.CronSchedule.ShouldBe("0 2 * * *");
         resposta.LimiteRequisicoesPorSegundo.ShouldBe(15);
         resposta.OrcamentoDiario.ShouldBe(50000);
-        resposta.TamanheLoteCertificado.ShouldBe(200);
+        resposta.TamanhoLoteCertificado.ShouldBe(200);
         resposta.PausaLoteSegundos.ShouldBe(5);
-        resposta.TamanheLoteMongo.ShouldBe(50);
+        resposta.TamanhoLoteMongo.ShouldBe(50);
         resposta.MaxTentativas.ShouldBe(3);
         resposta.LimiteParadaAntecipada.ShouldBe(9);
         resposta.MaxDesdobramento.ShouldBe(20);
@@ -67,7 +67,7 @@ public class ConfiguracaoCrawlerAppServiceTests
     {
         // Arrange
         _repository
-            .Setup(r => r.ObterAtivaAsync())
+            .Setup(r => r.ObterAtualAsync())
             .ReturnsAsync((ConfiguracaoCrawler?)null);
 
         // Act
@@ -86,7 +86,7 @@ public class ConfiguracaoCrawlerAppServiceTests
         configuracao.SetId("config-123");
 
         _repository
-            .Setup(r => r.ObterAtivaAsync())
+            .Setup(r => r.ObterAtualAsync())
             .ReturnsAsync(configuracao);
 
         var request = new AtualizarConfiguracaoCrawlerRequest
@@ -94,9 +94,9 @@ public class ConfiguracaoCrawlerAppServiceTests
             CronSchedule = "0 3 * * *",
             LimiteRequisicoesPorSegundo = 20,
             OrcamentoDiario = 60000,
-            TamanheLoteCertificado = 300,
+            TamanhoLoteCertificado = 300,
             PausaLoteSegundos = 10,
-            TamanheLoteMongo = 100,
+            TamanhoLoteMongo = 100,
             MaxTentativas = 5,
             LimiteParadaAntecipada = 12,
             MaxDesdobramento = 30,
@@ -123,9 +123,9 @@ public class ConfiguracaoCrawlerAppServiceTests
         resposta.CronSchedule.ShouldBe("0 3 * * *");
         resposta.LimiteRequisicoesPorSegundo.ShouldBe(20);
         resposta.OrcamentoDiario.ShouldBe(60000);
-        resposta.TamanheLoteCertificado.ShouldBe(300);
+        resposta.TamanhoLoteCertificado.ShouldBe(300);
         resposta.PausaLoteSegundos.ShouldBe(10);
-        resposta.TamanheLoteMongo.ShouldBe(100);
+        resposta.TamanhoLoteMongo.ShouldBe(100);
         resposta.MaxTentativas.ShouldBe(5);
         resposta.LimiteParadaAntecipada.ShouldBe(12);
         resposta.MaxDesdobramento.ShouldBe(30);
@@ -149,7 +149,7 @@ public class ConfiguracaoCrawlerAppServiceTests
     {
         // Arrange
         _repository
-            .Setup(r => r.ObterAtivaAsync())
+            .Setup(r => r.ObterAtualAsync())
             .ReturnsAsync((ConfiguracaoCrawler?)null);
 
         var request = new AtualizarConfiguracaoCrawlerRequest
@@ -157,9 +157,9 @@ public class ConfiguracaoCrawlerAppServiceTests
             CronSchedule = "0 3 * * *",
             LimiteRequisicoesPorSegundo = 20,
             OrcamentoDiario = 60000,
-            TamanheLoteCertificado = 300,
+            TamanhoLoteCertificado = 300,
             PausaLoteSegundos = 10,
-            TamanheLoteMongo = 100,
+            TamanhoLoteMongo = 100,
             MaxTentativas = 5,
             LimiteParadaAntecipada = 12,
             MaxDesdobramento = 30,
@@ -194,7 +194,7 @@ public class ConfiguracaoCrawlerAppServiceTests
         configuracao.SetId("config-parcial");
 
         _repository
-            .Setup(r => r.ObterAtivaAsync())
+            .Setup(r => r.ObterAtualAsync())
             .ReturnsAsync(configuracao);
 
         var request = new AtualizarParcialConfiguracaoCrawlerRequest
@@ -218,9 +218,9 @@ public class ConfiguracaoCrawlerAppServiceTests
         // Campos inalterados (valores padrão)
         resposta.LimiteRequisicoesPorSegundo.ShouldBe(15);
         resposta.OrcamentoDiario.ShouldBe(50000);
-        resposta.TamanheLoteCertificado.ShouldBe(200);
+        resposta.TamanhoLoteCertificado.ShouldBe(200);
         resposta.PausaLoteSegundos.ShouldBe(5);
-        resposta.TamanheLoteMongo.ShouldBe(50);
+        resposta.TamanhoLoteMongo.ShouldBe(50);
         resposta.LimiteParadaAntecipada.ShouldBe(9);
         resposta.MaxDesdobramento.ShouldBe(20);
         resposta.MaxDetalhamento.ShouldBe(99);
@@ -242,7 +242,7 @@ public class ConfiguracaoCrawlerAppServiceTests
     {
         // Arrange
         _repository
-            .Setup(r => r.ObterAtivaAsync())
+            .Setup(r => r.ObterAtualAsync())
             .ReturnsAsync((ConfiguracaoCrawler?)null);
 
         var request = new AtualizarParcialConfiguracaoCrawlerRequest

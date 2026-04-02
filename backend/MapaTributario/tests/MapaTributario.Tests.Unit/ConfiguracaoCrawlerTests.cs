@@ -90,9 +90,9 @@ public class ConfiguracaoCrawlerTests
             cronSchedule: "0 5 * * *",
             limiteRequisicoesPorSegundo: 25,
             orcamentoDiario: 80000,
-            tamanheLoteCertificado: 400,
+            tamanhoLoteCertificado: 400,
             pausaLoteSegundos: 15,
-            tamanheLoteMongo: 75,
+            tamanhoLoteMongo: 75,
             maxTentativas: 6,
             limiteParadaAntecipada: 15,
             maxDesdobramento: 40,
@@ -112,9 +112,9 @@ public class ConfiguracaoCrawlerTests
         configuracao.CronSchedule.ShouldBe("0 5 * * *");
         configuracao.LimiteRequisicoesPorSegundo.ShouldBe(25);
         configuracao.OrcamentoDiario.ShouldBe(80000);
-        configuracao.TamanheLoteCertificado.ShouldBe(400);
+        configuracao.TamanhoLoteCertificado.ShouldBe(400);
         configuracao.PausaLoteSegundos.ShouldBe(15);
-        configuracao.TamanheLoteMongo.ShouldBe(75);
+        configuracao.TamanhoLoteMongo.ShouldBe(75);
         configuracao.MaxTentativas.ShouldBe(6);
         configuracao.LimiteParadaAntecipada.ShouldBe(15);
         configuracao.MaxDesdobramento.ShouldBe(40);
@@ -149,9 +149,9 @@ public class ConfiguracaoCrawlerTests
         // Assert — campos inalterados (valores padrão)
         configuracao.LimiteRequisicoesPorSegundo.ShouldBe(15);
         configuracao.OrcamentoDiario.ShouldBe(50000);
-        configuracao.TamanheLoteCertificado.ShouldBe(200);
+        configuracao.TamanhoLoteCertificado.ShouldBe(200);
         configuracao.PausaLoteSegundos.ShouldBe(5);
-        configuracao.TamanheLoteMongo.ShouldBe(50);
+        configuracao.TamanhoLoteMongo.ShouldBe(50);
         configuracao.LimiteParadaAntecipada.ShouldBe(9);
         configuracao.MaxDesdobramento.ShouldBe(20);
         configuracao.MaxDetalhamento.ShouldBe(99);

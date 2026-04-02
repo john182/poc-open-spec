@@ -137,9 +137,10 @@ public class CrawlerController : ControllerBase
 
         if (resultado.IsFailed)
         {
-            if (resultado.Errors.OfType<NotFoundError>().Any())
+            var erroNaoEncontrado = resultado.Errors.OfType<NotFoundError>().FirstOrDefault();
+            if (erroNaoEncontrado is not null)
             {
-                return NotFound(new { erro = resultado.Errors.First().Message });
+                return NotFound(new { erro = erroNaoEncontrado.Message });
             }
 
             return BadRequest(new { erro = resultado.Errors.First().Message });
@@ -163,9 +164,10 @@ public class CrawlerController : ControllerBase
 
         if (resultado.IsFailed)
         {
-            if (resultado.Errors.OfType<NotFoundError>().Any())
+            var erroNaoEncontrado = resultado.Errors.OfType<NotFoundError>().FirstOrDefault();
+            if (erroNaoEncontrado is not null)
             {
-                return NotFound(new { erro = resultado.Errors.First().Message });
+                return NotFound(new { erro = erroNaoEncontrado.Message });
             }
 
             return BadRequest(new { erro = resultado.Errors.First().Message });
@@ -189,9 +191,10 @@ public class CrawlerController : ControllerBase
 
         if (resultado.IsFailed)
         {
-            if (resultado.Errors.OfType<NotFoundError>().Any())
+            var erroNaoEncontrado = resultado.Errors.OfType<NotFoundError>().FirstOrDefault();
+            if (erroNaoEncontrado is not null)
             {
-                return NotFound(new { erro = resultado.Errors.First().Message });
+                return NotFound(new { erro = erroNaoEncontrado.Message });
             }
 
             return BadRequest(new { erro = resultado.Errors.First().Message });

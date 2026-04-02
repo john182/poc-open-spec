@@ -21,7 +21,7 @@ public class ConfiguracaoCrawlerAppService : IConfiguracaoCrawlerAppService
 
     public async Task<Result<ConfiguracaoCrawlerResponse>> ObterConfiguracaoAtualAsync()
     {
-        ConfiguracaoCrawler? configuracao = await _repository.ObterAtivaAsync();
+        ConfiguracaoCrawler? configuracao = await _repository.ObterAtualAsync();
 
         if (configuracao is null)
         {
@@ -35,7 +35,7 @@ public class ConfiguracaoCrawlerAppService : IConfiguracaoCrawlerAppService
     public async Task<Result<ConfiguracaoCrawlerResponse>> AtualizarConfiguracaoAsync(
         AtualizarConfiguracaoCrawlerRequest request)
     {
-        ConfiguracaoCrawler? configuracao = await _repository.ObterAtivaAsync();
+        ConfiguracaoCrawler? configuracao = await _repository.ObterAtualAsync();
 
         if (configuracao is null)
         {
@@ -47,9 +47,9 @@ public class ConfiguracaoCrawlerAppService : IConfiguracaoCrawlerAppService
             request.CronSchedule,
             request.LimiteRequisicoesPorSegundo,
             request.OrcamentoDiario,
-            request.TamanheLoteCertificado,
+            request.TamanhoLoteCertificado,
             request.PausaLoteSegundos,
-            request.TamanheLoteMongo,
+            request.TamanhoLoteMongo,
             request.MaxTentativas,
             request.LimiteParadaAntecipada,
             request.MaxDesdobramento,
@@ -77,7 +77,7 @@ public class ConfiguracaoCrawlerAppService : IConfiguracaoCrawlerAppService
     public async Task<Result<ConfiguracaoCrawlerResponse>> AtualizarParcialmenteAsync(
         AtualizarParcialConfiguracaoCrawlerRequest request)
     {
-        ConfiguracaoCrawler? configuracao = await _repository.ObterAtivaAsync();
+        ConfiguracaoCrawler? configuracao = await _repository.ObterAtualAsync();
 
         if (configuracao is null)
         {
@@ -89,9 +89,9 @@ public class ConfiguracaoCrawlerAppService : IConfiguracaoCrawlerAppService
             request.CronSchedule,
             request.LimiteRequisicoesPorSegundo,
             request.OrcamentoDiario,
-            request.TamanheLoteCertificado,
+            request.TamanhoLoteCertificado,
             request.PausaLoteSegundos,
-            request.TamanheLoteMongo,
+            request.TamanhoLoteMongo,
             request.MaxTentativas,
             request.LimiteParadaAntecipada,
             request.MaxDesdobramento,
@@ -124,9 +124,9 @@ public class ConfiguracaoCrawlerAppService : IConfiguracaoCrawlerAppService
             CronSchedule = entidade.CronSchedule,
             LimiteRequisicoesPorSegundo = entidade.LimiteRequisicoesPorSegundo,
             OrcamentoDiario = entidade.OrcamentoDiario,
-            TamanheLoteCertificado = entidade.TamanheLoteCertificado,
+            TamanhoLoteCertificado = entidade.TamanhoLoteCertificado,
             PausaLoteSegundos = entidade.PausaLoteSegundos,
-            TamanheLoteMongo = entidade.TamanheLoteMongo,
+            TamanhoLoteMongo = entidade.TamanhoLoteMongo,
             MaxTentativas = entidade.MaxTentativas,
             LimiteParadaAntecipada = entidade.LimiteParadaAntecipada,
             MaxDesdobramento = entidade.MaxDesdobramento,

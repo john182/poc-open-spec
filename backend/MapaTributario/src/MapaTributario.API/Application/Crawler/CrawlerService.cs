@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using FluentResults;
 using MapaTributario.API.Application.Errors;
+using MapaTributario.API.Domain.Constants;
 using MapaTributario.API.Domain.Entities;
 using MapaTributario.API.Domain.Interfaces;
 using MapaTributario.API.Infrastructure.External;
@@ -114,12 +115,7 @@ public class CrawlerService : ICrawlerService
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(tipo);
 
         // Record which UFs are being processed
-        string[] todasUfsDefault = new[]
-        {
-            "AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT",
-            "PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"
-        };
-        execucao.SetUfsProcessadas(filtroUfs is { Count: > 0 } ? filtroUfs : todasUfsDefault);
+        execucao.SetUfsProcessadas(filtroUfs is { Count: > 0 } ? filtroUfs : UfsBrasil.Todas);
 
         try
         {
@@ -205,15 +201,10 @@ public class CrawlerService : ICrawlerService
         _logger.LogInformation("Phase 1: Discovering municipalities via convenio endpoint");
 
         List<Municipio> todos = new();
-        string[] todasUfs = new[]
-        {
-            "AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT",
-            "PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"
-        };
 
         IEnumerable<string> ufsParaProcessar = filtroUfs is { Count: > 0 }
-            ? filtroUfs.Select(u => u.ToUpperInvariant()).Where(u => todasUfs.Contains(u))
-            : todasUfs;
+            ? filtroUfs.Select(u => u.ToUpperInvariant()).Where(u => UfsBrasil.Todas.Contains(u))
+            : UfsBrasil.Todas;
 
         if (filtroUfs is { Count: > 0 })
         {

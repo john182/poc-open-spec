@@ -791,6 +791,14 @@ public class CrawlerService : ICrawlerService
             return 0;
         }
 
+        // Buscar descrição do serviço na tabela de serviços
+        string descricaoServico = string.Empty;
+        var servico = await _servicoRepository.GetByCodigoAsync(codigoServicoBase);
+        if (servico is not null)
+        {
+            descricaoServico = servico.Descricao;
+        }
+
         int count = 0;
 
         foreach (KeyValuePair<string, List<AliquotaItem>> entry in response.Aliquotas)
@@ -811,7 +819,7 @@ public class CrawlerService : ICrawlerService
                     nomeMunicipio,
                     codigoServicoNormalizado,
                     FormatServiceCode(codigoServicoApi),
-                    string.Empty, // API doesn't return description per aliquota
+                    descricaoServico,
                     aliquotaItem.Aliq.Value,
                     competencia,
                     "API NFS-e Nacional");

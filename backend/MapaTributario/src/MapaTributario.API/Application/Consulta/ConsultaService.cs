@@ -15,6 +15,7 @@ public class ConsultaService : IConsultaService
     private readonly IEstadoRepository _estadoRepository;
     private readonly IMunicipioRepository _municipioRepository;
     private readonly IAliquotaRepository _aliquotaRepository;
+    private readonly IServicoRepository _servicoRepository;
     private readonly IExecucaoCrawlerRepository _execucaoCrawlerRepository;
     private readonly ICrawlerExecutionGuard _executionGuard;
     private readonly ICertificadoStore _certificadoStore;
@@ -26,6 +27,7 @@ public class ConsultaService : IConsultaService
         IEstadoRepository estadoRepository,
         IMunicipioRepository municipioRepository,
         IAliquotaRepository aliquotaRepository,
+        IServicoRepository servicoRepository,
         IExecucaoCrawlerRepository execucaoCrawlerRepository,
         ICrawlerExecutionGuard executionGuard,
         ICertificadoStore certificadoStore,
@@ -36,6 +38,7 @@ public class ConsultaService : IConsultaService
         _estadoRepository = estadoRepository;
         _municipioRepository = municipioRepository;
         _aliquotaRepository = aliquotaRepository;
+        _servicoRepository = servicoRepository;
         _execucaoCrawlerRepository = execucaoCrawlerRepository;
         _executionGuard = executionGuard;
         _certificadoStore = certificadoStore;
@@ -172,6 +175,9 @@ public class ConsultaService : IConsultaService
             Competencia = a.Competencia
         }).ToList();
 
+        // Enriquecer descrições vazias com dados da tabela de serviços
+        await EnriquecerDescricoesAsync(responseItems);
+
         return Result.Ok(PaginatedResponse<AliquotaResponse>.Create(
             responseItems,
             queryParams.Pagina,
@@ -204,7 +210,7 @@ public class ConsultaService : IConsultaService
                 new NotFoundError($"Alíquota não encontrada para município '{codigoIbge}' e serviço '{codigoServico}'"));
         }
 
-        return Result.Ok(new AliquotaDetalheResponse
+        var detalheResponse = new AliquotaDetalheResponse
         {
             CodigoMunicipio = aliquota.CodigoMunicipio,
             NomeMunicipio = aliquota.NomeMunicipio,
@@ -214,7 +220,20 @@ public class ConsultaService : IConsultaService
             Aliquota = aliquota.ValorAliquota,
             Competencia = aliquota.Competencia,
             ColetadoEm = aliquota.ColetadoEm
-        });
+        };
+
+        // Enriquecer descrição vazia com dados da tabela de serviços
+        if (string.IsNullOrWhiteSpace(detalheResponse.DescricaoServico))
+        {
+            var codigoComPontos = CodigoServicoNormalizer.Formatar(aliquota.CodigoServico);
+            var servico = await _servicoRepository.GetByCodigoAsync(codigoComPontos);
+            if (servico is not null)
+            {
+                detalheResponse.DescricaoServico = servico.Descricao;
+            }
+        }
+
+        return Result.Ok(detalheResponse);
     }
 
     private async Task<IReadOnlyList<MunicipioResponse>> ObterMunicipiosComAliquotaAsync(string uf)
@@ -276,5 +295,31 @@ public class ConsultaService : IConsultaService
         });
 
         return true;
+    }
+
+    private async Task EnriquecerDescricoesAsync(List<AliquotaResponse> items)
+    {
+        var itensVazios = items.Where(i => string.IsNullOrWhiteSpace(i.DescricaoServico)).ToList();
+        if (itensVazios.Count == 0)
+        {
+            return;
+        }
+
+        var codigosComPontos = itensVazios
+            .Select(i => CodigoServicoNormalizer.Formatar(i.CodigoServico))
+            .Where(c => !string.IsNullOrEmpty(c))
+            .Distinct()
+            .ToList();
+
+        var descricoes = await _servicoRepository.ObterDescricoesPorCodigosAsync(codigosComPontos);
+
+        foreach (var item in itensVazios)
+        {
+            var codigoComPontos = CodigoServicoNormalizer.Formatar(item.CodigoServico);
+            if (descricoes.TryGetValue(codigoComPontos, out var descricao))
+            {
+                item.DescricaoServico = descricao;
+            }
+        }
     }
 }

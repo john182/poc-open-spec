@@ -6,7 +6,7 @@
     <div class="filtros-grid">
       <div class="filtro-campo">
         <label for="codigoServico">Código de serviço</label>
-        <input pInputText id="codigoServico" placeholder="Ex: 01.01"
+        <p-inputMask id="codigoServico" mask="99.99.99" placeholder="__.__.__" [autoClear]="false"
                [ngModel]="filtroCodigoServico()" (ngModelChange)="filtroCodigoServico.set($event)" />
       </div>
       <div class="filtro-campo">
@@ -72,9 +72,11 @@
       <ng-template pTemplate="body" let-aliquota>
         <tr [attr.data-cy]="'aliquota-' + aliquota.codigoServico">
           <td>{{ aliquota.codigoServicoFormatado }}</td>
-          <td>{{ aliquota.descricaoServico }}</td>
+          <td class="descricao-celula" [pTooltip]="aliquota.descricaoServico" tooltipPosition="top">
+            {{ aliquota.descricaoServico }}
+          </td>
           <td>{{ aliquota.aliquota | number:'1.2-2' }}</td>
-          <td>{{ aliquota.competencia }}</td>
+          <td>{{ aliquota.competencia | date:'MM/yyyy' }}</td>
           <td>
             <p-button icon="pi pi-eye" [rounded]="true" [text]="true"
                       data-cy="btn-detalhe" (onClick)="verDetalhe(aliquota)" />
@@ -110,11 +112,11 @@
       </div>
       <div class="detalhe-campo">
         <span class="detalhe-label">Competência</span>
-        <span class="detalhe-valor">{{ detalhe()!.competencia }}</span>
+        <span class="detalhe-valor">{{ detalhe()!.competencia | date:'MM/yyyy' }}</span>
       </div>
       <div class="detalhe-campo">
         <span class="detalhe-label">Coletado em</span>
-        <span class="detalhe-valor">{{ detalhe()!.coletadoEm }}</span>
+        <span class="detalhe-valor">{{ detalhe()!.coletadoEm | date:'dd/MM/yyyy HH:mm' }}</span>
       </div>
     </div>
   }

@@ -6,6 +6,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { MessageModule } from 'primeng/message';
 import { AuthService } from '../../../core/auth/auth.service';
+import { LayoutService } from '../../../layout/services/layout.service';
 
 @Component({
   selector: 'app-signup',
@@ -19,6 +20,8 @@ export class SignupComponent {
   private readonly _fb = inject(FormBuilder);
   private readonly _authService = inject(AuthService);
   private readonly _router = inject(Router);
+  // Injeta LayoutService para garantir que o tema salvo no localStorage seja aplicado
+  private readonly _layoutService = inject(LayoutService);
 
   readonly loading = signal(false);
   readonly errorMessage = signal('');

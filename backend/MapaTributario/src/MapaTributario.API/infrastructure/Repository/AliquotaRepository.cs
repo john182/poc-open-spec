@@ -58,7 +58,16 @@ public class AliquotaRepository : IAliquotaRepository
 
         if (!string.IsNullOrWhiteSpace(competencia))
         {
-            filter &= filterBuilder.Eq(a => a.Competencia, competencia);
+            // Suporte a filtro parcial (yyyy-MM) e completo (yyyy-MM-dd)
+            if (competencia.Length == 7)
+            {
+                var escapedCompetencia = Regex.Escape(competencia);
+                filter &= filterBuilder.Regex(a => a.Competencia, new MongoDB.Bson.BsonRegularExpression($"^{escapedCompetencia}"));
+            }
+            else
+            {
+                filter &= filterBuilder.Eq(a => a.Competencia, competencia);
+            }
         }
 
         var total = await _aliquotas.CountDocumentsAsync(filter);

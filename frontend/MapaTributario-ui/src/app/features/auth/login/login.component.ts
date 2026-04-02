@@ -7,6 +7,7 @@ import { PasswordModule } from 'primeng/password';
 import { CheckboxModule } from 'primeng/checkbox';
 import { MessageModule } from 'primeng/message';
 import { AuthService } from '../../../core/auth/auth.service';
+import { LayoutService } from '../../../layout/services/layout.service';
 
 @Component({
   selector: 'app-login',
@@ -20,6 +21,8 @@ export class LoginComponent {
   private readonly _fb = inject(FormBuilder);
   private readonly _authService = inject(AuthService);
   private readonly _router = inject(Router);
+  // Injeta LayoutService para garantir que o tema salvo no localStorage seja aplicado
+  private readonly _layoutService = inject(LayoutService);
 
   readonly loading = signal(false);
   readonly errorMessage = signal('');

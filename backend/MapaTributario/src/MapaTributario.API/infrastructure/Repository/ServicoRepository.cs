@@ -28,6 +28,19 @@ public class ServicoRepository : IServicoRepository
             .FirstOrDefaultAsync();
     }
 
+    public async Task<IReadOnlyDictionary<string, string>> ObterDescricoesPorCodigosAsync(IEnumerable<string> codigosTribNac)
+    {
+        var codigos = codigosTribNac.ToList();
+        if (codigos.Count == 0)
+        {
+            return new Dictionary<string, string>();
+        }
+
+        var filter = Builders<Servico>.Filter.In(s => s.CodigoTribNac, codigos);
+        var servicos = await _servicos.Find(filter).ToListAsync();
+        return servicos.ToDictionary(s => s.CodigoTribNac, s => s.Descricao);
+    }
+
     public async Task<long> CountAsync()
     {
         return await _servicos.CountDocumentsAsync(FilterDefinition<Servico>.Empty);

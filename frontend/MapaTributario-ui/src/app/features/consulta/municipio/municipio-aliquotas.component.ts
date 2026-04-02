@@ -1,13 +1,15 @@
 import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, DatePipe } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { InputMaskModule } from 'primeng/inputmask';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { DatePickerModule } from 'primeng/datepicker';
+import { TooltipModule } from 'primeng/tooltip';
 import { MenuItem } from 'primeng/api';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
@@ -20,8 +22,8 @@ import { Aliquota, AliquotaDetalhe, FiltroAliquota } from '../models/consulta.mo
   selector: 'app-municipio-aliquotas',
   standalone: true,
   imports: [
-    FormsModule, DecimalPipe, TableModule, InputTextModule, InputNumberModule,
-    ButtonModule, DialogModule, DatePickerModule, PageHeaderComponent,
+    FormsModule, DecimalPipe, DatePipe, TableModule, InputTextModule, InputNumberModule, InputMaskModule,
+    ButtonModule, DialogModule, DatePickerModule, TooltipModule, PageHeaderComponent,
     LoadingSpinnerComponent, EmptyStateComponent, ErrorStateComponent,
   ],
   templateUrl: './municipio-aliquotas.component.html',
@@ -87,10 +89,12 @@ export class MunicipioAliquotasComponent implements OnInit {
       const mes = String(competenciaDate.getMonth() + 1).padStart(2, '0');
       competenciaStr = `${ano}-${mes}`;
     }
+    // Limpar placeholders da máscara do código de serviço (remove _ e pontos soltos)
+    const codigoServicoRaw = this.filtroCodigoServico()?.replace(/_/g, '').replace(/\.+$/, '') || '';
     this.filtro.set({
       pagina: 1,
       tamanhoPagina: 20,
-      codigoServico: this.filtroCodigoServico() || undefined,
+      codigoServico: codigoServicoRaw || undefined,
       descricao: this.filtroDescricao() || undefined,
       aliquotaMin: this.filtroAliquotaMin() ?? undefined,
       aliquotaMax: this.filtroAliquotaMax() ?? undefined,

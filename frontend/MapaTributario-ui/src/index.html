@@ -8,6 +8,14 @@
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>
+  <script>
+    // Aplicar tema escuro antes do Angular inicializar para evitar flash de tema claro
+    try {
+      if (localStorage.getItem('darkTheme') === 'true') {
+        document.documentElement.classList.add('app-dark');
+      }
+    } catch (e) { /* localStorage indisponível (SSR/private) */ }
+  </script>
   <app-root></app-root>
 </body>
 </html>

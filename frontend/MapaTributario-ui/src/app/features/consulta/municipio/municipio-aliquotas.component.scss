@@ -57,3 +57,10 @@
   font-size: 1rem;
   color: var(--text-color);
 }
+
+.descricao-celula {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -17,6 +17,7 @@ public class ConsultaServiceTests
     private readonly Mock<IEstadoRepository> _estadoRepository = new();
     private readonly Mock<IMunicipioRepository> _municipioRepository = new();
     private readonly Mock<IAliquotaRepository> _aliquotaRepository = new();
+    private readonly Mock<IServicoRepository> _servicoRepository = new();
     private readonly Mock<IExecucaoCrawlerRepository> _execucaoCrawlerRepository = new();
     private readonly Mock<ICrawlerExecutionGuard> _executionGuard = new();
     private readonly Mock<ICertificadoStore> _certificadoStore = new();
@@ -39,6 +40,12 @@ public class ConsultaServiceTests
         // Setup padrão: certificado disponível
         _certificadoStore.Setup(s => s.HasCertificate()).Returns(true);
 
+        // Setup padrão: serviço repository retorna dicionário vazio (sem enriquecimento)
+        _servicoRepository.Setup(r => r.ObterDescricoesPorCodigosAsync(It.IsAny<IEnumerable<string>>()))
+            .ReturnsAsync(new Dictionary<string, string>() as IReadOnlyDictionary<string, string>);
+        _servicoRepository.Setup(r => r.GetByCodigoAsync(It.IsAny<string>()))
+            .ReturnsAsync((Servico?)null);
+
         // Setup scope factory para fire-and-forget (não será realmente executado nos testes unitários)
         var mockScope = new Mock<IServiceScope>();
         var mockServiceProvider = new Mock<IServiceProvider>();
@@ -52,6 +59,7 @@ public class ConsultaServiceTests
             _estadoRepository.Object,
             _municipioRepository.Object,
             _aliquotaRepository.Object,
+            _servicoRepository.Object,
             _execucaoCrawlerRepository.Object,
             _executionGuard.Object,
             _certificadoStore.Object,

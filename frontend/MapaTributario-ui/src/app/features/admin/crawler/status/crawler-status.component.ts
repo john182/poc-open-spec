@@ -50,6 +50,7 @@ export class CrawlerStatusComponent implements OnInit, OnDestroy {
 
   readonly opcoesUf = SIGLAS_UF.map(uf => ({ label: uf, value: uf }));
   readonly executando = signal(false);
+  readonly executandoCapitais = signal(false);
   readonly mensagemExecucao = signal('');
   readonly erroExecucao = signal('');
   readonly forcarReprocessamento = signal(false);
@@ -96,6 +97,28 @@ export class CrawlerStatusComponent implements OnInit, OnDestroy {
         const msg = err.error?.erro ?? 'Erro ao iniciar execução do crawler.';
         this.erroExecucao.set(msg);
         this.executando.set(false);
+      },
+    });
+  }
+
+  executarCapitaisPrimeiro(): void {
+    this.executandoCapitais.set(true);
+    this.mensagemExecucao.set('');
+    this.erroExecucao.set('');
+
+    this._crawlerService.executar({
+      forcarReprocessamento: this.forcarReprocessamento(),
+      capitaisPrimeiro: true,
+    }).subscribe({
+      next: (resposta) => {
+        this.mensagemExecucao.set(resposta.mensagem);
+        this.executandoCapitais.set(false);
+        this._carregarStatus();
+      },
+      error: (err) => {
+        const msg = err.error?.erro ?? 'Erro ao iniciar execução do crawler.';
+        this.erroExecucao.set(msg);
+        this.executandoCapitais.set(false);
       },
     });
   }

@@ -26,6 +26,12 @@ export interface ProgressoUf {
 export interface ExecutarCrawlerRequest {
   forcarReprocessamento: boolean;
   ufs?: string[];
+  /**
+   * Quando true, executa em duas fases:
+   * 1ª fase — somente capitais estaduais (EhCapital = true)
+   * 2ª fase — demais municípios (EhCapital = false)
+   */
+  capitaisPrimeiro?: boolean;
 }
 
 export interface ExecutarCrawlerResponse {

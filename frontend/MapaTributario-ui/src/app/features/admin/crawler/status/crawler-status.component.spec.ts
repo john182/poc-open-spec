@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/angular';
+import { render, screen, waitFor, fireEvent } from '@testing-library/angular';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
@@ -163,5 +163,80 @@ describe('CrawlerStatusComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance['_intervalPolling']).toBeNull();
+  });
+
+  it('Given_StatusCarregado_Should_ExibirBotaoExecutarCapitaisPrimeiro', async () => {
+    // Arrange
+    const { container, httpTesting, fixture } = await setup();
+    httpTesting.expectOne('/api/v1/crawler/status').flush(statusMock);
+    fixture.detectChanges();
+
+    // Act — nenhuma ação necessária, apenas verificar presença
+
+    // Assert
+    await waitFor(() => {
+      expect(container.querySelector('[data-cy="btn-executar-capitais"]')).toBeTruthy();
+    });
+  });
+
+  it('Given_CliqueBotaoCapitais_Should_EnviarCapitaisPrimeiroTrueEExibirMensagemSucesso', async () => {
+    // Arrange
+    const { container, httpTesting, fixture } = await setup();
+    httpTesting.expectOne('/api/v1/crawler/status').flush(statusMock);
+    fixture.detectChanges();
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-cy="btn-executar-capitais"] button')).toBeTruthy();
+    });
+
+    const botaoCapitais = container.querySelector('[data-cy="btn-executar-capitais"] button') as HTMLButtonElement;
+
+    // Act
+    fireEvent.click(botaoCapitais);
+
+    // Assert — verificar requisição POST com body correto
+    const reqExecutar = httpTesting.expectOne('/api/v1/crawler/executar');
+    expect(reqExecutar.request.method).toBe('POST');
+    expect(reqExecutar.request.body).toEqual({
+      forcarReprocessamento: false,
+      capitaisPrimeiro: true,
+    });
+    reqExecutar.flush({ mensagem: 'Crawler iniciado' });
+
+    // Após sucesso, o componente chama _carregarStatus() novamente
+    httpTesting.expectOne('/api/v1/crawler/status').flush(statusMock);
+    fixture.detectChanges();
+
+    await waitFor(() => {
+      expect(screen.getByText('Crawler iniciado')).toBeTruthy();
+    });
+  });
+
+  it('Given_FalhaAoExecutarCapitais_Should_ExibirMensagemDeErro', async () => {
+    // Arrange
+    const { container, httpTesting, fixture } = await setup();
+    httpTesting.expectOne('/api/v1/crawler/status').flush(statusMock);
+    fixture.detectChanges();
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-cy="btn-executar-capitais"] button')).toBeTruthy();
+    });
+
+    const botaoCapitais = container.querySelector('[data-cy="btn-executar-capitais"] button') as HTMLButtonElement;
+
+    // Act
+    fireEvent.click(botaoCapitais);
+
+    // Assert — simular erro na requisição POST
+    const reqExecutar = httpTesting.expectOne('/api/v1/crawler/executar');
+    reqExecutar.flush(
+      { erro: 'Falha interna no servidor' },
+      { status: 500, statusText: 'Internal Server Error' },
+    );
+    fixture.detectChanges();
+
+    await waitFor(() => {
+      expect(screen.getByText('Falha interna no servidor')).toBeTruthy();
+    });
   });
 });

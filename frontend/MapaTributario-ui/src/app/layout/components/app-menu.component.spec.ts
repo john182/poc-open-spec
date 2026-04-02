@@ -4,7 +4,6 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { PLATFORM_ID } from '@angular/core';
 import { AppMenuComponent } from './app-menu.component';
-import { RoleService } from '../../core/auth/role.service';
 import { AuthService } from '../../core/auth/auth.service';
 
 function criarTokenJwt(payload: Record<string, unknown>): string {

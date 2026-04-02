@@ -88,7 +88,7 @@ describe('jwtInterceptor', () => {
     localStorage.setItem('refreshToken', 'invalid-refresh');
     const logoutSpy = vi.spyOn(authService, 'logout');
 
-    http.get('/api/v1/estados').subscribe({ error: () => {} });
+    http.get('/api/v1/estados').subscribe({ error: () => { /* esperado */ } });
 
     httpTesting.expectOne('/api/v1/estados').flush(null, { status: 401, statusText: 'Unauthorized' });
     httpTesting.expectOne('/api/v1/auth/refresh').flush(null, { status: 401, statusText: 'Unauthorized' });

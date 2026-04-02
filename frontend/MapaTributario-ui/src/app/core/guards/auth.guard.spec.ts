@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Router, UrlTree } from '@angular/router';
+import { UrlTree } from '@angular/router';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -9,8 +9,6 @@ import { AuthService } from '../auth/auth.service';
 
 describe('authGuard', () => {
   let authService: AuthService;
-  let router: Router;
-
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({
@@ -25,7 +23,6 @@ describe('authGuard', () => {
       ],
     });
     authService = TestBed.inject(AuthService);
-    router = TestBed.inject(Router);
   });
 
   afterEach(() => localStorage.clear());

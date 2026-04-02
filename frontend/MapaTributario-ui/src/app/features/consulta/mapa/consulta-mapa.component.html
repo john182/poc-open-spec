@@ -15,7 +15,10 @@
       @for (estado of estados(); track estado.sigla) {
         <a class="estado-link"
            [attr.data-cy]="'estado-' + estado.sigla"
-           (click)="onEstadoSelecionado(estado.sigla)">
+           role="link"
+           tabindex="0"
+           (click)="onEstadoSelecionado(estado.sigla)"
+           (keydown.enter)="onEstadoSelecionado(estado.sigla)">
           <span class="estado-sigla">{{ estado.sigla }}</span>
           <span class="estado-nome">{{ estado.nome }}</span>
         </a>

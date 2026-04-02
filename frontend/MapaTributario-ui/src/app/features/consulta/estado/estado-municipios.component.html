@@ -54,7 +54,10 @@
         @for (municipio of municipiosFiltrados(); track municipio.codigoIbge) {
           <a class="municipio-card"
              [attr.data-cy]="'municipio-' + municipio.codigoIbge"
-             (click)="onMunicipioClick(municipio.codigoIbge)">
+             role="link"
+             tabindex="0"
+             (click)="onMunicipioClick(municipio.codigoIbge)"
+             (keydown.enter)="onMunicipioClick(municipio.codigoIbge)">
             <span class="municipio-nome">{{ municipio.nome }}</span>
             <span class="municipio-codigo">{{ municipio.codigoIbge }}</span>
           </a>

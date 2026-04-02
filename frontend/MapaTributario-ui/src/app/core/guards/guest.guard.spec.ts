@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { PLATFORM_ID } from '@angular/core';
 import { guestGuard } from './guest.guard';
 import { AuthService } from '../auth/auth.service';
@@ -38,7 +38,6 @@ describe('guestGuard', () => {
   it('deve redirecionar para / quando autenticado', () => {
     const result = setup(true);
     expect(result).toBeInstanceOf(UrlTree);
-    const router = TestBed.inject(Router);
     expect((result as UrlTree).toString()).toBe('/');
   });
 

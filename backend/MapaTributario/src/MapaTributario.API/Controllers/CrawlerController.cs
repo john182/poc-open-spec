@@ -225,8 +225,9 @@ public class CrawlerController : ControllerBase
                 kvp => new ProgressoUfResponse
                 {
                     Uf = kvp.Value.Uf,
-                    Status = kvp.Value.Status,
+                    Status = kvp.Value.Status.ToString(),
                     MunicipiosEncontrados = kvp.Value.MunicipiosEncontrados,
+                    MunicipiosAtivos = kvp.Value.MunicipiosAtivos,
                     Inicio = kvp.Value.Inicio,
                     Fim = kvp.Value.Fim
                 })

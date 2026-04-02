@@ -81,28 +81,63 @@ public class ExecucaoCrawler
             ProgressoUfs[UfAtual] = new ProgressoUf
             {
                 Uf = UfAtual,
-                Status = "EmAndamento",
+                Status = StatusProgressoUf.EmAndamento,
                 Inicio = DateTime.UtcNow
             };
         }
         else
         {
-            ProgressoUfs[UfAtual].Status = "EmAndamento";
+            ProgressoUfs[UfAtual].Status = StatusProgressoUf.EmAndamento;
             ProgressoUfs[UfAtual].Inicio = DateTime.UtcNow;
         }
     }
 
-    public void FinalizarProcessamentoUf(string uf, int municipiosEncontrados)
+    public void FinalizarProcessamentoUf(string uf, int municipiosEncontrados, int municipiosAtivos)
     {
         string ufNormalizada = uf.ToUpperInvariant();
         if (ProgressoUfs.ContainsKey(ufNormalizada))
         {
-            ProgressoUfs[ufNormalizada].Status = "Concluido";
+            ProgressoUfs[ufNormalizada].Status = StatusProgressoUf.Concluido;
             ProgressoUfs[ufNormalizada].MunicipiosEncontrados = municipiosEncontrados;
+            ProgressoUfs[ufNormalizada].MunicipiosAtivos = municipiosAtivos;
             ProgressoUfs[ufNormalizada].Fim = DateTime.UtcNow;
         }
 
         // Limpar UfAtual se era esta UF
+        if (UfAtual == ufNormalizada)
+        {
+            UfAtual = null;
+        }
+    }
+
+    public void FalharProcessamentoUf(string uf, int municipiosEncontrados)
+    {
+        string ufNormalizada = uf.ToUpperInvariant();
+        if (ProgressoUfs.ContainsKey(ufNormalizada))
+        {
+            ProgressoUfs[ufNormalizada].Status = StatusProgressoUf.Falha;
+            ProgressoUfs[ufNormalizada].MunicipiosEncontrados = municipiosEncontrados;
+            ProgressoUfs[ufNormalizada].MunicipiosAtivos = 0;
+            ProgressoUfs[ufNormalizada].Fim = DateTime.UtcNow;
+        }
+
+        if (UfAtual == ufNormalizada)
+        {
+            UfAtual = null;
+        }
+    }
+
+    public void InterromperProcessamentoUf(string uf, int municipiosEncontrados, int municipiosAtivosAteAgora)
+    {
+        string ufNormalizada = uf.ToUpperInvariant();
+        if (ProgressoUfs.ContainsKey(ufNormalizada))
+        {
+            ProgressoUfs[ufNormalizada].Status = StatusProgressoUf.Interrompido;
+            ProgressoUfs[ufNormalizada].MunicipiosEncontrados = municipiosEncontrados;
+            ProgressoUfs[ufNormalizada].MunicipiosAtivos = municipiosAtivosAteAgora;
+            ProgressoUfs[ufNormalizada].Fim = DateTime.UtcNow;
+        }
+
         if (UfAtual == ufNormalizada)
         {
             UfAtual = null;
@@ -127,8 +162,18 @@ public enum TipoExecucao
 public class ProgressoUf
 {
     public string Uf { get; set; } = null!;
-    public string Status { get; set; } = "Pendente";
+    public StatusProgressoUf Status { get; set; } = StatusProgressoUf.Pendente;
     public int MunicipiosEncontrados { get; set; }
+    public int MunicipiosAtivos { get; set; }
     public DateTime? Inicio { get; set; }
     public DateTime? Fim { get; set; }
+}
+
+public enum StatusProgressoUf
+{
+    Pendente,
+    EmAndamento,
+    Concluido,
+    Falha,
+    Interrompido
 }

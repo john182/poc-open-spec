@@ -641,12 +641,10 @@ public class CrawlerServiceTests
         // Assert
         resultado.Count.ShouldBe(4);
 
-        // Capitais devem vir primeiro (ordenadas por UF)
+        // Dentro de cada UF, capitais vêm primeiro (MG é processado antes de SP)
         resultado[0].CodigoIbge.ShouldBe("3106200"); // BH (capital MG)
-        resultado[1].CodigoIbge.ShouldBe("3550308"); // SP (capital SP)
-
-        // Depois os demais (ordenados por UF e nome)
-        resultado[2].CodigoIbge.ShouldBe("3170206"); // Uberlândia (interior MG — MG vem antes de SP)
+        resultado[1].CodigoIbge.ShouldBe("3170206"); // Uberlândia (interior MG)
+        resultado[2].CodigoIbge.ShouldBe("3550308"); // São Paulo (capital SP)
         resultado[3].CodigoIbge.ShouldBe("3509502"); // Campinas (interior SP)
     }
 
@@ -940,6 +938,211 @@ public class CrawlerServiceTests
         // Assert — 2 aliquotas saved (01.01.01.000 and 01.01.01.001)
         execucao.Processados.ShouldBe(1);
         _aliquotaRepo.Verify(r => r.UpsertAsync(It.IsAny<Aliquota>()), Times.Exactly(2));
+    }
+
+    #endregion
+
+    #region ProgressoUf — Regression Tests (fix-progresso-uf-prematuro)
+
+    [Fact]
+    public async Task Dado_TodasChamadasConvenioFalham_ProgressoUfDeveSerFalha()
+    {
+        // Arrange — todas as chamadas GetConvenioAsync falham com HttpRequestException
+        Municipio mun1 = Municipio.Create("2800308", "Aracaju", "SE");
+        Municipio mun2 = Municipio.Create("2802106", "Itabaiana", "SE");
+
+        _municipioRepo.Setup(r => r.GetByUfAsync("SE"))
+            .ReturnsAsync(new List<Municipio> { mun1, mun2 });
+        _municipioRepo.Setup(r => r.GetByUfAsync(It.Is<string>(s => s != "SE")))
+            .ReturnsAsync(new List<Municipio>());
+
+        _nfseClient.Setup(c => c.GetConvenioAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("SSL certificate error", null, System.Net.HttpStatusCode.InternalServerError));
+
+        // Act
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        List<Municipio> resultado = await _sut.FaseConvenioAsync(execucao, new[] { "SE" }, null, CancellationToken.None);
+
+        // Assert — nenhum município ativo retornado
+        resultado.Count.ShouldBe(0);
+        execucao.ProgressoUfs.ShouldContainKey("SE");
+        execucao.ProgressoUfs["SE"].Status.ShouldBe(StatusProgressoUf.Falha);
+        execucao.ProgressoUfs["SE"].MunicipiosEncontrados.ShouldBe(2);
+        execucao.ProgressoUfs["SE"].MunicipiosAtivos.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Dado_CertificateProtectionInterrompe_UfAtualDeveSerInterrompido()
+    {
+        // Arrange — RO tem 3 municípios; halt ativa após o 1º ser verificado
+        Municipio mun1 = Municipio.Create("1100015", "Alta Floresta D'Oeste", "RO");
+        Municipio mun2 = Municipio.Create("1100205", "Porto Velho", "RO");
+        Municipio mun3 = Municipio.Create("1100379", "Vilhena", "RO");
+        Municipio munAM = Municipio.Create("1302603", "Manaus", "AM");
+
+        _municipioRepo.Setup(r => r.GetByUfAsync("RO"))
+            .ReturnsAsync(new List<Municipio> { mun1, mun2, mun3 });
+        _municipioRepo.Setup(r => r.GetByUfAsync("AM"))
+            .ReturnsAsync(new List<Municipio> { munAM });
+        _municipioRepo.Setup(r => r.GetByUfAsync(It.Is<string>(s => s != "RO" && s != "AM")))
+            .ReturnsAsync(new List<Municipio>());
+
+        // Todos os municípios retornam convênio ativo
+        int chamadas = 0;
+        _nfseClient.Setup(c => c.GetConvenioAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback(() => chamadas++)
+            .ReturnsAsync(CriarConvenioAtivo());
+
+        // ShouldHalt ativa após a 1ª chamada de convênio ser concluída
+        // O check acontece ANTES de cada município no loop, então:
+        // - mun1 (Alta Floresta): check=false (chamadas=0), processa, chamadas→1
+        // - mun2 (Porto Velho): check=true (chamadas=1) → break → interrompido
+        _certProtection.Setup(c => c.ShouldHalt).Returns(() => chamadas >= 1);
+
+        // Act
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        await _sut.FaseConvenioAsync(execucao, new[] { "RO", "AM" }, null, CancellationToken.None);
+
+        // Assert — RO deve estar "Interrompido" (halt ativou após 1º município)
+        execucao.ProgressoUfs.ShouldContainKey("RO");
+        execucao.ProgressoUfs["RO"].Status.ShouldBe(StatusProgressoUf.Interrompido);
+        execucao.ProgressoUfs["RO"].MunicipiosEncontrados.ShouldBe(3);
+        execucao.ProgressoUfs["RO"].MunicipiosAtivos.ShouldBe(1); // Apenas Alta Floresta verificada
+
+        // AM não deve ter sido iniciada (break no loop externo)
+        execucao.ProgressoUfs.ShouldNotContainKey("AM");
+    }
+
+    [Fact]
+    public async Task Dado_ZeroMunicipiosAtivos_ProgressoUfDeveRefletirContagens()
+    {
+        // Arrange — município existe no banco mas convênio retorna null (inativo)
+        Municipio mun1 = Municipio.Create("5300108", "Brasília", "DF");
+
+        _municipioRepo.Setup(r => r.GetByUfAsync("DF"))
+            .ReturnsAsync(new List<Municipio> { mun1 });
+        _municipioRepo.Setup(r => r.GetByUfAsync(It.Is<string>(s => s != "DF")))
+            .ReturnsAsync(new List<Municipio>());
+
+        _nfseClient.Setup(c => c.GetConvenioAsync("5300108", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ConvenioNfseResponse?)null);
+
+        // Act
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        List<Municipio> resultado = await _sut.FaseConvenioAsync(execucao, new[] { "DF" }, null, CancellationToken.None);
+
+        // Assert
+        resultado.Count.ShouldBe(0);
+        execucao.ProgressoUfs["DF"].Status.ShouldBe(StatusProgressoUf.Concluido);
+        execucao.ProgressoUfs["DF"].MunicipiosEncontrados.ShouldBe(1);
+        execucao.ProgressoUfs["DF"].MunicipiosAtivos.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Dado_ConvenioAtivo_ProgressoUfDeveSerConcluidoComAtivos()
+    {
+        // Arrange — 2 municípios, ambos com convênio ativo
+        Municipio mun1 = Municipio.Create("2800308", "Aracaju", "SE");
+        Municipio mun2 = Municipio.Create("2802106", "Itabaiana", "SE");
+
+        _municipioRepo.Setup(r => r.GetByUfAsync("SE"))
+            .ReturnsAsync(new List<Municipio> { mun1, mun2 });
+        _municipioRepo.Setup(r => r.GetByUfAsync(It.Is<string>(s => s != "SE")))
+            .ReturnsAsync(new List<Municipio>());
+
+        _nfseClient.Setup(c => c.GetConvenioAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CriarConvenioAtivo());
+
+        // Act
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        List<Municipio> resultado = await _sut.FaseConvenioAsync(execucao, new[] { "SE" }, null, CancellationToken.None);
+
+        // Assert
+        resultado.Count.ShouldBe(2);
+        execucao.ProgressoUfs["SE"].Status.ShouldBe(StatusProgressoUf.Concluido);
+        execucao.ProgressoUfs["SE"].MunicipiosEncontrados.ShouldBe(2);
+        execucao.ProgressoUfs["SE"].MunicipiosAtivos.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task Dado_FalhasParciais_ProgressoUfDeveRefletirAtivos()
+    {
+        // Arrange — 3 municípios: 1 ativo, 1 inativo (null), 1 falha (exception)
+        Municipio mun1 = Municipio.Create("2800308", "Aracaju", "SE");
+        Municipio mun2 = Municipio.Create("2802106", "Itabaiana", "SE");
+        Municipio mun3 = Municipio.Create("2803500", "Lagarto", "SE");
+
+        _municipioRepo.Setup(r => r.GetByUfAsync("SE"))
+            .ReturnsAsync(new List<Municipio> { mun1, mun2, mun3 });
+        _municipioRepo.Setup(r => r.GetByUfAsync(It.Is<string>(s => s != "SE")))
+            .ReturnsAsync(new List<Municipio>());
+
+        // mun1: convênio ativo
+        _nfseClient.Setup(c => c.GetConvenioAsync("2800308", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CriarConvenioAtivo());
+        // mun2: sem convênio
+        _nfseClient.Setup(c => c.GetConvenioAsync("2802106", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ConvenioNfseResponse?)null);
+        // mun3: erro HTTP
+        _nfseClient.Setup(c => c.GetConvenioAsync("2803500", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("Timeout", null, System.Net.HttpStatusCode.RequestTimeout));
+
+        // Act
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        List<Municipio> resultado = await _sut.FaseConvenioAsync(execucao, new[] { "SE" }, null, CancellationToken.None);
+
+        // Assert — apenas Aracaju é ativo
+        resultado.Count.ShouldBe(1);
+        resultado[0].CodigoIbge.ShouldBe("2800308");
+        execucao.ProgressoUfs["SE"].Status.ShouldBe(StatusProgressoUf.Concluido); // Não é "Falha" porque nem todos falharam
+        execucao.ProgressoUfs["SE"].MunicipiosEncontrados.ShouldBe(3);
+        execucao.ProgressoUfs["SE"].MunicipiosAtivos.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Dado_InterrupcaoNoMeio_UfsNaoIniciadasDevemFicarPendente()
+    {
+        // Arrange — 3 UFs: AC, AL, AM. Halt ativa após processar AC (1 município).
+        // AL inicia mas é interrompida imediatamente, AM nunca é iniciada.
+        Municipio munAC = Municipio.Create("1200401", "Rio Branco", "AC");
+        Municipio munAL1 = Municipio.Create("2700102", "Água Branca", "AL");
+        Municipio munAL2 = Municipio.Create("2704302", "Maceió", "AL");
+        Municipio munAM = Municipio.Create("1302603", "Manaus", "AM");
+
+        _municipioRepo.Setup(r => r.GetByUfAsync("AC"))
+            .ReturnsAsync(new List<Municipio> { munAC });
+        _municipioRepo.Setup(r => r.GetByUfAsync("AL"))
+            .ReturnsAsync(new List<Municipio> { munAL1, munAL2 });
+        _municipioRepo.Setup(r => r.GetByUfAsync("AM"))
+            .ReturnsAsync(new List<Municipio> { munAM });
+        _municipioRepo.Setup(r => r.GetByUfAsync(It.Is<string>(s => s != "AC" && s != "AL" && s != "AM")))
+            .ReturnsAsync(new List<Municipio>());
+
+        // Todos retornam convênio ativo
+        int chamadas = 0;
+        _nfseClient.Setup(c => c.GetConvenioAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback(() => chamadas++)
+            .ReturnsAsync(CriarConvenioAtivo());
+
+        // Halt ativa após 1ª chamada (AC processa Rio Branco, chamadas→1).
+        // AL: ao iniciar o loop de municípios, ShouldHalt já é true → break imediato → interrompida
+        _certProtection.Setup(c => c.ShouldHalt).Returns(() => chamadas >= 1);
+
+        // Act
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        await _sut.FaseConvenioAsync(execucao, new[] { "AC", "AL", "AM" }, null, CancellationToken.None);
+
+        // Assert
+        // AC: processa Rio Branco antes do halt → Concluido
+        execucao.ProgressoUfs["AC"].Status.ShouldBe(StatusProgressoUf.Concluido);
+        execucao.ProgressoUfs["AC"].MunicipiosAtivos.ShouldBe(1);
+
+        // AL: halt já ativo ao entrar no loop → interrompida sem verificar nenhum município
+        execucao.ProgressoUfs["AL"].Status.ShouldBe(StatusProgressoUf.Interrompido);
+        execucao.ProgressoUfs["AL"].MunicipiosAtivos.ShouldBe(0);
+
+        // AM: não foi iniciada — não deve existir no dicionário
+        execucao.ProgressoUfs.ShouldNotContainKey("AM");
     }
 
     #endregion

@@ -44,6 +44,7 @@ export class EstadoMunicipiosComponent implements OnInit, OnDestroy {
   readonly textoBusca = signal('');
   readonly statusProcessamento = signal<StatusProcessamentoUf | ''>('');
   readonly ultimoProcessamento = signal<string | null>(null);
+  readonly semCertificado = signal(false);
 
   readonly migalhas = computed<MenuItem[]>(() => [
     { label: 'Consulta', routerLink: '/consulta' },
@@ -58,6 +59,10 @@ export class EstadoMunicipiosComponent implements OnInit, OnDestroy {
 
   readonly statusEmProcessamento = computed(() => {
     const status = this.statusProcessamento();
+    // Sem certificado + aguardando/vencido: não há processamento real, não fazer polling
+    if (this.semCertificado() && (status === 'aguardandoProcessamento' || status === 'vencido')) {
+      return false;
+    }
     return STATUS_COM_POLLING.includes(status as StatusProcessamentoUf);
   });
 
@@ -74,6 +79,12 @@ export class EstadoMunicipiosComponent implements OnInit, OnDestroy {
 
   readonly mensagemProcessamento = computed(() => {
     const status = this.statusProcessamento();
+    const certificadoAusente = this.semCertificado();
+
+    if (certificadoAusente && (status === 'aguardandoProcessamento' || status === 'vencido')) {
+      return 'O serviço de coleta de dados está temporariamente indisponível. Tente novamente mais tarde.';
+    }
+
     switch (status) {
       case 'processamentoIniciado':
         return 'O processamento dos dados deste estado foi iniciado. Aguarde alguns instantes, os dados aparecerão automaticamente.';
@@ -121,6 +132,7 @@ export class EstadoMunicipiosComponent implements OnInit, OnDestroy {
         this.statusProcessamento.set(resposta.statusProcessamento);
         this.ultimoProcessamento.set(resposta.ultimoProcessamento);
         this.municipios.set(resposta.municipios);
+        this.semCertificado.set(resposta.semCertificado ?? false);
         this.carregando.set(false);
         this._gerenciarPolling(resposta.statusProcessamento);
       },
@@ -138,6 +150,7 @@ export class EstadoMunicipiosComponent implements OnInit, OnDestroy {
         this.statusProcessamento.set(resposta.statusProcessamento);
         this.ultimoProcessamento.set(resposta.ultimoProcessamento);
         this.municipios.set(resposta.municipios);
+        this.semCertificado.set(resposta.semCertificado ?? false);
         this._gerenciarPolling(resposta.statusProcessamento);
       },
       error: () => {
@@ -147,6 +160,11 @@ export class EstadoMunicipiosComponent implements OnInit, OnDestroy {
   }
 
   private _gerenciarPolling(status: StatusProcessamentoUf): void {
+    // Sem certificado + aguardando/vencido: não fazer polling
+    if (this.semCertificado() && (status === 'aguardandoProcessamento' || status === 'vencido')) {
+      this._pararPolling();
+      return;
+    }
     if (STATUS_COM_POLLING.includes(status)) {
       this._iniciarPolling();
     } else {

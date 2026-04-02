@@ -12,4 +12,5 @@ public class StatusCrawlerResponse
     public int Processados { get; set; }
     public int Erros { get; set; }
     public List<string> DetalhesErro { get; set; } = new();
+    public bool TemCertificado { get; set; }
 }

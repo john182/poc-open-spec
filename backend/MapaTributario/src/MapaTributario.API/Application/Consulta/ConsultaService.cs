@@ -73,6 +73,7 @@ public class ConsultaService : IConsultaService
         if (ultimaExecucao is null)
         {
             bool disparou = DispararCrawlerSeDisponivel(uf);
+            bool semCertificado = !_certificadoStore.HasCertificate();
 
             return Result.Ok(new MunicipiosUfResponse
             {
@@ -80,7 +81,8 @@ public class ConsultaService : IConsultaService
                     ? StatusProcessamentoUf.ProcessamentoIniciado
                     : StatusProcessamentoUf.AguardandoProcessamento,
                 UltimoProcessamento = null,
-                Municipios = Array.Empty<MunicipioResponse>()
+                Municipios = Array.Empty<MunicipioResponse>(),
+                SemCertificado = semCertificado
             });
         }
 
@@ -107,6 +109,7 @@ public class ConsultaService : IConsultaService
         {
             // Caso 4: Vencido -- dispara reprocessamento e retorna dados antigos
             bool disparou = DispararCrawlerSeDisponivel(uf);
+            bool semCertificado = !_certificadoStore.HasCertificate();
 
             return Result.Ok(new MunicipiosUfResponse
             {
@@ -114,7 +117,8 @@ public class ConsultaService : IConsultaService
                     ? StatusProcessamentoUf.Atualizando
                     : StatusProcessamentoUf.Vencido,
                 UltimoProcessamento = ultimaExecucao.Fim,
-                Municipios = municipios
+                Municipios = municipios,
+                SemCertificado = semCertificado
             });
         }
 

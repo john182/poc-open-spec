@@ -6,6 +6,7 @@ import { AuthService } from '../auth/auth.service';
 export const guestGuard: CanActivateFn = () => {
   const platformId = inject(PLATFORM_ID);
 
+  // No servidor, permitir — guest é a rota pública (login/signup)
   if (!isPlatformBrowser(platformId)) {
     return true;
   }

@@ -42,6 +42,7 @@ describe('EstadoMunicipiosComponent', () => {
         { codigoIbge: '3106200', nome: 'Belo Horizonte', siglaEstado: 'MG', possuiAliquotas: true },
         { codigoIbge: '3118601', nome: 'Contagem', siglaEstado: 'MG', possuiAliquotas: true },
       ],
+      semCertificado: false,
     };
     httpTesting.expectOne('/api/v1/estados/MG/municipios').flush(resposta);
     fixture.detectChanges();
@@ -59,6 +60,7 @@ describe('EstadoMunicipiosComponent', () => {
       statusProcessamento: 'processamentoIniciado',
       ultimoProcessamento: null,
       municipios: [],
+      semCertificado: false,
     };
     httpTesting.expectOne('/api/v1/estados/MG/municipios').flush(resposta);
     fixture.detectChanges();
@@ -77,6 +79,7 @@ describe('EstadoMunicipiosComponent', () => {
       statusProcessamento: 'aguardandoProcessamento',
       ultimoProcessamento: null,
       municipios: [],
+      semCertificado: false,
     };
     httpTesting.expectOne('/api/v1/estados/MG/municipios').flush(resposta);
     fixture.detectChanges();
@@ -94,6 +97,7 @@ describe('EstadoMunicipiosComponent', () => {
       statusProcessamento: 'processando',
       ultimoProcessamento: null,
       municipios: [],
+      semCertificado: false,
     };
     httpTesting.expectOne('/api/v1/estados/MG/municipios').flush(resposta);
     fixture.detectChanges();
@@ -113,6 +117,7 @@ describe('EstadoMunicipiosComponent', () => {
       municipios: [
         { codigoIbge: '3106200', nome: 'Belo Horizonte', siglaEstado: 'MG', possuiAliquotas: true },
       ],
+      semCertificado: false,
     };
     httpTesting.expectOne('/api/v1/estados/MG/municipios').flush(resposta);
     fixture.detectChanges();
@@ -132,6 +137,7 @@ describe('EstadoMunicipiosComponent', () => {
       municipios: [
         { codigoIbge: '3106200', nome: 'Belo Horizonte', siglaEstado: 'MG', possuiAliquotas: true },
       ],
+      semCertificado: false,
     };
     httpTesting.expectOne('/api/v1/estados/MG/municipios').flush(resposta);
     fixture.detectChanges();
@@ -150,6 +156,7 @@ describe('EstadoMunicipiosComponent', () => {
       municipios: [
         { codigoIbge: '3106200', nome: 'Belo Horizonte', siglaEstado: 'MG', possuiAliquotas: true },
       ],
+      semCertificado: false,
     };
     httpTesting.expectOne('/api/v1/estados/MG/municipios').flush(resposta);
     fixture.detectChanges();
@@ -177,6 +184,7 @@ describe('EstadoMunicipiosComponent', () => {
       statusProcessamento: 'processamentoIniciado',
       ultimoProcessamento: null,
       municipios: [],
+      semCertificado: false,
     };
     httpTesting.expectOne('/api/v1/estados/MG/municipios').flush(resposta);
     fixture.detectChanges();

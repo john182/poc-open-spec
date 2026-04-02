@@ -29,6 +29,7 @@ describe('CrawlerStatusComponent', () => {
     processados: 48,
     erros: 2,
     detalhesErro: [],
+    temCertificado: true,
   };
 
   it('deve exibir loading inicialmente', async () => {
@@ -47,12 +48,21 @@ describe('CrawlerStatusComponent', () => {
     });
   });
 
-  it('deve exibir empty state quando nao ha execucoes (404)', async () => {
+  it('deve exibir empty state quando nenhuma execucao encontrada', async () => {
     const { httpTesting, fixture } = await setup();
-    httpTesting.expectOne('/api/v1/crawler/status').flush(
-      { erro: 'Nenhuma execucao encontrada' },
-      { status: 404, statusText: 'Not Found' },
-    );
+    httpTesting.expectOne('/api/v1/crawler/status').flush({
+      id: '',
+      inicio: '0001-01-01T00:00:00',
+      fim: null,
+      status: 'NenhumaExecucao',
+      tipo: '',
+      totalMunicipios: 0,
+      totalServicos: 0,
+      processados: 0,
+      erros: 0,
+      detalhesErro: [],
+      temCertificado: false,
+    });
     fixture.detectChanges();
     await waitFor(() => {
       expect(screen.getByText('Nenhuma execução encontrada')).toBeTruthy();

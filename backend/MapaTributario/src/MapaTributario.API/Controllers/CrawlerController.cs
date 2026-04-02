@@ -77,7 +77,20 @@ public class CrawlerController : ControllerBase
 
         if (latest is null)
         {
-            return NotFound(new { erro = "Nenhuma execucao encontrada" });
+            return Ok(new StatusCrawlerResponse
+            {
+                Id = string.Empty,
+                Inicio = DateTime.MinValue,
+                Fim = null,
+                Status = "NenhumaExecucao",
+                Tipo = string.Empty,
+                TotalMunicipios = 0,
+                TotalServicos = 0,
+                Processados = 0,
+                Erros = 0,
+                DetalhesErro = new(),
+                TemCertificado = _certificadoStore.HasCertificate()
+            });
         }
 
         return Ok(MapToResponse(latest));
@@ -91,7 +104,7 @@ public class CrawlerController : ControllerBase
         return Ok(recentes.Select(MapToResponse).ToList());
     }
 
-    private static StatusCrawlerResponse MapToResponse(ExecucaoCrawler execucao)
+    private StatusCrawlerResponse MapToResponse(ExecucaoCrawler execucao)
     {
         return new StatusCrawlerResponse
         {
@@ -104,7 +117,8 @@ public class CrawlerController : ControllerBase
             TotalServicos = execucao.TotalServicos,
             Processados = execucao.Processados,
             Erros = execucao.Erros,
-            DetalhesErro = execucao.DetalhesErro
+            DetalhesErro = execucao.DetalhesErro,
+            TemCertificado = _certificadoStore.HasCertificate()
         };
     }
 }

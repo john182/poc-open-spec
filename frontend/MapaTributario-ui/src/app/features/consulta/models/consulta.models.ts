@@ -25,6 +25,7 @@ export interface MunicipiosUfResponse {
   statusProcessamento: StatusProcessamentoUf;
   ultimoProcessamento: string | null;
   municipios: Municipio[];
+  semCertificado: boolean;
 }
 
 export interface Aliquota {

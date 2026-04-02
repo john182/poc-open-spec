@@ -2,6 +2,24 @@
   padding: 1.5rem;
 }
 
+.aviso-certificado {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--orange-400);
+  border-radius: var(--border-radius);
+  background-color: var(--orange-50);
+  color: var(--orange-900);
+  font-size: 0.875rem;
+
+  .pi {
+    color: var(--orange-500);
+    font-size: 1.25rem;
+  }
+}
+
 .secao {
   margin-bottom: 2rem;
 

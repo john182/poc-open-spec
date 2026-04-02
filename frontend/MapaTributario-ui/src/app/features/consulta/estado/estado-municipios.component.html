@@ -11,6 +11,11 @@
       <p class="status-mensagem">{{ mensagemProcessamento() }}</p>
       <p class="status-dica">A página será atualizada automaticamente.</p>
     </div>
+  } @else if (semCertificado() && (statusProcessamento() === 'aguardandoProcessamento') && municipios().length === 0) {
+    <div class="status-processamento status-sem-certificado" data-cy="status-sem-certificado">
+      <i class="pi pi-exclamation-triangle"></i>
+      <p class="status-mensagem">{{ mensagemProcessamento() }}</p>
+    </div>
   } @else {
     @if (exibindoDadosVencidos()) {
       <div class="aviso-vencido" data-cy="aviso-vencido">

@@ -9,6 +9,7 @@ export interface StatusCrawler {
   processados: number;
   erros: number;
   detalhesErro: string[];
+  temCertificado: boolean;
 }
 
 export interface ExecutarCrawlerRequest {

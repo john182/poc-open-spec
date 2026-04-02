@@ -6,10 +6,18 @@
   } @else if (erro()) {
     <app-error-state [mensagem]="erro()" (tentarNovamente)="tentarNovamente()" />
   } @else {
+    <!-- Aviso de certificado -->
+    @if (statusAtual() && !statusAtual()!.temCertificado) {
+      <div class="aviso-certificado" data-cy="aviso-certificado">
+        <i class="pi pi-exclamation-triangle"></i>
+        <span>Nenhum certificado digital configurado. O crawler não conseguirá processar dados. Faça o upload na seção <strong>Certificado</strong>.</span>
+      </div>
+    }
+
     <!-- Última execução -->
     <div class="secao" data-cy="ultima-execucao">
       <h3>Última execução</h3>
-      @if (statusAtual()) {
+      @if (statusAtual() && statusAtual()!.status !== 'NenhumaExecucao') {
         <div class="metricas-grid">
           <div class="metrica-card">
             <span class="metrica-label">Status</span>

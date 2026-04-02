@@ -78,10 +78,10 @@ export class CrawlerStatusComponent implements OnInit {
   obterSeveridadeStatus(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
     switch (status?.toLowerCase()) {
       case 'concluido': return 'success';
-      case 'executando': return 'info';
-      case 'erro':
+      case 'emandamento': return 'info';
+      case 'falhaparcial': return 'warn';
       case 'falha': return 'danger';
-      case 'cancelado': return 'warn';
+      case 'nenhumaexecucao': return 'secondary';
       default: return 'secondary';
     }
   }
@@ -91,17 +91,17 @@ export class CrawlerStatusComponent implements OnInit {
     this.erro.set('');
     this._crawlerService.obterStatus().subscribe({
       next: (status) => {
-        this.statusAtual.set(status);
+        // NenhumaExecucao agora vem como 200 com status "NenhumaExecucao"
+        if (status.status === 'NenhumaExecucao') {
+          this.statusAtual.set(status);
+        } else {
+          this.statusAtual.set(status);
+        }
         this.carregando.set(false);
       },
-      error: (err) => {
-        if (err.status === 404) {
-          this.statusAtual.set(null);
-          this.carregando.set(false);
-        } else {
-          this.erro.set('Erro ao carregar status do crawler.');
-          this.carregando.set(false);
-        }
+      error: () => {
+        this.erro.set('Erro ao carregar status do crawler.');
+        this.carregando.set(false);
       },
     });
   }

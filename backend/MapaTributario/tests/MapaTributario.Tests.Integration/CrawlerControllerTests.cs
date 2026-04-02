@@ -110,7 +110,7 @@ public class CrawlerControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Status_SemExecucao_Retorna404Ou200()
+    public async Task Status_SemExecucao_Retorna200ComStatusNeutro()
     {
         using var authClient = Factory.CreateClient();
         var token = await GetAdminTokenAsync();
@@ -118,8 +118,10 @@ public class CrawlerControllerTests : IntegrationTestBase
 
         var response = await authClient.GetAsync("/api/v1/crawler/status");
 
-        // May be 200 if an execution was created by another test, or 404 if none
-        (response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.NotFound).ShouldBeTrue();
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<StatusCrawlerResponse>();
+        body.ShouldNotBeNull();
+        body.Status.ShouldBe("NenhumaExecucao");
     }
 
     [Fact]

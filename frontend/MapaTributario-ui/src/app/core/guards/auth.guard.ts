@@ -5,14 +5,14 @@ import { AuthService } from '../auth/auth.service';
 
 export const authGuard: CanActivateFn = () => {
   const platformId = inject(PLATFORM_ID);
+  const router = inject(Router);
 
-  // On the server, allow through — client will re-evaluate after hydration
+  // No servidor, redirecionar para login — sem acesso a storage não há como validar token
   if (!isPlatformBrowser(platformId)) {
-    return true;
+    return router.createUrlTree(['/auth/login']);
   }
 
   const authService = inject(AuthService);
-  const router = inject(Router);
 
   if (authService.isAuthenticated()) {
     return true;

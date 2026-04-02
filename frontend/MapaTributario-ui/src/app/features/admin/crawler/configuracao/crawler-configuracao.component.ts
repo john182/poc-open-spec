@@ -1,6 +1,5 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -20,7 +19,7 @@ import { ConfiguracaoCrawler, AtualizarConfiguracaoCrawlerRequest } from '../mod
   selector: 'app-crawler-configuracao',
   standalone: true,
   imports: [
-    FormsModule, RouterModule, DatePipe, ButtonModule, InputTextModule, InputNumberModule,
+    FormsModule, DatePipe, ButtonModule, InputTextModule, InputNumberModule,
     CheckboxModule, TooltipModule, DividerModule, TextareaModule,
     PageHeaderComponent, LoadingSpinnerComponent, ErrorStateComponent,
   ],

@@ -158,13 +158,4 @@ describe('CrawlerConfiguracaoComponent', () => {
       expect(fixture.componentInstance.maxTentativas()).toBe(3);
     });
   });
-
-  it('deve exibir botao de executar crawler com link para status', async () => {
-    const { container, httpTesting, fixture } = await setup();
-    httpTesting.expectOne('/api/v1/crawler/configuracao').flush(configuracaoMock);
-    fixture.detectChanges();
-    await waitFor(() => {
-      expect(container.querySelector('[data-cy="btn-ir-executar"]')).toBeTruthy();
-    });
-  });
 });

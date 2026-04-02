@@ -101,7 +101,7 @@ describe('CrawlerStatusComponent', () => {
       status: 'EmAndamento',
       fim: null,
       ufAtual: 'MG',
-      ufsProcessadas: ['SP', 'RJ'],
+      ufsProcessadas: ['SP', 'RJ', 'MG'],
       progressoUfs: {
         SP: { uf: 'SP', status: 'Concluido', municipiosEncontrados: 645, inicio: '2026-03-01T10:00:00Z', fim: '2026-03-01T10:30:00Z' },
         RJ: { uf: 'RJ', status: 'Concluido', municipiosEncontrados: 92, inicio: '2026-03-01T10:30:00Z', fim: '2026-03-01T10:45:00Z' },
@@ -114,6 +114,28 @@ describe('CrawlerStatusComponent', () => {
       expect(container.querySelector('[data-cy="progresso-uf-SP"]')).toBeTruthy();
       expect(container.querySelector('[data-cy="progresso-uf-RJ"]')).toBeTruthy();
       expect(container.querySelector('[data-cy="progresso-uf-MG"]')).toBeTruthy();
+      // UFs concluídas (tags verdes) devem ser apenas SP e RJ (status Concluido no progressoUfs)
+      expect(fixture.componentInstance.ufsConcluidasLista()).toEqual(['SP', 'RJ']);
+    });
+  });
+
+  it('nao deve exibir tags verdes para UFs com status EmAndamento', async () => {
+    const { container, httpTesting, fixture } = await setup();
+    httpTesting.expectOne('/api/v1/crawler/status').flush({
+      ...statusMock,
+      status: 'EmAndamento',
+      fim: null,
+      ufAtual: 'SP',
+      ufsProcessadas: ['SP'],
+      progressoUfs: {
+        SP: { uf: 'SP', status: 'EmAndamento', municipiosEncontrados: 100, inicio: '2026-03-01T10:00:00Z', fim: null },
+      },
+    });
+    fixture.detectChanges();
+    await waitFor(() => {
+      expect(container.querySelector('[data-cy="progresso-ufs"]')).toBeTruthy();
+      // Nenhuma UF concluída — não deve exibir tags verdes
+      expect(fixture.componentInstance.ufsConcluidasLista()).toEqual([]);
     });
   });
 

@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
@@ -56,6 +56,12 @@ export class CrawlerStatusComponent implements OnInit, OnDestroy {
   readonly filtroUfs = signal<string[]>([]);
 
   readonly listaProgressoUfs = signal<ProgressoUf[]>([]);
+
+  readonly ufsConcluidasLista = computed(() => {
+    return this.listaProgressoUfs()
+      .filter(p => p.status === 'Concluido')
+      .map(p => p.uf);
+  });
 
   ngOnInit(): void {
     this._carregarStatus();

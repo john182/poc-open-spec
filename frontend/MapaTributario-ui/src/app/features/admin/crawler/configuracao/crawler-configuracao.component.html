@@ -332,12 +332,6 @@
                 data-cy="btn-restaurar-padrao"
                 [disabled]="salvando()"
                 (onClick)="restaurarPadrao()" />
-      <p-button label="Executar Crawler"
-                icon="pi pi-play"
-                severity="info"
-                [outlined]="true"
-                data-cy="btn-ir-executar"
-                routerLink="/admin/crawler/status" />
     </div>
 
     @if (mensagemSucesso()) {

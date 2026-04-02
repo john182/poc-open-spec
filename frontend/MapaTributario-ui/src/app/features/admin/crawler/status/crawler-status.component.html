@@ -65,7 +65,7 @@
         }
 
         <!-- Progresso por UF -->
-        @if (statusAtual()!.ufAtual || statusAtual()!.ufsProcessadas.length > 0 || listaProgressoUfs().length > 0) {
+        @if (statusAtual()!.ufAtual || listaProgressoUfs().length > 0) {
           <div class="secao-progresso-uf" data-cy="progresso-ufs">
             <h4>
               Progresso por UF
@@ -76,13 +76,13 @@
                 </span>
               }
             </h4>
-            @if (statusAtual()!.ufsProcessadas.length > 0) {
+            @if (ufsConcluidasLista().length > 0) {
               <div class="ufs-resumo">
-                <span class="ufs-resumo-label">UFs processadas:</span>
-                <span class="ufs-resumo-valor">{{ statusAtual()!.ufsProcessadas.length }}</span>
+                <span class="ufs-resumo-label">UFs concluídas:</span>
+                <span class="ufs-resumo-valor">{{ ufsConcluidasLista().length }} / {{ statusAtual()!.ufsProcessadas.length }}</span>
               </div>
               <div class="ufs-processadas-lista">
-                @for (uf of statusAtual()!.ufsProcessadas; track uf) {
+                @for (uf of ufsConcluidasLista(); track uf) {
                   <p-tag [value]="uf" severity="success" />
                 }
               </div>

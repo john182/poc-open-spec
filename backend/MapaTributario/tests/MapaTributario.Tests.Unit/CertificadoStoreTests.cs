@@ -268,4 +268,32 @@ public class CertificadoStoreTests
         _sut.GetCertificate().ShouldBeNull();
         _sut.UploadedAt.ShouldBeNull();
     }
+
+    [Fact]
+    public async Task Given_CacheJaPopulado_CarregarDoBancoAsync_Should_SubstituirCertificadoAnterior()
+    {
+        // Arrange — primeiro carrega um certificado no cache
+        (byte[] pfxBytes, string senha) = GerarCertificadoTeste();
+        await _sut.StoreAsync(pfxBytes, senha);
+        _sut.HasCertificate().ShouldBeTrue();
+
+        // Gerar segundo certificado para retornar do banco
+        using RSA rsa = RSA.Create(2048);
+        CertificateRequest requisicao = new("CN=DoBancoSegundo", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        using X509Certificate2 cert2 = requisicao.CreateSelfSigned(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddYears(2));
+        byte[] pfxBytes2 = cert2.Export(X509ContentType.Pkcs12, "outra-senha");
+        CertificadoDigital entidade = CertificadoDigital.Criar(
+            pfxBytes2, "outra-senha", "NEWTHUMB", "CN=DoBancoSegundo", DateTime.UtcNow.AddYears(2));
+
+        _repositorio.Setup(r => r.ObterAsync()).ReturnsAsync(entidade);
+
+        // Act — recarregar do banco com cache já populado (dispõe certificado anterior)
+        await _sut.CarregarDoBancoAsync();
+
+        // Assert
+        _sut.HasCertificate().ShouldBeTrue();
+        _sut.GetCertificate().ShouldNotBeNull();
+        _sut.GetCertificate()!.Subject.ShouldContain("CN=DoBancoSegundo");
+        _sut.UploadedAt.ShouldBe(entidade.DataUpload);
+    }
 }

@@ -68,7 +68,10 @@ public class CertificadoController : ControllerBase
         return Ok(new CertificadoStatusResponse
         {
             HasCertificate = _certificadoStore.HasCertificate(),
-            UploadedAt = _certificadoStore.UploadedAt
+            UploadedAt = _certificadoStore.UploadedAt,
+            Thumbprint = _certificadoStore.Thumbprint,
+            Subject = _certificadoStore.Subject,
+            ValidoAte = _certificadoStore.ValidoAte
         });
     }
 
@@ -76,9 +79,9 @@ public class CertificadoController : ControllerBase
     /// Removes the currently loaded certificate.
     /// </summary>
     [HttpDelete]
-    public IActionResult Remove()
+    public async Task<IActionResult> Remove()
     {
-        _certificadoStore.Remove();
+        await _certificadoStore.RemoveAsync();
         _logger.LogInformation("Certificate PFX removed");
         return Ok(new { mensagem = "Certificado removido com sucesso" });
     }

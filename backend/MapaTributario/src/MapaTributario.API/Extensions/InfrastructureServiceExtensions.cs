@@ -39,6 +39,7 @@ public static class InfrastructureServiceExtensions
         services.AddSingleton<IExecucaoCrawlerRepository, ExecucaoCrawlerRepository>();
         services.AddSingleton<IFilaProcessamentoRepository, FilaProcessamentoRepository>();
         services.AddSingleton<IConfiguracaoCrawlerRepository, ConfiguracaoCrawlerRepository>();
+        services.AddSingleton<ICertificadoDigitalRepository, CertificadoDigitalRepository>();
 
         // Auth infrastructure
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
@@ -74,6 +75,10 @@ public static class InfrastructureServiceExtensions
 
         var configuracaoCrawlerSeed = scope.ServiceProvider.GetRequiredService<ConfiguracaoCrawlerSeedService>();
         await configuracaoCrawlerSeed.SeedAsync();
+
+        // Carregar certificado do MongoDB para o cache em memória
+        var certificadoStore = app.Services.GetRequiredService<ICertificadoStore>();
+        await certificadoStore.CarregarDoBancoAsync();
     }
 
     public static async Task ApplyMongoIndexesAsync(this WebApplication app)
@@ -100,19 +105,10 @@ public static class InfrastructureServiceExtensions
             ICertificadoStore certificadoStore = sp.GetRequiredService<ICertificadoStore>();
             HttpClientHandler handler = new HttpClientHandler();
 
-            // Priority 1: certificate from ICertificadoStore (uploaded via API)
             X509Certificate2? dynamicCert = certificadoStore.GetCertificate();
             if (dynamicCert is not null)
             {
                 handler.ClientCertificates.Add(dynamicCert);
-            }
-            // Priority 2: fallback to static file from appsettings
-            else if (!string.IsNullOrEmpty(nfseOptions.CertificatePath) && File.Exists(nfseOptions.CertificatePath))
-            {
-                X509Certificate2 certificate = string.IsNullOrEmpty(nfseOptions.CertificatePassword)
-                    ? X509CertificateLoader.LoadPkcs12FromFile(nfseOptions.CertificatePath, null)
-                    : X509CertificateLoader.LoadPkcs12FromFile(nfseOptions.CertificatePath, nfseOptions.CertificatePassword);
-                handler.ClientCertificates.Add(certificate);
             }
 
             return handler;

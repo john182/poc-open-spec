@@ -142,6 +142,9 @@ public class CertificadoControllerTests
         CertificadoController sut = CriarSut();
         _certificadoStore.Setup(s => s.HasCertificate()).Returns(false);
         _certificadoStore.Setup(s => s.UploadedAt).Returns((DateTime?)null);
+        _certificadoStore.Setup(s => s.Thumbprint).Returns((string?)null);
+        _certificadoStore.Setup(s => s.Subject).Returns((string?)null);
+        _certificadoStore.Setup(s => s.ValidoAte).Returns((DateTime?)null);
 
         // Act
         IActionResult resultado = sut.Status();
@@ -152,16 +155,23 @@ public class CertificadoControllerTests
             ok.Value.ShouldBeOfType<API.Application.Crawler.Contracts.CertificadoStatusResponse>();
         status.HasCertificate.ShouldBeFalse();
         status.UploadedAt.ShouldBeNull();
+        status.Thumbprint.ShouldBeNull();
+        status.Subject.ShouldBeNull();
+        status.ValidoAte.ShouldBeNull();
     }
 
     [Fact]
-    public void Given_ComCertificado_Should_RetornarStatusVerdadeiro()
+    public void Given_ComCertificado_Should_RetornarStatusVerdadeiroComMetadados()
     {
         // Arrange
         CertificadoController sut = CriarSut();
         DateTime dataUpload = new(2026, 4, 1, 12, 0, 0, DateTimeKind.Utc);
+        DateTime validoAte = new(2027, 4, 1, 12, 0, 0, DateTimeKind.Utc);
         _certificadoStore.Setup(s => s.HasCertificate()).Returns(true);
         _certificadoStore.Setup(s => s.UploadedAt).Returns(dataUpload);
+        _certificadoStore.Setup(s => s.Thumbprint).Returns("ABC123");
+        _certificadoStore.Setup(s => s.Subject).Returns("CN=Teste");
+        _certificadoStore.Setup(s => s.ValidoAte).Returns(validoAte);
 
         // Act
         IActionResult resultado = sut.Status();
@@ -172,22 +182,26 @@ public class CertificadoControllerTests
             ok.Value.ShouldBeOfType<API.Application.Crawler.Contracts.CertificadoStatusResponse>();
         status.HasCertificate.ShouldBeTrue();
         status.UploadedAt.ShouldBe(dataUpload);
+        status.Thumbprint.ShouldBe("ABC123");
+        status.Subject.ShouldBe("CN=Teste");
+        status.ValidoAte.ShouldBe(validoAte);
     }
 
     // ── Remove ──────────────────────────────────────────────────────
 
     [Fact]
-    public void Given_CertificadoCarregado_Should_RemoverComSucesso()
+    public async Task Given_CertificadoCarregado_Should_RemoverComSucesso()
     {
         // Arrange
         CertificadoController sut = CriarSut();
+        _certificadoStore.Setup(s => s.RemoveAsync()).Returns(Task.CompletedTask);
 
         // Act
-        IActionResult resultado = sut.Remove();
+        IActionResult resultado = await sut.Remove();
 
         // Assert
         OkObjectResult ok = resultado.ShouldBeOfType<OkObjectResult>();
         ok.Value!.ToString().ShouldContain("Certificado removido com sucesso");
-        _certificadoStore.Verify(s => s.Remove(), Times.Once);
+        _certificadoStore.Verify(s => s.RemoveAsync(), Times.Once);
     }
 }

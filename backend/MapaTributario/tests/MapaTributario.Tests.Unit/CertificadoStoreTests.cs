@@ -1,13 +1,25 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using MapaTributario.API.Domain.Entities;
+using MapaTributario.API.Domain.Interfaces;
 using MapaTributario.API.Infrastructure;
+using Moq;
 using Shouldly;
 
 namespace MapaTributario.Tests.Unit;
 
 public class CertificadoStoreTests
 {
-    private readonly CertificadoStore _sut = new();
+    private readonly Mock<ICertificadoDigitalRepository> _repositorio = new();
+    private readonly CertificadoStore _sut;
+
+    public CertificadoStoreTests()
+    {
+        _repositorio.Setup(r => r.SalvarAsync(It.IsAny<CertificadoDigital>())).Returns(Task.CompletedTask);
+        _repositorio.Setup(r => r.RemoverAsync()).Returns(Task.CompletedTask);
+        _repositorio.Setup(r => r.ObterAsync()).ReturnsAsync((CertificadoDigital?)null);
+        _sut = new CertificadoStore(_repositorio.Object);
+    }
 
     private static (byte[] pfxBytes, string senha) GerarCertificadoTeste()
     {
@@ -107,7 +119,7 @@ public class CertificadoStoreTests
         await _sut.StoreAsync(pfxBytes, senha);
 
         // Act
-        _sut.Remove();
+        await _sut.RemoveAsync();
 
         // Assert
         _sut.HasCertificate().ShouldBeFalse();
@@ -166,11 +178,94 @@ public class CertificadoStoreTests
     }
 
     [Fact]
-    public void Given_RemoveSemCertificado_Should_NaoLancarExcecao()
+    public async Task Given_RemoveSemCertificado_Should_NaoLancarExcecao()
     {
         // Arrange — store vazio
 
         // Act & Assert — não deve lançar exceção
-        Should.NotThrow(() => _sut.Remove());
+        await Should.NotThrowAsync(() => _sut.RemoveAsync());
+    }
+
+    [Fact]
+    public async Task Given_PfxValido_Should_PreencherMetadados()
+    {
+        // Arrange
+        (byte[] pfxBytes, string senha) = GerarCertificadoTeste();
+
+        // Act
+        await _sut.StoreAsync(pfxBytes, senha);
+
+        // Assert
+        _sut.Thumbprint.ShouldNotBeNullOrEmpty();
+        _sut.Subject.ShouldContain("CN=Teste");
+        _sut.ValidoAte.ShouldNotBeNull();
+        _sut.ValidoAte!.Value.ShouldBeGreaterThan(DateTime.UtcNow);
+    }
+
+    [Fact]
+    public async Task Given_StoreAsync_Should_PersistirNoRepositorio()
+    {
+        // Arrange
+        (byte[] pfxBytes, string senha) = GerarCertificadoTeste();
+
+        // Act
+        await _sut.StoreAsync(pfxBytes, senha);
+
+        // Assert
+        _repositorio.Verify(r => r.SalvarAsync(It.Is<CertificadoDigital>(
+            c => c.Thumbprint != null && c.Subject.Contains("CN=Teste"))), Times.Once);
+    }
+
+    [Fact]
+    public async Task Given_RemoveAsync_Should_ChamarRepositorioRemover()
+    {
+        // Arrange
+        (byte[] pfxBytes, string senha) = GerarCertificadoTeste();
+        await _sut.StoreAsync(pfxBytes, senha);
+
+        // Act
+        await _sut.RemoveAsync();
+
+        // Assert
+        _repositorio.Verify(r => r.RemoverAsync(), Times.Once);
+        _sut.Thumbprint.ShouldBeNull();
+        _sut.Subject.ShouldBeNull();
+        _sut.ValidoAte.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Given_DadosNoBanco_CarregarDoBancoAsync_Should_PopularCache()
+    {
+        // Arrange — gerar certificado e simular retorno do repositório
+        (byte[] pfxBytes, string senha) = GerarCertificadoTeste();
+        CertificadoDigital entidade = CertificadoDigital.Criar(
+            pfxBytes, senha, "THUMB123", "CN=DoBanco", DateTime.UtcNow.AddYears(1));
+
+        _repositorio.Setup(r => r.ObterAsync()).ReturnsAsync(entidade);
+
+        // Act
+        await _sut.CarregarDoBancoAsync();
+
+        // Assert
+        _sut.HasCertificate().ShouldBeTrue();
+        _sut.GetCertificate().ShouldNotBeNull();
+        _sut.UploadedAt.ShouldBe(entidade.DataUpload);
+        _sut.Thumbprint.ShouldNotBeNullOrEmpty();
+        _sut.Subject.ShouldNotBeNullOrEmpty();
+        _sut.ValidoAte.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task Given_BancoVazio_CarregarDoBancoAsync_Should_ManterCacheVazio()
+    {
+        // Arrange — repositório retorna null (padrão do setup)
+
+        // Act
+        await _sut.CarregarDoBancoAsync();
+
+        // Assert
+        _sut.HasCertificate().ShouldBeFalse();
+        _sut.GetCertificate().ShouldBeNull();
+        _sut.UploadedAt.ShouldBeNull();
     }
 }

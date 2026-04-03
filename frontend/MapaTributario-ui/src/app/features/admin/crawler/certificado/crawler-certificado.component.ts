@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, computed, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
@@ -42,6 +42,29 @@ export class CrawlerCertificadoComponent implements OnInit {
   readonly erroUpload = signal('');
 
   readonly removendo = signal(false);
+
+  readonly certificadoProximoDoVencimento = computed(() => {
+    const status = this.statusCertificado();
+    if (!status?.validoAte) return false;
+    const validoAte = new Date(status.validoAte);
+    const hoje = new Date();
+    const diasRestantes = Math.ceil((validoAte.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+    return diasRestantes <= 30 && diasRestantes > 0;
+  });
+
+  readonly certificadoVencido = computed(() => {
+    const status = this.statusCertificado();
+    if (!status?.validoAte) return false;
+    const validoAte = new Date(status.validoAte);
+    return validoAte.getTime() < new Date().getTime();
+  });
+
+  readonly diasParaVencimento = computed(() => {
+    const status = this.statusCertificado();
+    if (!status?.validoAte) return null;
+    const validoAte = new Date(status.validoAte);
+    return Math.ceil((validoAte.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+  });
 
   ngOnInit(): void {
     this._carregarStatus();

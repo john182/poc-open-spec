@@ -25,6 +25,7 @@ public static class CrawlerMongoMappings
         RegisterProgressoUf();
         RegisterFilaProcessamento();
         RegisterConfiguracaoCrawler();
+        RegisterCertificadoDigital();
     }
 
     private static void RegisterExecucaoCrawler()
@@ -125,6 +126,24 @@ public static class CrawlerMongoMappings
             cm.MapMember(c => c.Ativo).SetElementName("ativo");
             cm.MapMember(c => c.CriadoEm).SetElementName("criadoEm");
             cm.MapMember(c => c.AtualizadoEm).SetElementName("atualizadoEm");
+            cm.SetIgnoreExtraElements(true);
+        });
+    }
+
+    private static void RegisterCertificadoDigital()
+    {
+        BsonClassMap.RegisterClassMap<CertificadoDigital>(cm =>
+        {
+            cm.AutoMap();
+            cm.MapIdMember(c => c.Id)
+                .SetIdGenerator(StringObjectIdGenerator.Instance)
+                .SetSerializer(new StringSerializer(BsonType.ObjectId));
+            cm.MapMember(c => c.PfxBytes).SetElementName("pfxBytes");
+            cm.MapMember(c => c.Senha).SetElementName("senha");
+            cm.MapMember(c => c.Thumbprint).SetElementName("thumbprint");
+            cm.MapMember(c => c.Subject).SetElementName("subject");
+            cm.MapMember(c => c.ValidoAte).SetElementName("validoAte");
+            cm.MapMember(c => c.DataUpload).SetElementName("dataUpload");
             cm.SetIgnoreExtraElements(true);
         });
     }

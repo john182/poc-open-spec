@@ -7,7 +7,6 @@ using MapaTributario.API.Domain.Entities;
 using MapaTributario.API.Domain.Interfaces;
 using MapaTributario.API.Infrastructure.External;
 using MapaTributario.API.Infrastructure.External.Contracts;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace MapaTributario.API.Application.Crawler;
@@ -26,7 +25,6 @@ public class CrawlerService : ICrawlerService
     private readonly ICertificateProtection _certificateProtection;
     private readonly ICrawlerExecutionGuard _executionGuard;
     private readonly ICertificadoStore _certificadoStore;
-    private readonly string? _caminhoArquivoCertificado;
     private readonly ILogger<CrawlerService> _logger;
 
     // Configuração carregada do MongoDB no início de cada execução
@@ -49,7 +47,6 @@ public class CrawlerService : ICrawlerService
         ICertificateProtection certificateProtection,
         ICrawlerExecutionGuard executionGuard,
         ICertificadoStore certificadoStore,
-        IConfiguration configuration,
         ILogger<CrawlerService> logger)
     {
         _execucaoRepository = execucaoRepository;
@@ -64,28 +61,10 @@ public class CrawlerService : ICrawlerService
         _certificateProtection = certificateProtection;
         _executionGuard = executionGuard;
         _certificadoStore = certificadoStore;
-        _caminhoArquivoCertificado = configuration["NfseApi:CertificatePath"];
         _logger = logger;
     }
 
     public bool EmExecucao => _executionGuard.IsRunning;
-
-    /// <summary>
-    /// Verifica se existe certificado digital disponível (dinâmico via upload ou estático via arquivo).
-    /// Sem certificado, as chamadas à API NFS-e falharão com 496/403.
-    /// </summary>
-    internal bool CertificadoDisponivel()
-    {
-        // Certificado dinâmico (upload via API)
-        if (_certificadoStore.HasCertificate())
-            return true;
-
-        // Certificado estático (arquivo PFX configurado em NfseApi:CertificatePath)
-        if (!string.IsNullOrEmpty(_caminhoArquivoCertificado) && File.Exists(_caminhoArquivoCertificado))
-            return true;
-
-        return false;
-    }
 
     public async Task<Result<ExecucaoCrawler>> ExecutarAsync(
         TipoExecucao tipo,
@@ -94,7 +73,7 @@ public class CrawlerService : ICrawlerService
         bool? filtroCapital = null,
         CancellationToken cancellationToken = default)
     {
-        if (!CertificadoDisponivel())
+        if (!_certificadoStore.HasCertificate())
         {
             _logger.LogWarning(
                 "Crawler não iniciado: nenhum certificado digital disponível. " +

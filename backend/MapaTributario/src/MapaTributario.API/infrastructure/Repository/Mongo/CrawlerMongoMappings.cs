@@ -47,7 +47,7 @@ public static class CrawlerMongoMappings
             cm.MapMember(e => e.Erros).SetElementName("erros");
             cm.MapMember(e => e.DetalhesErro).SetElementName("detalhesErro");
             cm.MapMember(e => e.UfsProcessadas).SetElementName("ufsProcessadas");
-            cm.MapMember(e => e.UfAtual).SetElementName("ufAtual");
+            cm.MapMember(e => e.UfsEmAndamento).SetElementName("ufsEmAndamento");
             cm.MapMember(e => e.ProgressoUfs).SetElementName("progressoUfs");
             cm.SetIgnoreExtraElements(true);
         });
@@ -113,6 +113,7 @@ public static class CrawlerMongoMappings
             cm.MapMember(c => c.MaxFalhasConsecutivasDetalhamento).SetElementName("maxFalhasConsecutivasDetalhamento");
             cm.MapMember(c => c.MaxFalhasConsecutivasDesdobramento).SetElementName("maxFalhasConsecutivasDesdobramento");
             cm.MapMember(c => c.MaxItensParalelos).SetElementName("maxItensParalelos");
+            cm.MapMember(c => c.MaxUfsParalelas).SetElementName("maxUfsParalelas");
             cm.MapMember(c => c.CodigosSondagem).SetElementName("codigosSondagem");
             cm.MapMember(c => c.ValidadeDiasProcessamento).SetElementName("validadeDiasProcessamento");
             cm.MapMember(c => c.CircuitBreakerLimiarErroPercent).SetElementName("circuitBreakerLimiarErroPercent");

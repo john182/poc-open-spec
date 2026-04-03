@@ -15,6 +15,7 @@ public class AtualizarParcialConfiguracaoCrawlerRequest
     public int? MaxFalhasConsecutivasDetalhamento { get; set; }
     public int? MaxFalhasConsecutivasDesdobramento { get; set; }
     public int? MaxItensParalelos { get; set; }
+    public int? MaxUfsParalelas { get; set; }
     public List<string>? CodigosSondagem { get; set; }
     public int? ValidadeDiasProcessamento { get; set; }
     public int? CircuitBreakerLimiarErroPercent { get; set; }

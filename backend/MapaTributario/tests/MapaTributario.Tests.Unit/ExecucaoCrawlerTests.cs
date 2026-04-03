@@ -105,7 +105,7 @@ public class ExecucaoCrawlerTests
         execucao.ProgressoUfs["SP"].MunicipiosEncontrados.ShouldBe(100);
         execucao.ProgressoUfs["SP"].MunicipiosAtivos.ShouldBe(42);
         execucao.ProgressoUfs["SP"].Fim.ShouldNotBeNull();
-        execucao.UfAtual.ShouldBeNull();
+        execucao.UfsEmAndamento.ShouldBeEmpty();
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public class ExecucaoCrawlerTests
         execucao.ProgressoUfs["RJ"].MunicipiosEncontrados.ShouldBe(50);
         execucao.ProgressoUfs["RJ"].MunicipiosAtivos.ShouldBe(0);
         execucao.ProgressoUfs["RJ"].Fim.ShouldNotBeNull();
-        execucao.UfAtual.ShouldBeNull();
+        execucao.UfsEmAndamento.ShouldBeEmpty();
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class ExecucaoCrawlerTests
         execucao.ProgressoUfs["MG"].MunicipiosEncontrados.ShouldBe(80);
         execucao.ProgressoUfs["MG"].MunicipiosAtivos.ShouldBe(15);
         execucao.ProgressoUfs["MG"].Fim.ShouldNotBeNull();
-        execucao.UfAtual.ShouldBeNull();
+        execucao.UfsEmAndamento.ShouldBeEmpty();
     }
 
     [Fact]
@@ -158,6 +158,149 @@ public class ExecucaoCrawlerTests
         execucao.ProgressoUfs.ShouldContainKey("SE");
         execucao.ProgressoUfs["SE"].Status.ShouldBe(StatusProgressoUf.EmAndamento);
         execucao.ProgressoUfs["SE"].Inicio.ShouldNotBeNull();
-        execucao.UfAtual.ShouldBe("SE");
+        execucao.UfsEmAndamento.ShouldContain("SE");
+    }
+
+    [Fact]
+    public void IniciarProcessamentoUf_MultiplasUfs_TodasApareceEmAndamento()
+    {
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+
+        execucao.IniciarProcessamentoUf("SP");
+        execucao.IniciarProcessamentoUf("RJ");
+        execucao.IniciarProcessamentoUf("MG");
+
+        execucao.UfsEmAndamento.Count.ShouldBe(3);
+        execucao.UfsEmAndamento.ShouldContain("SP");
+        execucao.UfsEmAndamento.ShouldContain("RJ");
+        execucao.UfsEmAndamento.ShouldContain("MG");
+        execucao.ProgressoUfs.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public void FinalizarProcessamentoUf_RemoveDeUfsEmAndamento()
+    {
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+
+        execucao.IniciarProcessamentoUf("SP");
+        execucao.IniciarProcessamentoUf("RJ");
+        execucao.FinalizarProcessamentoUf("SP", municipiosEncontrados: 645, municipiosAtivos: 200);
+
+        execucao.UfsEmAndamento.Count.ShouldBe(1);
+        execucao.UfsEmAndamento.ShouldContain("RJ");
+        execucao.UfsEmAndamento.ShouldNotContain("SP");
+    }
+
+    [Fact]
+    public async Task ThreadSafety_MultiplasThreadsIniciarEFinalizar_SemExcecao()
+    {
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        string[] ufs = new[] { "SP", "RJ", "MG", "RS", "BA", "PR", "SC", "PE", "CE", "GO" };
+
+        // Múltiplas threads iniciando UFs simultaneamente
+        Task[] tarefasIniciar = ufs.Select(uf => Task.Run(() =>
+        {
+            execucao.IniciarProcessamentoUf(uf);
+        })).ToArray();
+
+        await Task.WhenAll(tarefasIniciar);
+
+        execucao.ProgressoUfs.Count.ShouldBe(10);
+        execucao.UfsEmAndamento.Count.ShouldBe(10);
+
+        // Múltiplas threads finalizando UFs simultaneamente
+        Task[] tarefasFinalizar = ufs.Select(uf => Task.Run(() =>
+        {
+            execucao.FinalizarProcessamentoUf(uf, municipiosEncontrados: 100, municipiosAtivos: 50);
+        })).ToArray();
+
+        await Task.WhenAll(tarefasFinalizar);
+
+        execucao.UfsEmAndamento.ShouldBeEmpty();
+        foreach (string uf in ufs)
+        {
+            execucao.ProgressoUfs[uf].Status.ShouldBe(StatusProgressoUf.Concluido);
+        }
+    }
+
+    [Fact]
+    public async Task ThreadSafety_IniciarEFinalizarIntercalados_SemExcecao()
+    {
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+        string[] ufs = new[] { "SP", "RJ", "MG", "RS", "BA" };
+
+        // Threads intercalando iniciar e finalizar
+        List<Task> tarefas = new();
+        foreach (string uf in ufs)
+        {
+            tarefas.Add(Task.Run(async () =>
+            {
+                execucao.IniciarProcessamentoUf(uf);
+                await Task.Delay(Random.Shared.Next(1, 10));
+                execucao.FinalizarProcessamentoUf(uf, municipiosEncontrados: 50, municipiosAtivos: 20);
+            }));
+        }
+
+        await Task.WhenAll(tarefas);
+
+        execucao.UfsEmAndamento.ShouldBeEmpty();
+        execucao.ProgressoUfs.Count.ShouldBe(5);
+        foreach (string uf in ufs)
+        {
+            execucao.ProgressoUfs[uf].Status.ShouldBe(StatusProgressoUf.Concluido);
+        }
+    }
+
+    [Fact]
+    public async Task ThreadSafety_FalharEInterromperSimultaneo_SemExcecao()
+    {
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+
+        // Iniciar todas as UFs
+        string[] ufsParaFalhar = new[] { "SP", "RJ", "MG" };
+        string[] ufsParaInterromper = new[] { "BA", "CE", "PE" };
+        string[] todasUfs = ufsParaFalhar.Concat(ufsParaInterromper).ToArray();
+
+        foreach (string uf in todasUfs)
+        {
+            execucao.IniciarProcessamentoUf(uf);
+        }
+
+        execucao.UfsEmAndamento.Count.ShouldBe(6);
+
+        // Falhar e interromper simultaneamente
+        Task[] tarefas = ufsParaFalhar.Select(uf => Task.Run(() =>
+        {
+            execucao.FalharProcessamentoUf(uf, municipiosEncontrados: 100);
+        }))
+        .Concat(ufsParaInterromper.Select(uf => Task.Run(() =>
+        {
+            execucao.InterromperProcessamentoUf(uf, municipiosEncontrados: 80, municipiosAtivosAteAgora: 30);
+        })))
+        .ToArray();
+
+        await Task.WhenAll(tarefas);
+
+        execucao.UfsEmAndamento.ShouldBeEmpty();
+        foreach (string uf in ufsParaFalhar)
+        {
+            execucao.ProgressoUfs[uf].Status.ShouldBe(StatusProgressoUf.Falha);
+        }
+        foreach (string uf in ufsParaInterromper)
+        {
+            execucao.ProgressoUfs[uf].Status.ShouldBe(StatusProgressoUf.Interrompido);
+        }
+    }
+
+    [Fact]
+    public void IniciarProcessamentoUf_MesmaUfDuasVezes_NaoDuplicaEmAndamento()
+    {
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+
+        execucao.IniciarProcessamentoUf("SP");
+        execucao.IniciarProcessamentoUf("SP");
+
+        execucao.UfsEmAndamento.Count.ShouldBe(1);
+        execucao.ProgressoUfs.Count.ShouldBe(1);
     }
 }

@@ -20,6 +20,7 @@ public class AtualizarConfiguracaoCrawlerRequestValidator : AbstractValidator<At
         RuleFor(x => x.MaxFalhasConsecutivasDetalhamento).ValidarMaxFalhasConsecutivas();
         RuleFor(x => x.MaxFalhasConsecutivasDesdobramento).ValidarMaxFalhasConsecutivas();
         RuleFor(x => x.MaxItensParalelos).ValidarMaxItensParalelos();
+        RuleFor(x => x.MaxUfsParalelas).ValidarMaxUfsParalelas();
 
         RuleFor(x => x.CodigosSondagem)
             .NotEmpty().WithMessage("'{PropertyName}' não pode ser vazio");

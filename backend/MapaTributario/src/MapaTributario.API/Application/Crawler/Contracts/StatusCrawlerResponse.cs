@@ -16,7 +16,7 @@ public class StatusCrawlerResponse
     public int Erros { get; set; }
     public List<string> DetalhesErro { get; set; } = new();
     public bool TemCertificado { get; set; }
-    public string? UfAtual { get; set; }
+    public List<string> UfsEmAndamento { get; set; } = new();
     public List<string> UfsProcessadas { get; set; } = new();
     public Dictionary<string, ProgressoUfResponse> ProgressoUfs { get; set; } = new();
 }

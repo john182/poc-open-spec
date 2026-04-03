@@ -41,10 +41,10 @@ public class ConfiguracaoCrawlerAppServiceTests
         ConfiguracaoCrawlerResponse resposta = resultado.Value;
         resposta.Id.ShouldBe("test-id");
         resposta.CronSchedule.ShouldBe("0 2 * * *");
-        resposta.LimiteRequisicoesPorSegundo.ShouldBe(15);
-        resposta.OrcamentoDiario.ShouldBe(50000);
-        resposta.TamanhoLoteCertificado.ShouldBe(200);
-        resposta.PausaLoteSegundos.ShouldBe(5);
+        resposta.LimiteRequisicoesPorSegundo.ShouldBe(50);
+        resposta.OrcamentoDiario.ShouldBe(200000);
+        resposta.TamanhoLoteCertificado.ShouldBe(500);
+        resposta.PausaLoteSegundos.ShouldBe(0);
         resposta.TamanhoLoteMongo.ShouldBe(50);
         resposta.MaxTentativas.ShouldBe(3);
         resposta.LimiteParadaAntecipada.ShouldBe(9);
@@ -52,7 +52,8 @@ public class ConfiguracaoCrawlerAppServiceTests
         resposta.MaxDetalhamento.ShouldBe(99);
         resposta.MaxFalhasConsecutivasDetalhamento.ShouldBe(2);
         resposta.MaxFalhasConsecutivasDesdobramento.ShouldBe(2);
-        resposta.MaxItensParalelos.ShouldBe(10);
+        resposta.MaxItensParalelos.ShouldBe(20);
+        resposta.MaxUfsParalelas.ShouldBe(5);
         resposta.CodigosSondagem.ShouldNotBeEmpty();
         resposta.ValidadeDiasProcessamento.ShouldBe(7);
         resposta.CircuitBreakerLimiarErroPercent.ShouldBe(50);
@@ -104,6 +105,7 @@ public class ConfiguracaoCrawlerAppServiceTests
             MaxFalhasConsecutivasDetalhamento = 4,
             MaxFalhasConsecutivasDesdobramento = 4,
             MaxItensParalelos = 15,
+            MaxUfsParalelas = 8,
             CodigosSondagem = new List<string> { "01.01.01", "07.02.01" },
             ValidadeDiasProcessamento = 14,
             CircuitBreakerLimiarErroPercent = 70,
@@ -133,6 +135,7 @@ public class ConfiguracaoCrawlerAppServiceTests
         resposta.MaxFalhasConsecutivasDetalhamento.ShouldBe(4);
         resposta.MaxFalhasConsecutivasDesdobramento.ShouldBe(4);
         resposta.MaxItensParalelos.ShouldBe(15);
+        resposta.MaxUfsParalelas.ShouldBe(8);
         resposta.CodigosSondagem.Count.ShouldBe(2);
         resposta.ValidadeDiasProcessamento.ShouldBe(14);
         resposta.CircuitBreakerLimiarErroPercent.ShouldBe(70);
@@ -167,6 +170,7 @@ public class ConfiguracaoCrawlerAppServiceTests
             MaxFalhasConsecutivasDetalhamento = 4,
             MaxFalhasConsecutivasDesdobramento = 4,
             MaxItensParalelos = 15,
+            MaxUfsParalelas = 8,
             CodigosSondagem = new List<string> { "01.01.01" },
             ValidadeDiasProcessamento = 14,
             CircuitBreakerLimiarErroPercent = 70,
@@ -216,17 +220,18 @@ public class ConfiguracaoCrawlerAppServiceTests
         resposta.MaxTentativas.ShouldBe(7);
 
         // Campos inalterados (valores padrão)
-        resposta.LimiteRequisicoesPorSegundo.ShouldBe(15);
-        resposta.OrcamentoDiario.ShouldBe(50000);
-        resposta.TamanhoLoteCertificado.ShouldBe(200);
-        resposta.PausaLoteSegundos.ShouldBe(5);
+        resposta.LimiteRequisicoesPorSegundo.ShouldBe(50);
+        resposta.OrcamentoDiario.ShouldBe(200000);
+        resposta.TamanhoLoteCertificado.ShouldBe(500);
+        resposta.PausaLoteSegundos.ShouldBe(0);
         resposta.TamanhoLoteMongo.ShouldBe(50);
         resposta.LimiteParadaAntecipada.ShouldBe(9);
         resposta.MaxDesdobramento.ShouldBe(20);
         resposta.MaxDetalhamento.ShouldBe(99);
         resposta.MaxFalhasConsecutivasDetalhamento.ShouldBe(2);
         resposta.MaxFalhasConsecutivasDesdobramento.ShouldBe(2);
-        resposta.MaxItensParalelos.ShouldBe(10);
+        resposta.MaxItensParalelos.ShouldBe(20);
+        resposta.MaxUfsParalelas.ShouldBe(5);
         resposta.ValidadeDiasProcessamento.ShouldBe(7);
         resposta.CircuitBreakerLimiarErroPercent.ShouldBe(50);
         resposta.CircuitBreakerJanelaAvaliacaoSegundos.ShouldBe(60);

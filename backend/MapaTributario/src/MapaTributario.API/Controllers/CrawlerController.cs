@@ -218,7 +218,7 @@ public class CrawlerController : ControllerBase
             Erros = execucao.Erros,
             DetalhesErro = execucao.DetalhesErro,
             TemCertificado = _certificadoStore.HasCertificate(),
-            UfAtual = execucao.UfAtual,
+            UfsEmAndamento = execucao.UfsEmAndamento.ToList(),
             UfsProcessadas = execucao.UfsProcessadas,
             ProgressoUfs = execucao.ProgressoUfs.ToDictionary(
                 kvp => kvp.Key,

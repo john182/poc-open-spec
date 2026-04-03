@@ -7,13 +7,13 @@ public class ConfiguracaoCrawler
     // Agendamento
     public string CronSchedule { get; private set; } = "0 2 * * *";
 
-    // Limites de requisição
-    public int LimiteRequisicoesPorSegundo { get; private set; } = 15;
-    public int OrcamentoDiario { get; private set; } = 50000;
+    // Limites de requisição (valores otimizados conforme benchmark — API sem rate limiting, plateau ~17 req/s serial)
+    public int LimiteRequisicoesPorSegundo { get; private set; } = 50;
+    public int OrcamentoDiario { get; private set; } = 200000;
 
     // Lote de certificado (CertificateProtection)
-    public int TamanhoLoteCertificado { get; private set; } = 200;
-    public int PausaLoteSegundos { get; private set; } = 5;
+    public int TamanhoLoteCertificado { get; private set; } = 500;
+    public int PausaLoteSegundos { get; private set; } = 0;
 
     // Lote de consulta MongoDB
     public int TamanhoLoteMongo { get; private set; } = 50;
@@ -25,7 +25,10 @@ public class ConfiguracaoCrawler
     public int MaxDetalhamento { get; private set; } = 99;
     public int MaxFalhasConsecutivasDetalhamento { get; private set; } = 2;
     public int MaxFalhasConsecutivasDesdobramento { get; private set; } = 2;
-    public int MaxItensParalelos { get; private set; } = 10;
+    public int MaxItensParalelos { get; private set; } = 20;
+
+    // Paralelismo por UF (quantas UFs simultâneas na Fase 1)
+    public int MaxUfsParalelas { get; private set; } = 5;
 
     // Códigos de sondagem (probe)
     public List<string> CodigosSondagem { get; private set; } = new()
@@ -55,10 +58,10 @@ public class ConfiguracaoCrawler
         return new ConfiguracaoCrawler
         {
             CronSchedule = "0 2 * * *",
-            LimiteRequisicoesPorSegundo = 15,
-            OrcamentoDiario = 50000,
-            TamanhoLoteCertificado = 200,
-            PausaLoteSegundos = 5,
+            LimiteRequisicoesPorSegundo = 50,
+            OrcamentoDiario = 200000,
+            TamanhoLoteCertificado = 500,
+            PausaLoteSegundos = 0,
             TamanhoLoteMongo = 50,
             MaxTentativas = 3,
             LimiteParadaAntecipada = 9,
@@ -66,7 +69,8 @@ public class ConfiguracaoCrawler
             MaxDetalhamento = 99,
             MaxFalhasConsecutivasDetalhamento = 2,
             MaxFalhasConsecutivasDesdobramento = 2,
-            MaxItensParalelos = 10,
+            MaxItensParalelos = 20,
+            MaxUfsParalelas = 5,
             CodigosSondagem = new List<string>
             {
                 "01.01.01", "07.02.01", "14.01.01", "17.01.01", "25.01.01"
@@ -103,6 +107,7 @@ public class ConfiguracaoCrawler
         int maxFalhasConsecutivasDetalhamento,
         int maxFalhasConsecutivasDesdobramento,
         int maxItensParalelos,
+        int maxUfsParalelas,
         List<string> codigosSondagem,
         int validadeDiasProcessamento,
         int circuitBreakerLimiarErroPercent,
@@ -124,6 +129,7 @@ public class ConfiguracaoCrawler
         MaxFalhasConsecutivasDetalhamento = maxFalhasConsecutivasDetalhamento;
         MaxFalhasConsecutivasDesdobramento = maxFalhasConsecutivasDesdobramento;
         MaxItensParalelos = maxItensParalelos;
+        MaxUfsParalelas = maxUfsParalelas;
         CodigosSondagem = codigosSondagem;
         ValidadeDiasProcessamento = validadeDiasProcessamento;
         CircuitBreakerLimiarErroPercent = circuitBreakerLimiarErroPercent;
@@ -148,6 +154,7 @@ public class ConfiguracaoCrawler
         int? maxFalhasConsecutivasDetalhamento = null,
         int? maxFalhasConsecutivasDesdobramento = null,
         int? maxItensParalelos = null,
+        int? maxUfsParalelas = null,
         List<string>? codigosSondagem = null,
         int? validadeDiasProcessamento = null,
         int? circuitBreakerLimiarErroPercent = null,
@@ -169,6 +176,7 @@ public class ConfiguracaoCrawler
         if (maxFalhasConsecutivasDetalhamento.HasValue) MaxFalhasConsecutivasDetalhamento = maxFalhasConsecutivasDetalhamento.Value;
         if (maxFalhasConsecutivasDesdobramento.HasValue) MaxFalhasConsecutivasDesdobramento = maxFalhasConsecutivasDesdobramento.Value;
         if (maxItensParalelos.HasValue) MaxItensParalelos = maxItensParalelos.Value;
+        if (maxUfsParalelas.HasValue) MaxUfsParalelas = maxUfsParalelas.Value;
         if (codigosSondagem is not null) CodigosSondagem = codigosSondagem;
         if (validadeDiasProcessamento.HasValue) ValidadeDiasProcessamento = validadeDiasProcessamento.Value;
         if (circuitBreakerLimiarErroPercent.HasValue) CircuitBreakerLimiarErroPercent = circuitBreakerLimiarErroPercent.Value;

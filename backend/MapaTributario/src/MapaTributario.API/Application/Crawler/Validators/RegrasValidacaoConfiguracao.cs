@@ -107,6 +107,13 @@ public static class RegrasValidacaoConfiguracao
             .LessThanOrEqualTo(50).WithMessage("'{PropertyName}' deve ser no máximo 50");
     }
 
+    public static IRuleBuilderOptions<T, int> ValidarMaxUfsParalelas<T>(
+        this IRuleBuilder<T, int> regra)
+    {
+        return regra
+            .InclusiveBetween(1, 27).WithMessage("'{PropertyName}' deve estar entre 1 e 27");
+    }
+
     public static IRuleBuilderOptions<T, int> ValidarValidadeDiasProcessamento<T>(
         this IRuleBuilder<T, int> regra)
     {

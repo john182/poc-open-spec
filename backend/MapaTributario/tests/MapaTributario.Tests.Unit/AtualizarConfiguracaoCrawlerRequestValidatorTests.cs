@@ -25,6 +25,7 @@ public class AtualizarConfiguracaoCrawlerRequestValidatorTests
             MaxFalhasConsecutivasDetalhamento = 5,
             MaxFalhasConsecutivasDesdobramento = 5,
             MaxItensParalelos = 10,
+            MaxUfsParalelas = 5,
             CodigosSondagem = ["01.01.01", "02.02.02"],
             ValidadeDiasProcessamento = 30,
             CircuitBreakerLimiarErroPercent = 50,

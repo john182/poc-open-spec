@@ -63,6 +63,10 @@ public class AtualizarParcialConfiguracaoCrawlerRequestValidator : AbstractValid
             .ValidarMaxItensParalelos()
             .When(x => x.MaxItensParalelos.HasValue);
 
+        RuleFor(x => x.MaxUfsParalelas!.Value)
+            .ValidarMaxUfsParalelas()
+            .When(x => x.MaxUfsParalelas.HasValue);
+
         RuleFor(x => x.CodigosSondagem!)
             .NotEmpty().WithMessage("'{PropertyName}' não pode ser vazio")
             .When(x => x.CodigosSondagem is not null);
@@ -108,6 +112,7 @@ public class AtualizarParcialConfiguracaoCrawlerRequestValidator : AbstractValid
             || request.MaxFalhasConsecutivasDetalhamento.HasValue
             || request.MaxFalhasConsecutivasDesdobramento.HasValue
             || request.MaxItensParalelos.HasValue
+            || request.MaxUfsParalelas.HasValue
             || request.CodigosSondagem is not null
             || request.ValidadeDiasProcessamento.HasValue
             || request.CircuitBreakerLimiarErroPercent.HasValue

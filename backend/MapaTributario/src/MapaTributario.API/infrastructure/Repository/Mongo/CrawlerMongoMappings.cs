@@ -41,6 +41,8 @@ public static class CrawlerMongoMappings
                 .SetSerializer(new EnumSerializer<StatusExecucao>(BsonType.String));
             cm.MapMember(e => e.Tipo).SetElementName("tipo")
                 .SetSerializer(new EnumSerializer<TipoExecucao>(BsonType.String));
+            cm.MapMember(e => e.FaseAtual).SetElementName("faseAtual")
+                .SetSerializer(new EnumSerializer<FaseCrawler>(BsonType.String));
             cm.MapMember(e => e.TotalMunicipios).SetElementName("totalMunicipios");
             cm.MapMember(e => e.TotalServicos).SetElementName("totalServicos");
             cm.MapMember(e => e.Processados).SetElementName("processados");

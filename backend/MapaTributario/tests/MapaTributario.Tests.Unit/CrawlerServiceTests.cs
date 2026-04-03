@@ -1240,4 +1240,108 @@ public class CrawlerServiceTests
     }
 
     #endregion
+
+    #region FaseCrawler — Transições de Fase no CrawlerService
+
+    [Fact]
+    public async Task Dado_ExecucaoSemMunicipios_FaseAtualDeveSerConcluidoAoFinal()
+    {
+        // Arrange — sem municípios, execução conclui imediatamente após fase 1
+        _municipioRepo.Setup(r => r.GetByUfAsync(It.IsAny<string>()))
+            .ReturnsAsync(new List<Municipio>());
+
+        // Act
+        Result<ExecucaoCrawler> resultado = await _sut.ExecutarAsync(TipoExecucao.Manual);
+
+        // Assert
+        resultado.IsSuccess.ShouldBeTrue();
+        resultado.Value.FaseAtual.ShouldBe(FaseCrawler.Concluido);
+    }
+
+    [Fact]
+    public async Task Dado_ExecucaoComMunicipiosAtivos_FaseAtualDeveSerConcluidoAoFinal()
+    {
+        // Arrange
+        Municipio municipio = Municipio.Create("3106200", "Belo Horizonte", "MG");
+        _municipioRepo.Setup(r => r.GetByUfAsync("MG"))
+            .ReturnsAsync(new List<Municipio> { municipio });
+        _municipioRepo.Setup(r => r.GetByUfAsync(It.Is<string>(s => s != "MG")))
+            .ReturnsAsync(new List<Municipio>());
+        _municipioRepo.Setup(r => r.GetByCodigoIbgeAsync("3106200"))
+            .ReturnsAsync(municipio);
+
+        _nfseClient.Setup(c => c.GetConvenioAsync("3106200", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CriarConvenioAtivo());
+        _nfseClient.Setup(c => c.GetAliquotaAsync("3106200", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CriarAliquotaResponse("01.01.01.000", 2.0m));
+
+        Servico servico = Servico.Create("01.01.01", "Servico teste", "01", "01", "01");
+        _servicoRepo.Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<Servico> { servico });
+
+        _aliquotaRepo.Setup(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(false);
+        _aliquotaRepo.Setup(r => r.UpsertAsync(It.IsAny<Aliquota>())).Returns(Task.CompletedTask);
+
+        bool primeiraChamada = true;
+        _filaRepo.Setup(r => r.GetPendingAsync(It.IsAny<int>()))
+            .ReturnsAsync(() =>
+            {
+                if (primeiraChamada)
+                {
+                    primeiraChamada = false;
+                    return new List<FilaProcessamento>
+                    {
+                        FilaProcessamento.Create("3106200", "01.01.01", CrawlerService.GetCompetenciaAtual(), "exec1")
+                    };
+                }
+                return new List<FilaProcessamento>();
+            });
+
+        // Act
+        Result<ExecucaoCrawler> resultado = await _sut.ExecutarAsync(TipoExecucao.Manual);
+
+        // Assert
+        resultado.IsSuccess.ShouldBeTrue();
+        resultado.Value.FaseAtual.ShouldBe(FaseCrawler.Concluido);
+        resultado.Value.Status.ShouldBe(StatusExecucao.Concluido);
+    }
+
+    [Fact]
+    public async Task Dado_TransicoesDeFase_RepositorioDeveSerChamadoParaCadaFase()
+    {
+        // Arrange — sem municípios para simplificar
+        _municipioRepo.Setup(r => r.GetByUfAsync(It.IsAny<string>()))
+            .ReturnsAsync(new List<Municipio>());
+
+        List<FaseCrawler> fasesCapturadas = new();
+        _execucaoRepo.Setup(r => r.UpdateAsync(It.IsAny<ExecucaoCrawler>()))
+            .Callback<ExecucaoCrawler>(e => fasesCapturadas.Add(e.FaseAtual))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _sut.ExecutarAsync(TipoExecucao.Manual);
+
+        // Assert — ao menos a fase DescobertaConvenios e Concluido devem ter sido persistidas
+        fasesCapturadas.ShouldContain(FaseCrawler.DescobertaConvenios);
+        fasesCapturadas.ShouldContain(FaseCrawler.Concluido);
+    }
+
+    [Fact]
+    public async Task Dado_ExcecaoInesperada_FaseAtualDeveSerConcluido()
+    {
+        // Arrange
+        _municipioRepo.Setup(r => r.GetByUfAsync(It.IsAny<string>()))
+            .ThrowsAsync(new Exception("Falha no banco de dados"));
+
+        // Act
+        Result<ExecucaoCrawler> resultado = await _sut.ExecutarAsync(TipoExecucao.Manual);
+
+        // Assert
+        resultado.IsSuccess.ShouldBeTrue();
+        resultado.Value.Status.ShouldBe(StatusExecucao.Falha);
+        resultado.Value.FaseAtual.ShouldBe(FaseCrawler.Concluido);
+    }
+
+    #endregion
 }

@@ -142,10 +142,9 @@ public class CrawlerService : ICrawlerService
             string competencia = GetCompetenciaAtual();
 
             // Phase 1: Discover active municipalities via convenio endpoint
-            List<Municipio> municipiosAtivos = await FaseConvenioAsync(execucao, filtroUfs, filtroCapital, cancellationToken);
-
-            // Persistir progresso de UFs no banco
+            execucao.AvancarFase(FaseCrawler.DescobertaConvenios);
             await _execucaoRepository.UpdateAsync(execucao);
+            List<Municipio> municipiosAtivos = await FaseConvenioAsync(execucao, filtroUfs, filtroCapital, cancellationToken);
 
             if (municipiosAtivos.Count == 0)
             {
@@ -156,6 +155,8 @@ public class CrawlerService : ICrawlerService
             }
 
             // Phase 2: Probe municipalities
+            execucao.AvancarFase(FaseCrawler.Sondagem);
+            await _execucaoRepository.UpdateAsync(execucao);
             List<Municipio> municipiosComDados = await FaseProbeAsync(
                 municipiosAtivos, competencia, cancellationToken);
 
@@ -175,6 +176,8 @@ public class CrawlerService : ICrawlerService
                 cancellationToken);
 
             // Phase 3: Process queue
+            execucao.AvancarFase(FaseCrawler.ProcessamentoFila);
+            await _execucaoRepository.UpdateAsync(execucao);
             await ProcessarFilaAsync(execucao, competencia, cancellationToken);
 
             // Finalize
@@ -268,6 +271,7 @@ public class CrawlerService : ICrawlerService
         CancellationToken cancellationToken)
     {
         execucao.IniciarProcessamentoUf(uf);
+        await _execucaoRepository.UpdateAsync(execucao);
 
         List<Municipio> ativosUf = new();
         int municipiosEncontrados = 0;
@@ -367,6 +371,9 @@ public class CrawlerService : ICrawlerService
         {
             execucao.FinalizarProcessamentoUf(uf, municipiosEncontrados, ativosUf.Count);
         }
+
+        // Persistir progresso da UF no MongoDB para observabilidade em tempo real
+        await _execucaoRepository.UpdateAsync(execucao);
 
         foreach (Municipio ativo in ativosUf)
         {

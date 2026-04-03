@@ -3,6 +3,7 @@ export interface StatusCrawler {
   inicio: string;
   fim: string | null;
   status: string;
+  faseAtual?: string;
   tipo: string;
   totalMunicipios: number;
   totalServicos: number;

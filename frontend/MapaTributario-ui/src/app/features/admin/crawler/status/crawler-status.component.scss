@@ -236,3 +236,32 @@
   font-size: 0.75rem;
   color: var(--text-color-secondary);
 }
+
+.indicador-fases {
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+
+  h4 {
+    margin-bottom: 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-color);
+  }
+}
+
+.fases-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.fase-item {
+  display: flex;
+  align-items: center;
+}
+
+.fase-seta {
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+}

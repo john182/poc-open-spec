@@ -53,6 +53,23 @@
             <span class="metrica-valor erro">{{ statusAtual()!.erros }}</span>
           </div>
         </div>
+        @if (statusAtual()!.status === 'EmAndamento' && statusAtual()!.faseAtual) {
+          <div class="indicador-fases" data-cy="indicador-fases">
+            <h4>Fase atual</h4>
+            <div class="fases-stepper">
+              @for (fase of fasesCrawler; track fase; let ultimo = $last) {
+                <div class="fase-item">
+                  <p-tag [value]="labelsFasesCrawler[fase]"
+                         [severity]="obterSeveridadeFase(fase)"
+                         [icon]="obterIconeFase(fase)" />
+                </div>
+                @if (!ultimo) {
+                  <i class="pi pi-arrow-right fase-seta"></i>
+                }
+              }
+            </div>
+          </div>
+        }
         @if (statusAtual()!.detalhesErro.length > 0) {
           <div class="detalhes-erro" data-cy="detalhes-erro">
             <h4>Detalhes dos erros</h4>
@@ -68,7 +85,7 @@
         @if (statusAtual()!.ufAtual || listaProgressoUfs().length > 0) {
           <div class="secao-progresso-uf" data-cy="progresso-ufs">
             <h4>
-              Progresso por UF
+              Fase 1 — Descoberta de Convênios
               @if (statusAtual()!.ufAtual) {
                 <span class="uf-atual-badge">
                   <i class="pi pi-spin pi-spinner"></i>
@@ -93,7 +110,7 @@
                   <div class="progresso-uf-card" [attr.data-cy]="'progresso-uf-' + progresso.uf">
                     <div class="progresso-uf-header">
                       <span class="progresso-uf-sigla">{{ progresso.uf }}</span>
-                      <p-tag [value]="progresso.status"
+                      <p-tag [value]="obterLabelProgressoUf(progresso.status)"
                              [severity]="obterSeveridadeProgressoUf(progresso.status)" />
                     </div>
                     <div class="progresso-uf-detalhes">

@@ -10,6 +10,7 @@ public class StatusCrawlerResponse
     public DateTime? Fim { get; set; }
     public string Status { get; set; } = null!;
     public string Tipo { get; set; } = null!;
+    public string FaseAtual { get; set; } = null!;
     public int TotalMunicipios { get; set; }
     public int TotalServicos { get; set; }
     public int Processados { get; set; }

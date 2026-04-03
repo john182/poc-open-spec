@@ -9,6 +9,7 @@ public class ExecucaoCrawler
     public DateTime? Fim { get; private set; }
     public StatusExecucao Status { get; private set; }
     public TipoExecucao Tipo { get; private set; }
+    public FaseCrawler FaseAtual { get; private set; }
     public int TotalMunicipios { get; private set; }
     public int TotalServicos { get; private set; }
 
@@ -32,6 +33,7 @@ public class ExecucaoCrawler
             Inicio = DateTime.UtcNow,
             Status = StatusExecucao.EmAndamento,
             Tipo = tipo,
+            FaseAtual = FaseCrawler.DescobertaConvenios,
             TotalMunicipios = 0,
             TotalServicos = 0,
             Processados = 0,
@@ -49,6 +51,8 @@ public class ExecucaoCrawler
     }
 
     public void SetId(string id) => Id = id;
+
+    public void AvancarFase(FaseCrawler fase) => FaseAtual = fase;
 
     public void SetTotais(int totalMunicipios, int totalServicos)
     {
@@ -72,6 +76,7 @@ public class ExecucaoCrawler
     public void Finalizar(StatusExecucao status)
     {
         Status = status;
+        FaseAtual = FaseCrawler.Concluido;
         Fim = DateTime.UtcNow;
     }
 
@@ -167,6 +172,14 @@ public enum TipoExecucao
 {
     Agendado,
     Manual
+}
+
+public enum FaseCrawler
+{
+    DescobertaConvenios,
+    Sondagem,
+    ProcessamentoFila,
+    Concluido
 }
 
 public class ProgressoUf

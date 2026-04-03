@@ -212,6 +212,7 @@ public class CrawlerController : ControllerBase
             Fim = execucao.Fim,
             Status = execucao.Status.ToString(),
             Tipo = execucao.Tipo.ToString(),
+            FaseAtual = execucao.FaseAtual.ToString(),
             TotalMunicipios = execucao.TotalMunicipios,
             TotalServicos = execucao.TotalServicos,
             Processados = execucao.Processados,

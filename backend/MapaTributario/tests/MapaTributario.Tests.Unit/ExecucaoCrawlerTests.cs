@@ -303,4 +303,67 @@ public class ExecucaoCrawlerTests
         execucao.UfsEmAndamento.Count.ShouldBe(1);
         execucao.ProgressoUfs.Count.ShouldBe(1);
     }
+
+    #region FaseCrawler Tests
+
+    [Fact]
+    public void Dado_ExecucaoCriada_FaseAtualDeveSerDescobertaConvenios()
+    {
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Agendado);
+
+        execucao.FaseAtual.ShouldBe(FaseCrawler.DescobertaConvenios);
+    }
+
+    [Fact]
+    public void Dado_AvancarFase_DeveAtualizarFaseAtual()
+    {
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+
+        execucao.AvancarFase(FaseCrawler.Sondagem);
+        execucao.FaseAtual.ShouldBe(FaseCrawler.Sondagem);
+
+        execucao.AvancarFase(FaseCrawler.ProcessamentoFila);
+        execucao.FaseAtual.ShouldBe(FaseCrawler.ProcessamentoFila);
+
+        execucao.AvancarFase(FaseCrawler.Concluido);
+        execucao.FaseAtual.ShouldBe(FaseCrawler.Concluido);
+    }
+
+    [Fact]
+    public void Dado_AvancarFase_ParaDescobertaConvenios_DevePermitirTransicao()
+    {
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+
+        execucao.AvancarFase(FaseCrawler.ProcessamentoFila);
+        execucao.AvancarFase(FaseCrawler.DescobertaConvenios);
+
+        execucao.FaseAtual.ShouldBe(FaseCrawler.DescobertaConvenios);
+    }
+
+    [Fact]
+    public void Dado_Finalizar_FaseAtualDeveSerConcluido()
+    {
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+
+        execucao.AvancarFase(FaseCrawler.ProcessamentoFila);
+        execucao.Finalizar(StatusExecucao.Concluido);
+
+        execucao.FaseAtual.ShouldBe(FaseCrawler.Concluido);
+        execucao.Status.ShouldBe(StatusExecucao.Concluido);
+        execucao.Fim.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void Dado_FinalizarComFalha_FaseAtualDeveSerConcluido()
+    {
+        ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
+
+        execucao.AvancarFase(FaseCrawler.Sondagem);
+        execucao.Finalizar(StatusExecucao.Falha);
+
+        execucao.FaseAtual.ShouldBe(FaseCrawler.Concluido);
+        execucao.Status.ShouldBe(StatusExecucao.Falha);
+    }
+
+    #endregion
 }

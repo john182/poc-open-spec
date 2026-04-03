@@ -86,11 +86,16 @@ public class FilaProcessamentoRepository : IFilaProcessamentoRepository
     {
         DateTime agora = DateTime.UtcNow;
 
-        FilterDefinition<FilaProcessamento> filter = Builders<FilaProcessamento>.Filter.Or(
-            Builders<FilaProcessamento>.Filter.Eq(f => f.Status, StatusFila.Pendente),
-            Builders<FilaProcessamento>.Filter.And(
-                Builders<FilaProcessamento>.Filter.Eq(f => f.Status, StatusFila.Erro),
-                Builders<FilaProcessamento>.Filter.Lte(f => f.ProximaTentativa, agora)
+        FilterDefinition<FilaProcessamento> filter = Builders<FilaProcessamento>.Filter.And(
+            // Excluir documentos legados sem campo Uf (null ou vazio)
+            Builders<FilaProcessamento>.Filter.Ne(f => f.Uf, null!),
+            Builders<FilaProcessamento>.Filter.Ne(f => f.Uf, ""),
+            Builders<FilaProcessamento>.Filter.Or(
+                Builders<FilaProcessamento>.Filter.Eq(f => f.Status, StatusFila.Pendente),
+                Builders<FilaProcessamento>.Filter.And(
+                    Builders<FilaProcessamento>.Filter.Eq(f => f.Status, StatusFila.Erro),
+                    Builders<FilaProcessamento>.Filter.Lte(f => f.ProximaTentativa, agora)
+                )
             )
         );
 
@@ -98,7 +103,13 @@ public class FilaProcessamentoRepository : IFilaProcessamentoRepository
             .Distinct(f => f.Uf, filter)
             .ToListAsync();
 
-        return ufs.AsReadOnly();
+        // Normalizar para upper-case e remover possíveis nulls residuais
+        return ufs
+            .Where(u => !string.IsNullOrEmpty(u))
+            .Select(u => u.ToUpperInvariant())
+            .Distinct()
+            .ToList()
+            .AsReadOnly();
     }
 
     public async Task UpdateStatusAsync(FilaProcessamento item)

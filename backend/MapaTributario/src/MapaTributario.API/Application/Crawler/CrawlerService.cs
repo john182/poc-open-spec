@@ -32,6 +32,10 @@ public class CrawlerService : ICrawlerService
     // Configuração carregada do MongoDB no início de cada execução
     private ConfiguracaoCrawler _configuracao = ConfiguracaoCrawler.CriarPadrao();
 
+    // Serializa chamadas concorrentes a _execucaoRepository.UpdateAsync(execucao)
+    // para evitar que ReplaceOneAsync (full-document replace) de UFs paralelas sobrescrevam dados umas das outras.
+    private readonly SemaphoreSlim _semaforoPersistencia = new(1, 1);
+
     public CrawlerService(
         IExecucaoCrawlerRepository execucaoRepository,
         IFilaProcessamentoRepository filaRepository,
@@ -531,6 +535,10 @@ public class CrawlerService : ICrawlerService
 
         IReadOnlyList<string> ufsComPendencia = await _filaRepository.GetDistinctPendingUfsAsync();
 
+        // Fallback: processar itens legados (sem campo Uf preenchido) via GetPendingAsync sequencial.
+        // Itens criados antes desta PR podem não ter Uf, ficando invisíveis para GetDistinctPendingUfsAsync.
+        await ProcessarItensLegadosSemUfAsync(execucao, competencia, cancellationToken);
+
         if (ufsComPendencia.Count == 0)
         {
             _logger.LogInformation("Phase 3: No pending items in queue");
@@ -564,6 +572,65 @@ public class CrawlerService : ICrawlerService
         }
     }
 
+    /// <summary>
+    /// Processa itens legados na fila que não possuem o campo Uf preenchido.
+    /// Estes itens foram criados antes da PR de multi-UF e são invisíveis para
+    /// GetDistinctPendingUfsAsync/GetPendingByUfAsync. Processa sequencialmente
+    /// via GetPendingAsync até esgotar.
+    /// </summary>
+    internal async Task ProcessarItensLegadosSemUfAsync(
+        ExecucaoCrawler execucao,
+        string competencia,
+        CancellationToken cancellationToken)
+    {
+        ConcurrentDictionary<string, int> misses = new();
+
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (_certificateProtection.ShouldHalt || _certificateProtection.BudgetExhausted)
+            {
+                break;
+            }
+
+            IReadOnlyList<FilaProcessamento> batch = await _filaRepository.GetPendingAsync(_configuracao.TamanhoLoteMongo);
+
+            // Filtrar apenas itens sem Uf (legados) — itens com Uf serão processados pelo loop principal
+            List<FilaProcessamento> itensLegados = batch.Where(i => string.IsNullOrEmpty(i.Uf)).ToList();
+
+            if (itensLegados.Count == 0)
+            {
+                break;
+            }
+
+            _logger.LogInformation(
+                "Phase 3 [legacy]: Processing {Count} legacy items without Uf field",
+                itensLegados.Count);
+
+            foreach (FilaProcessamento item in itensLegados)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (_certificateProtection.ShouldHalt || _certificateProtection.BudgetExhausted)
+                {
+                    break;
+                }
+
+                try
+                {
+                    await ProcessarItemAsync(item, execucao, competencia, misses, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Phase 3 [legacy]: Error processing item {Id}", item.Id);
+                }
+            }
+
+            await PersistirExecucaoAsync(execucao);
+        }
+    }
+
     internal async Task ProcessarFilaUfAsync(
         ExecucaoCrawler execucao,
         string uf,
@@ -574,8 +641,9 @@ public class CrawlerService : ICrawlerService
     {
         _logger.LogInformation("Phase 3 [{Uf}]: Starting queue processing", uf);
 
-        execucao.IniciarProcessamentoUf(uf);
-        await _execucaoRepository.UpdateAsync(execucao);
+        // Usar métodos dedicados da Fase 3 para NÃO sobrescrever ProgressoUfs da Fase 1
+        execucao.IniciarProcessamentoFilaUf(uf);
+        await PersistirExecucaoAsync(execucao);
 
         int processadosUf = 0;
         int errosUf = 0;
@@ -651,28 +719,28 @@ public class CrawlerService : ICrawlerService
                 }
 
                 await Task.WhenAll(tasks);
-                await _execucaoRepository.UpdateAsync(execucao);
+                await PersistirExecucaoAsync(execucao);
             }
 
-            execucao.FinalizarProcessamentoUf(uf, processadosUf, processadosUf - errosUf);
+            execucao.FinalizarProcessamentoFilaUf(uf);
             _logger.LogInformation(
                 "Phase 3 [{Uf}]: Completed — {Processados} processed, {Erros} errors",
                 uf, processadosUf, errosUf);
         }
         catch (OperationCanceledException)
         {
-            execucao.InterromperProcessamentoUf(uf, processadosUf, processadosUf - errosUf);
+            execucao.FinalizarProcessamentoFilaUf(uf);
             _logger.LogWarning("Phase 3 [{Uf}]: Interrupted", uf);
         }
         catch (Exception ex)
         {
-            execucao.FalharProcessamentoUf(uf, processadosUf);
+            execucao.FinalizarProcessamentoFilaUf(uf);
             _logger.LogError(ex, "Phase 3 [{Uf}]: Failed with unexpected error", uf);
         }
         finally
         {
             semaphore.Dispose();
-            await _execucaoRepository.UpdateAsync(execucao);
+            await PersistirExecucaoAsync(execucao);
         }
     }
 
@@ -1102,6 +1170,24 @@ public class CrawlerService : ICrawlerService
             _logger.LogWarning("MaxTentativas inválido ({Valor}), usando padrão ({Padrao})",
                 _configuracao.MaxTentativas, padrao.MaxTentativas);
             _configuracao.AtualizarParcial(maxTentativas: padrao.MaxTentativas);
+        }
+    }
+
+    /// <summary>
+    /// Persiste o estado da execução no MongoDB de forma thread-safe.
+    /// Usa SemaphoreSlim para serializar chamadas concorrentes e evitar que
+    /// ReplaceOneAsync (full-document replace) de UFs paralelas sobrescrevam dados.
+    /// </summary>
+    internal async Task PersistirExecucaoAsync(ExecucaoCrawler execucao)
+    {
+        await _semaforoPersistencia.WaitAsync();
+        try
+        {
+            await _execucaoRepository.UpdateAsync(execucao);
+        }
+        finally
+        {
+            _semaforoPersistencia.Release();
         }
     }
 }

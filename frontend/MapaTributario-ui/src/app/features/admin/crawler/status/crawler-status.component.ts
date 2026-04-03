@@ -200,7 +200,7 @@ export class CrawlerStatusComponent implements OnInit, OnDestroy {
   obterLabelProgressoUf(status: string): string {
     if (status === 'Concluido') return 'Convênios verificados';
     if (status === 'EmAndamento') return 'Em andamento';
-    return status;
+    return LABELS_STATUS[status] ?? status;
   }
 
   private _carregarStatus(): void {

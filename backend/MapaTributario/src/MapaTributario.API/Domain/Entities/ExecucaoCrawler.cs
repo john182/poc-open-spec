@@ -170,6 +170,38 @@ public class ExecucaoCrawler
             UfsEmAndamento.Remove(ufNormalizada);
         }
     }
+
+    /// <summary>
+    /// Marca uma UF como em andamento na Fase 3 (processamento de fila).
+    /// Diferente de IniciarProcessamentoUf, NÃO sobrescreve ProgressoUfs — preserva dados da Fase 1.
+    /// Apenas adiciona a UF à lista de UfsEmAndamento para observabilidade.
+    /// </summary>
+    public void IniciarProcessamentoFilaUf(string uf)
+    {
+        string ufNormalizada = uf.ToUpperInvariant();
+
+        lock (_lock)
+        {
+            if (!UfsEmAndamento.Contains(ufNormalizada))
+            {
+                UfsEmAndamento.Add(ufNormalizada);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Remove a UF da lista de UfsEmAndamento ao concluir o processamento de fila (Fase 3).
+    /// NÃO altera ProgressoUfs para preservar os dados originais da Fase 1.
+    /// </summary>
+    public void FinalizarProcessamentoFilaUf(string uf)
+    {
+        string ufNormalizada = uf.ToUpperInvariant();
+
+        lock (_lock)
+        {
+            UfsEmAndamento.Remove(ufNormalizada);
+        }
+    }
 }
 
 public enum StatusExecucao

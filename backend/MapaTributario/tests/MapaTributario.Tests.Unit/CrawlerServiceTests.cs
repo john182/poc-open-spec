@@ -46,6 +46,7 @@ public class CrawlerServiceTests
         _filaRepo.Setup(r => r.RevertProcessingTopendingAsync()).Returns(Task.CompletedTask);
         _filaRepo.Setup(r => r.InsertManyAsync(It.IsAny<IEnumerable<FilaProcessamento>>())).Returns(Task.CompletedTask);
         _filaRepo.Setup(r => r.UpdateStatusAsync(It.IsAny<FilaProcessamento>())).Returns(Task.CompletedTask);
+        _filaRepo.Setup(r => r.GetPendingAsync(It.IsAny<int>())).ReturnsAsync(new List<FilaProcessamento>());
 
         // Configuração padrão do crawler (retornada pelo repositório)
         _configuracaoRepo.Setup(r => r.ObterAtualAsync())

@@ -46,7 +46,7 @@ public class ConfiguracaoCrawlerAppService : IConfiguracaoCrawlerAppService
         configuracao.Atualizar(
             request.CronSchedule,
             request.LimiteRequisicoesPorSegundo,
-            request.OrcamentoDiario,
+            request.LimiteDiarioRequisicoes,
             request.TamanhoLoteCertificado,
             request.PausaLoteSegundos,
             request.TamanhoLoteMongo,
@@ -89,7 +89,7 @@ public class ConfiguracaoCrawlerAppService : IConfiguracaoCrawlerAppService
         configuracao.AtualizarParcial(
             request.CronSchedule,
             request.LimiteRequisicoesPorSegundo,
-            request.OrcamentoDiario,
+            request.LimiteDiarioRequisicoes,
             request.TamanhoLoteCertificado,
             request.PausaLoteSegundos,
             request.TamanhoLoteMongo,
@@ -125,7 +125,7 @@ public class ConfiguracaoCrawlerAppService : IConfiguracaoCrawlerAppService
             Id = entidade.Id,
             CronSchedule = entidade.CronSchedule,
             LimiteRequisicoesPorSegundo = entidade.LimiteRequisicoesPorSegundo,
-            OrcamentoDiario = entidade.OrcamentoDiario,
+            LimiteDiarioRequisicoes = entidade.LimiteDiarioRequisicoes,
             TamanhoLoteCertificado = entidade.TamanhoLoteCertificado,
             PausaLoteSegundos = entidade.PausaLoteSegundos,
             TamanhoLoteMongo = entidade.TamanhoLoteMongo,

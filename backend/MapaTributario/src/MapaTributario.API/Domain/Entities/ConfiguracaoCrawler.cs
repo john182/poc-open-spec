@@ -9,7 +9,7 @@ public class ConfiguracaoCrawler
 
     // Limites de requisição (valores otimizados conforme benchmark — API sem rate limiting, plateau ~17 req/s serial)
     public int LimiteRequisicoesPorSegundo { get; private set; } = 50;
-    public int OrcamentoDiario { get; private set; } = 200000;
+    public int LimiteDiarioRequisicoes { get; private set; } = 200000;
 
     // Lote de certificado (CertificateProtection)
     public int TamanhoLoteCertificado { get; private set; } = 500;
@@ -59,7 +59,7 @@ public class ConfiguracaoCrawler
         {
             CronSchedule = "0 2 * * *",
             LimiteRequisicoesPorSegundo = 50,
-            OrcamentoDiario = 200000,
+            LimiteDiarioRequisicoes = 200000,
             TamanhoLoteCertificado = 500,
             PausaLoteSegundos = 0,
             TamanhoLoteMongo = 50,
@@ -96,7 +96,7 @@ public class ConfiguracaoCrawler
     public void Atualizar(
         string cronSchedule,
         int limiteRequisicoesPorSegundo,
-        int orcamentoDiario,
+        int limiteDiarioRequisicoes,
         int tamanhoLoteCertificado,
         int pausaLoteSegundos,
         int tamanhoLoteMongo,
@@ -118,7 +118,7 @@ public class ConfiguracaoCrawler
     {
         CronSchedule = cronSchedule;
         LimiteRequisicoesPorSegundo = limiteRequisicoesPorSegundo;
-        OrcamentoDiario = orcamentoDiario;
+        LimiteDiarioRequisicoes = limiteDiarioRequisicoes;
         TamanhoLoteCertificado = tamanhoLoteCertificado;
         PausaLoteSegundos = pausaLoteSegundos;
         TamanhoLoteMongo = tamanhoLoteMongo;
@@ -143,7 +143,7 @@ public class ConfiguracaoCrawler
     public void AtualizarParcial(
         string? cronSchedule = null,
         int? limiteRequisicoesPorSegundo = null,
-        int? orcamentoDiario = null,
+        int? limiteDiarioRequisicoes = null,
         int? tamanhoLoteCertificado = null,
         int? pausaLoteSegundos = null,
         int? tamanhoLoteMongo = null,
@@ -165,7 +165,7 @@ public class ConfiguracaoCrawler
     {
         if (cronSchedule is not null) CronSchedule = cronSchedule;
         if (limiteRequisicoesPorSegundo.HasValue) LimiteRequisicoesPorSegundo = limiteRequisicoesPorSegundo.Value;
-        if (orcamentoDiario.HasValue) OrcamentoDiario = orcamentoDiario.Value;
+        if (limiteDiarioRequisicoes.HasValue) LimiteDiarioRequisicoes = limiteDiarioRequisicoes.Value;
         if (tamanhoLoteCertificado.HasValue) TamanhoLoteCertificado = tamanhoLoteCertificado.Value;
         if (pausaLoteSegundos.HasValue) PausaLoteSegundos = pausaLoteSegundos.Value;
         if (tamanhoLoteMongo.HasValue) TamanhoLoteMongo = tamanhoLoteMongo.Value;

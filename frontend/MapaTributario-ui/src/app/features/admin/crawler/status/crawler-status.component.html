@@ -21,7 +21,7 @@
         <div class="metricas-grid">
           <div class="metrica-card">
             <span class="metrica-label">Status</span>
-            <p-tag [value]="statusAtual()!.status"
+            <p-tag [value]="obterLabelStatus(statusAtual()!.status)"
                    [severity]="obterSeveridadeStatus(statusAtual()!.status)" />
           </div>
           <div class="metrica-card">

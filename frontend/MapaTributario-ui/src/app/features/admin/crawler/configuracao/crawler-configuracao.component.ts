@@ -45,7 +45,7 @@ export class CrawlerConfiguracaoComponent implements OnInit {
   // Campos do formulário (two-way binding via signals)
   readonly cronSchedule = signal('');
   readonly limiteRequisicoesPorSegundo = signal(15);
-  readonly orcamentoDiario = signal(50000);
+  readonly limiteDiarioRequisicoes = signal(50000);
   readonly tamanhoLoteCertificado = signal(200);
   readonly pausaLoteSegundos = signal(5);
   readonly tamanhoLoteMongo = signal(50);
@@ -86,7 +86,7 @@ export class CrawlerConfiguracaoComponent implements OnInit {
     const request: AtualizarConfiguracaoCrawlerRequest = {
       cronSchedule: this.cronSchedule(),
       limiteRequisicoesPorSegundo: this.limiteRequisicoesPorSegundo(),
-      orcamentoDiario: this.orcamentoDiario(),
+      limiteDiarioRequisicoes: this.limiteDiarioRequisicoes(),
       tamanhoLoteCertificado: this.tamanhoLoteCertificado(),
       pausaLoteSegundos: this.pausaLoteSegundos(),
       tamanhoLoteMongo: this.tamanhoLoteMongo(),
@@ -151,7 +151,7 @@ export class CrawlerConfiguracaoComponent implements OnInit {
   private _preencherFormulario(configuracao: ConfiguracaoCrawler): void {
     this.cronSchedule.set(configuracao.cronSchedule);
     this.limiteRequisicoesPorSegundo.set(configuracao.limiteRequisicoesPorSegundo);
-    this.orcamentoDiario.set(configuracao.orcamentoDiario);
+    this.limiteDiarioRequisicoes.set(configuracao.limiteDiarioRequisicoes);
     this.tamanhoLoteCertificado.set(configuracao.tamanhoLoteCertificado);
     this.pausaLoteSegundos.set(configuracao.pausaLoteSegundos);
     this.tamanhoLoteMongo.set(configuracao.tamanhoLoteMongo);

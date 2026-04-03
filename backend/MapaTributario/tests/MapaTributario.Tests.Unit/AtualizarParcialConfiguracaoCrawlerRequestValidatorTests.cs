@@ -109,14 +109,14 @@ public class AtualizarParcialConfiguracaoCrawlerRequestValidatorTests
         resultado.Errors.ShouldContain(e => e.PropertyName == "LimiteRequisicoesPorSegundo.Value");
     }
 
-    // ── OrcamentoDiario ─────────────────────────────────────────────
+    // ── LimiteDiarioRequisicoes ─────────────────────────────────────────────
 
     [Fact]
-    public async Task Given_ApenaOrcamentoDiarioValido_Should_PassarValidacao()
+    public async Task Given_ApenaLimiteDiarioRequisicoesValido_Should_PassarValidacao()
     {
         // Arrange
         var request = CriarRequestVazio();
-        request.OrcamentoDiario = 1000;
+        request.LimiteDiarioRequisicoes = 1000;
 
         // Act
         var resultado = await _validador.ValidateAsync(request);
@@ -128,18 +128,18 @@ public class AtualizarParcialConfiguracaoCrawlerRequestValidatorTests
     [Theory]
     [InlineData(0)]
     [InlineData(500001)]
-    public async Task Given_OrcamentoDiarioForaDoLimite_Should_FalharValidacao(int orcamento)
+    public async Task Given_LimiteDiarioRequisicoesForaDoLimite_Should_FalharValidacao(int limiteDiario)
     {
         // Arrange
         var request = CriarRequestVazio();
-        request.OrcamentoDiario = orcamento;
+        request.LimiteDiarioRequisicoes = limiteDiario;
 
         // Act
         var resultado = await _validador.ValidateAsync(request);
 
         // Assert
         resultado.IsValid.ShouldBeFalse();
-        resultado.Errors.ShouldContain(e => e.PropertyName == "OrcamentoDiario.Value");
+        resultado.Errors.ShouldContain(e => e.PropertyName == "LimiteDiarioRequisicoes.Value");
     }
 
     // ── CodigosSondagem ─────────────────────────────────────────────
@@ -307,7 +307,7 @@ public class AtualizarParcialConfiguracaoCrawlerRequestValidatorTests
         var request = CriarRequestVazio();
         request.CronSchedule = "0 */6 * * *";
         request.LimiteRequisicoesPorSegundo = 10;
-        request.OrcamentoDiario = 1000;
+        request.LimiteDiarioRequisicoes = 1000;
 
         // Act
         var resultado = await _validador.ValidateAsync(request);

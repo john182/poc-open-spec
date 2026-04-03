@@ -130,17 +130,17 @@
                          data-cy="input-limite-requisicoes" />
         </div>
         <div class="campo-formulario">
-          <label for="orcamentoDiario">
-            Orçamento Diário
+          <label for="limiteDiarioRequisicoes">
+            Limite Diário de Requisições
             <i class="pi pi-info-circle"
                pTooltip="Limite máximo de requisições permitidas por dia."
                tooltipPosition="top"
                style="margin-left: 0.5rem; cursor: help;"></i>
           </label>
-          <p-inputNumber id="orcamentoDiario"
-                         [(ngModel)]="orcamentoDiario"
+          <p-inputNumber id="limiteDiarioRequisicoes"
+                         [(ngModel)]="limiteDiarioRequisicoes"
                          [min]="1000" [max]="500000"
-                         data-cy="input-orcamento-diario" />
+                         data-cy="input-limite-diario-requisicoes" />
         </div>
         <div class="campo-formulario">
           <label for="tamanhoLoteCertificado">

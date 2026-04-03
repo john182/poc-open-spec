@@ -50,7 +50,7 @@ export interface ConfiguracaoCrawler {
   id: string;
   cronSchedule: string;
   limiteRequisicoesPorSegundo: number;
-  orcamentoDiario: number;
+  limiteDiarioRequisicoes: number;
   tamanhoLoteCertificado: number;
   pausaLoteSegundos: number;
   tamanhoLoteMongo: number;
@@ -75,7 +75,7 @@ export interface ConfiguracaoCrawler {
 export interface AtualizarConfiguracaoCrawlerRequest {
   cronSchedule: string;
   limiteRequisicoesPorSegundo: number;
-  orcamentoDiario: number;
+  limiteDiarioRequisicoes: number;
   tamanhoLoteCertificado: number;
   pausaLoteSegundos: number;
   tamanhoLoteMongo: number;

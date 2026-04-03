@@ -9,7 +9,7 @@ public class AtualizarConfiguracaoCrawlerRequestValidator : AbstractValidator<At
     {
         RuleFor(x => x.CronSchedule).ValidarCronSchedule();
         RuleFor(x => x.LimiteRequisicoesPorSegundo).ValidarLimiteRequisicoesPorSegundo();
-        RuleFor(x => x.OrcamentoDiario).ValidarOrcamentoDiario();
+        RuleFor(x => x.LimiteDiarioRequisicoes).ValidarLimiteDiarioRequisicoes();
         RuleFor(x => x.TamanhoLoteCertificado).ValidarTamanhoLoteCertificado();
         RuleFor(x => x.PausaLoteSegundos).ValidarPausaLoteSegundos();
         RuleFor(x => x.TamanhoLoteMongo).ValidarTamanhoLoteMongo();

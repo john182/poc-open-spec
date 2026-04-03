@@ -22,7 +22,7 @@ describe('CrawlerConfiguracaoComponent', () => {
     id: '1',
     cronSchedule: '0 2 * * *',
     limiteRequisicoesPorSegundo: 15,
-    orcamentoDiario: 50000,
+    limiteDiarioRequisicoes: 50000,
     tamanhoLoteCertificado: 200,
     pausaLoteSegundos: 5,
     tamanhoLoteMongo: 50,

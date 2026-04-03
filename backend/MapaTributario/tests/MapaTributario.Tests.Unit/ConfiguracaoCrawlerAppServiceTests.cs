@@ -42,7 +42,7 @@ public class ConfiguracaoCrawlerAppServiceTests
         resposta.Id.ShouldBe("test-id");
         resposta.CronSchedule.ShouldBe("0 2 * * *");
         resposta.LimiteRequisicoesPorSegundo.ShouldBe(50);
-        resposta.OrcamentoDiario.ShouldBe(200000);
+        resposta.LimiteDiarioRequisicoes.ShouldBe(200000);
         resposta.TamanhoLoteCertificado.ShouldBe(500);
         resposta.PausaLoteSegundos.ShouldBe(0);
         resposta.TamanhoLoteMongo.ShouldBe(50);
@@ -94,7 +94,7 @@ public class ConfiguracaoCrawlerAppServiceTests
         {
             CronSchedule = "0 3 * * *",
             LimiteRequisicoesPorSegundo = 20,
-            OrcamentoDiario = 60000,
+            LimiteDiarioRequisicoes = 60000,
             TamanhoLoteCertificado = 300,
             PausaLoteSegundos = 10,
             TamanhoLoteMongo = 100,
@@ -124,7 +124,7 @@ public class ConfiguracaoCrawlerAppServiceTests
         ConfiguracaoCrawlerResponse resposta = resultado.Value;
         resposta.CronSchedule.ShouldBe("0 3 * * *");
         resposta.LimiteRequisicoesPorSegundo.ShouldBe(20);
-        resposta.OrcamentoDiario.ShouldBe(60000);
+        resposta.LimiteDiarioRequisicoes.ShouldBe(60000);
         resposta.TamanhoLoteCertificado.ShouldBe(300);
         resposta.PausaLoteSegundos.ShouldBe(10);
         resposta.TamanhoLoteMongo.ShouldBe(100);
@@ -159,7 +159,7 @@ public class ConfiguracaoCrawlerAppServiceTests
         {
             CronSchedule = "0 3 * * *",
             LimiteRequisicoesPorSegundo = 20,
-            OrcamentoDiario = 60000,
+            LimiteDiarioRequisicoes = 60000,
             TamanhoLoteCertificado = 300,
             PausaLoteSegundos = 10,
             TamanhoLoteMongo = 100,
@@ -221,7 +221,7 @@ public class ConfiguracaoCrawlerAppServiceTests
 
         // Campos inalterados (valores padrão)
         resposta.LimiteRequisicoesPorSegundo.ShouldBe(50);
-        resposta.OrcamentoDiario.ShouldBe(200000);
+        resposta.LimiteDiarioRequisicoes.ShouldBe(200000);
         resposta.TamanhoLoteCertificado.ShouldBe(500);
         resposta.PausaLoteSegundos.ShouldBe(0);
         resposta.TamanhoLoteMongo.ShouldBe(50);

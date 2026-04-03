@@ -35,6 +35,15 @@ const LABELS_FASES_CRAWLER: Record<string, string> = {
   ProcessamentoFila: 'Processamento da Fila',
 };
 
+const LABELS_STATUS: Record<string, string> = {
+  EmAndamento: 'Em andamento',
+  Concluido: 'Concluído',
+  FalhaParcial: 'Falha parcial',
+  Falha: 'Falha',
+  NenhumaExecucao: 'Nenhuma execução',
+  Interrompido: 'Interrompido',
+};
+
 @Component({
   selector: 'app-crawler-status',
   standalone: true,
@@ -158,6 +167,10 @@ export class CrawlerStatusComponent implements OnInit, OnDestroy {
 
   readonly fasesCrawler = FASES_CRAWLER;
   readonly labelsFasesCrawler = LABELS_FASES_CRAWLER;
+
+  obterLabelStatus(status: string): string {
+    return LABELS_STATUS[status] ?? status;
+  }
 
   obterIndiceFaseAtual(): number {
     const faseAtual = this.statusAtual()?.faseAtual;

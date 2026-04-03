@@ -27,7 +27,7 @@ public static class RegrasValidacaoConfiguracao
             .LessThanOrEqualTo(100).WithMessage("'{PropertyName}' deve ser no máximo 100");
     }
 
-    public static IRuleBuilderOptions<T, int> ValidarOrcamentoDiario<T>(
+    public static IRuleBuilderOptions<T, int> ValidarLimiteDiarioRequisicoes<T>(
         this IRuleBuilder<T, int> regra)
     {
         return regra

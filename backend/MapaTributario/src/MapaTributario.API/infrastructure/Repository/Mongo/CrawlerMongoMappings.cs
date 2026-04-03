@@ -104,7 +104,7 @@ public static class CrawlerMongoMappings
                 .SetSerializer(new StringSerializer(BsonType.ObjectId));
             cm.MapMember(c => c.CronSchedule).SetElementName("cronSchedule");
             cm.MapMember(c => c.LimiteRequisicoesPorSegundo).SetElementName("limiteRequisicoesPorSegundo");
-            cm.MapMember(c => c.OrcamentoDiario).SetElementName("orcamentoDiario");
+            cm.MapMember(c => c.LimiteDiarioRequisicoes).SetElementName("limiteDiarioRequisicoes");
             cm.MapMember(c => c.TamanhoLoteCertificado).SetElementName("tamanhoLoteCertificado");
             cm.MapMember(c => c.PausaLoteSegundos).SetElementName("pausaLoteSegundos");
             cm.MapMember(c => c.TamanhoLoteMongo).SetElementName("tamanhoLoteMongo");

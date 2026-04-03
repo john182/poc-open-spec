@@ -19,9 +19,9 @@ public class AtualizarParcialConfiguracaoCrawlerRequestValidator : AbstractValid
             .ValidarLimiteRequisicoesPorSegundo()
             .When(x => x.LimiteRequisicoesPorSegundo.HasValue);
 
-        RuleFor(x => x.OrcamentoDiario!.Value)
-            .ValidarOrcamentoDiario()
-            .When(x => x.OrcamentoDiario.HasValue);
+        RuleFor(x => x.LimiteDiarioRequisicoes!.Value)
+            .ValidarLimiteDiarioRequisicoes()
+            .When(x => x.LimiteDiarioRequisicoes.HasValue);
 
         RuleFor(x => x.TamanhoLoteCertificado!.Value)
             .ValidarTamanhoLoteCertificado()
@@ -101,7 +101,7 @@ public class AtualizarParcialConfiguracaoCrawlerRequestValidator : AbstractValid
     {
         return request.CronSchedule is not null
             || request.LimiteRequisicoesPorSegundo.HasValue
-            || request.OrcamentoDiario.HasValue
+            || request.LimiteDiarioRequisicoes.HasValue
             || request.TamanhoLoteCertificado.HasValue
             || request.PausaLoteSegundos.HasValue
             || request.TamanhoLoteMongo.HasValue

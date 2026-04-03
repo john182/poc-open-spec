@@ -4,7 +4,7 @@ public class AtualizarConfiguracaoCrawlerRequest
 {
     public string CronSchedule { get; set; } = null!;
     public int LimiteRequisicoesPorSegundo { get; set; }
-    public int OrcamentoDiario { get; set; }
+    public int LimiteDiarioRequisicoes { get; set; }
     public int TamanhoLoteCertificado { get; set; }
     public int PausaLoteSegundos { get; set; }
     public int TamanhoLoteMongo { get; set; }

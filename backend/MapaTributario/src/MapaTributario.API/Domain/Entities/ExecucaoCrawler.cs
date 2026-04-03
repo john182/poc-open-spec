@@ -142,6 +142,18 @@ public class ExecucaoCrawler
         }
     }
 
+    /// <summary>
+    /// Retorna uma cópia thread-safe da lista de UFs em andamento.
+    /// Use este método para leituras externas (ex: controller/API) ao invés de acessar UfsEmAndamento diretamente.
+    /// </summary>
+    public List<string> ObterUfsEmAndamentoSnapshot()
+    {
+        lock (_lock)
+        {
+            return new List<string>(UfsEmAndamento);
+        }
+    }
+
     public void InterromperProcessamentoUf(string uf, int municipiosEncontrados, int municipiosAtivosAteAgora)
     {
         string ufNormalizada = uf.ToUpperInvariant();

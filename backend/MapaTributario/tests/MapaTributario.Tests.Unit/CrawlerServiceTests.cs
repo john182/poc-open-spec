@@ -506,9 +506,9 @@ public class CrawlerServiceTests
         // Act
         Result<ExecucaoCrawler> resultado = await _sut.ExecutarAsync(TipoExecucao.Manual);
 
-        // Assert
+        // Assert — exceção por UF é tratada individualmente; quando todas as UFs falham → FalhaParcial
         resultado.IsSuccess.ShouldBeTrue();
-        resultado.Value.Status.ShouldBe(StatusExecucao.Falha);
+        resultado.Value.Status.ShouldBe(StatusExecucao.FalhaParcial);
         resultado.Value.Erros.ShouldBeGreaterThan(0);
     }
 
@@ -1347,9 +1347,9 @@ public class CrawlerServiceTests
         // Act
         Result<ExecucaoCrawler> resultado = await _sut.ExecutarAsync(TipoExecucao.Manual);
 
-        // Assert
+        // Assert — exceção por UF é tratada individualmente; quando todas falham → FalhaParcial
         resultado.IsSuccess.ShouldBeTrue();
-        resultado.Value.Status.ShouldBe(StatusExecucao.Falha);
+        resultado.Value.Status.ShouldBe(StatusExecucao.FalhaParcial);
         resultado.Value.FaseAtual.ShouldBe(FaseCrawler.Concluido);
     }
 

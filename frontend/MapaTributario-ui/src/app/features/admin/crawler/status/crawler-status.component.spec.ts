@@ -45,7 +45,7 @@ describe('CrawlerStatusComponent', () => {
     httpTesting.expectOne('/api/v1/crawler/status').flush(statusMock);
     fixture.detectChanges();
     await waitFor(() => {
-      expect(screen.getByText('Concluido')).toBeTruthy();
+      expect(screen.getByText('Concluído')).toBeTruthy();
       expect(screen.getByText('Manual')).toBeTruthy();
       expect(screen.getByText('48')).toBeTruthy();
     });
@@ -398,7 +398,7 @@ describe('CrawlerStatusComponent', () => {
 
     // Assert
     await waitFor(() => {
-      expect(screen.getByText('Em andamento')).toBeTruthy();
+      expect(screen.getAllByText('Em andamento').length).toBeGreaterThanOrEqual(1);
     });
 
     // Limpar polling
@@ -456,7 +456,7 @@ describe('CrawlerStatusComponent', () => {
     fixture.detectChanges();
 
     await waitFor(() => {
-      expect(screen.getByText('Concluido')).toBeTruthy();
+      expect(screen.getByText('Concluído')).toBeTruthy();
     });
   });
 });

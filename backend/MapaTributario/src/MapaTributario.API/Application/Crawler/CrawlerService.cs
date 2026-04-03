@@ -149,7 +149,10 @@ public class CrawlerService : ICrawlerService
             if (municipiosAtivos.Count == 0)
             {
                 _logger.LogWarning("No active municipalities found. Ending execution");
-                execucao.Finalizar(StatusExecucao.Concluido);
+                StatusExecucao statusSaida = execucao.Erros > 0
+                    ? StatusExecucao.FalhaParcial
+                    : StatusExecucao.Concluido;
+                execucao.Finalizar(statusSaida);
                 await _execucaoRepository.UpdateAsync(execucao);
                 return Result.Ok(execucao);
             }
@@ -356,6 +359,21 @@ public class CrawlerService : ICrawlerService
         {
             // Cancelamento propagado pelo CTS derivado (outra UF disparou proteção)
             ufInterrompida = true;
+        }
+        catch (Exception ex)
+        {
+            // Exceção inesperada — marcar UF como falha para não ficar presa como "EmAndamento"
+            _logger.LogError(ex, "Phase 1 [{Uf}]: Unexpected error during convenio discovery", uf);
+            execucao.IncrementarErros($"Fase 1 [{uf}]: {ex.Message}");
+            execucao.FalharProcessamentoUf(uf, municipiosEncontrados);
+            await _execucaoRepository.UpdateAsync(execucao);
+
+            foreach (Municipio ativo in ativosUf)
+            {
+                todosAtivos.Add(ativo);
+            }
+
+            return;
         }
 
         // Determinar status da UF com base no resultado real — SEMPRE executado

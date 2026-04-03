@@ -205,6 +205,8 @@ public class CrawlerController : ControllerBase
 
     private StatusCrawlerResponse MapToResponse(ExecucaoCrawler execucao)
     {
+        List<string> ufsEmAndamento = execucao.ObterUfsEmAndamentoSnapshot();
+
         return new StatusCrawlerResponse
         {
             Id = execucao.Id,
@@ -219,7 +221,10 @@ public class CrawlerController : ControllerBase
             Erros = execucao.Erros,
             DetalhesErro = execucao.DetalhesErro,
             TemCertificado = _certificadoStore.HasCertificate(),
-            UfsEmAndamento = execucao.UfsEmAndamento.ToList(),
+#pragma warning disable CS0618 // Obsolete — mantido para compatibilidade com frontend
+            UfAtual = ufsEmAndamento.FirstOrDefault(),
+#pragma warning restore CS0618
+            UfsEmAndamento = ufsEmAndamento,
             UfsProcessadas = execucao.UfsProcessadas,
             ProgressoUfs = execucao.ProgressoUfs.ToDictionary(
                 kvp => kvp.Key,

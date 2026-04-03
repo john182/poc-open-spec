@@ -488,7 +488,8 @@ public class CrawlerService : ICrawlerService
                     municipio.CodigoIbge,
                     servico.CodigoTribNac,
                     competencia,
-                    execucaoId));
+                    execucaoId,
+                    municipio.SiglaEstado));
             }
         }
 
@@ -505,72 +506,154 @@ public class CrawlerService : ICrawlerService
         string competencia,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Phase 3: Processing work queue with {Parallelism} parallel workers", _configuracao.MaxItensParalelos);
+        _logger.LogInformation(
+            "Phase 3: Processing work queue — {MaxUfs} UFs in parallel, {MaxItens} workers per UF",
+            _configuracao.MaxUfsParalelas,
+            _configuracao.MaxItensParalelos);
 
-        // Track consecutive misses for early-stop per group (XX.XX.XX) — thread-safe
-        System.Collections.Concurrent.ConcurrentDictionary<string, int> consecutiveMissesByGroup = new();
+        IReadOnlyList<string> ufsComPendencia = await _filaRepository.GetDistinctPendingUfsAsync();
+
+        if (ufsComPendencia.Count == 0)
+        {
+            _logger.LogInformation("Phase 3: No pending items in queue");
+            return;
+        }
+
+        _logger.LogInformation("Phase 3: Found {Count} UFs with pending items: {Ufs}",
+            ufsComPendencia.Count, string.Join(", ", ufsComPendencia));
+
+        // Track consecutive misses for early-stop per group (XX.XX.XX) — thread-safe, shared across UFs
+        ConcurrentDictionary<string, int> consecutiveMissesByGroup = new();
+
+        using CancellationTokenSource ctsProtecao = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        ParallelOptions opcoes = new()
+        {
+            MaxDegreeOfParallelism = _configuracao.MaxUfsParalelas,
+            CancellationToken = ctsProtecao.Token
+        };
+
+        try
+        {
+            await Parallel.ForEachAsync(ufsComPendencia, opcoes, async (uf, tokenParalelo) =>
+            {
+                await ProcessarFilaUfAsync(execucao, uf, competencia, consecutiveMissesByGroup, ctsProtecao, tokenParalelo);
+            });
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning("Phase 3 interrupted by certificate protection halt");
+        }
+    }
+
+    internal async Task ProcessarFilaUfAsync(
+        ExecucaoCrawler execucao,
+        string uf,
+        string competencia,
+        ConcurrentDictionary<string, int> consecutiveMissesByGroup,
+        CancellationTokenSource ctsProtecao,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Phase 3 [{Uf}]: Starting queue processing", uf);
+
+        execucao.IniciarProcessamentoUf(uf);
+        await _execucaoRepository.UpdateAsync(execucao);
+
+        int processadosUf = 0;
+        int errosUf = 0;
         SemaphoreSlim semaphore = new(_configuracao.MaxItensParalelos, _configuracao.MaxItensParalelos);
 
-        while (true)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (_certificateProtection.ShouldHalt)
-            {
-                _logger.LogCritical("Certificate protection halt triggered. Stopping processing");
-                break;
-            }
-
-            if (_certificateProtection.BudgetExhausted)
-            {
-                _logger.LogWarning("Daily budget exhausted. Stopping processing");
-                break;
-            }
-
-            IReadOnlyList<FilaProcessamento> batch = await _filaRepository.GetPendingAsync(_configuracao.TamanhoLoteMongo);
-
-            if (batch.Count == 0)
-            {
-                break;
-            }
-
-            List<Task> tasks = new(batch.Count);
-
-            foreach (FilaProcessamento item in batch)
+            while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if (_certificateProtection.ShouldHalt || _certificateProtection.BudgetExhausted)
+                if (_certificateProtection.ShouldHalt)
+                {
+                    _logger.LogCritical("Phase 3 [{Uf}]: Certificate protection halt triggered", uf);
+                    await ctsProtecao.CancelAsync();
+                    break;
+                }
+
+                if (_certificateProtection.BudgetExhausted)
+                {
+                    _logger.LogWarning("Phase 3 [{Uf}]: Daily budget exhausted", uf);
+                    await ctsProtecao.CancelAsync();
+                    break;
+                }
+
+                IReadOnlyList<FilaProcessamento> batch = await _filaRepository.GetPendingByUfAsync(uf, _configuracao.TamanhoLoteMongo);
+
+                if (batch.Count == 0)
                 {
                     break;
                 }
 
-                // Early-stop check
-                string group = ExtractGroup(item.CodigoServico);
-                if (consecutiveMissesByGroup.TryGetValue(group, out int misses) && misses >= _configuracao.LimiteParadaAntecipada)
+                List<Task> tasks = new(batch.Count);
+
+                foreach (FilaProcessamento item in batch)
                 {
-                    item.MarcarConcluido();
-                    await _filaRepository.UpdateStatusAsync(item);
-                    execucao.IncrementarProcessados();
-                    continue;
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (_certificateProtection.ShouldHalt || _certificateProtection.BudgetExhausted)
+                    {
+                        break;
+                    }
+
+                    // Early-stop check
+                    string group = ExtractGroup(item.CodigoServico);
+                    if (consecutiveMissesByGroup.TryGetValue(group, out int misses) && misses >= _configuracao.LimiteParadaAntecipada)
+                    {
+                        item.MarcarConcluido();
+                        await _filaRepository.UpdateStatusAsync(item);
+                        execucao.IncrementarProcessados();
+                        Interlocked.Increment(ref processadosUf);
+                        continue;
+                    }
+
+                    await semaphore.WaitAsync(cancellationToken);
+
+                    tasks.Add(Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await ProcessarItemAsync(item, execucao, competencia, consecutiveMissesByGroup, cancellationToken);
+                            Interlocked.Increment(ref processadosUf);
+                        }
+                        catch (Exception)
+                        {
+                            Interlocked.Increment(ref errosUf);
+                        }
+                        finally
+                        {
+                            semaphore.Release();
+                        }
+                    }, cancellationToken));
                 }
 
-                await semaphore.WaitAsync(cancellationToken);
-
-                tasks.Add(Task.Run(async () =>
-                {
-                    try
-                    {
-                        await ProcessarItemAsync(item, execucao, competencia, consecutiveMissesByGroup, cancellationToken);
-                    }
-                    finally
-                    {
-                        semaphore.Release();
-                    }
-                }, cancellationToken));
+                await Task.WhenAll(tasks);
+                await _execucaoRepository.UpdateAsync(execucao);
             }
 
-            await Task.WhenAll(tasks);
+            execucao.FinalizarProcessamentoUf(uf, processadosUf, processadosUf - errosUf);
+            _logger.LogInformation(
+                "Phase 3 [{Uf}]: Completed — {Processados} processed, {Erros} errors",
+                uf, processadosUf, errosUf);
+        }
+        catch (OperationCanceledException)
+        {
+            execucao.InterromperProcessamentoUf(uf, processadosUf, processadosUf - errosUf);
+            _logger.LogWarning("Phase 3 [{Uf}]: Interrupted", uf);
+        }
+        catch (Exception ex)
+        {
+            execucao.FalharProcessamentoUf(uf, processadosUf);
+            _logger.LogError(ex, "Phase 3 [{Uf}]: Failed with unexpected error", uf);
+        }
+        finally
+        {
+            semaphore.Dispose();
             await _execucaoRepository.UpdateAsync(execucao);
         }
     }
@@ -579,7 +662,7 @@ public class CrawlerService : ICrawlerService
         FilaProcessamento item,
         ExecucaoCrawler execucao,
         string competencia,
-        System.Collections.Concurrent.ConcurrentDictionary<string, int> consecutiveMissesByGroup,
+        ConcurrentDictionary<string, int> consecutiveMissesByGroup,
         CancellationToken cancellationToken)
     {
         item.MarcarProcessando();
@@ -651,7 +734,7 @@ public class CrawlerService : ICrawlerService
         FilaProcessamento item,
         ExecucaoCrawler execucao,
         string competencia,
-        System.Collections.Concurrent.ConcurrentDictionary<string, int> consecutiveMissesByGroup,
+        ConcurrentDictionary<string, int> consecutiveMissesByGroup,
         CancellationToken cancellationToken)
     {
                     await Task.WhenAll(
@@ -708,7 +791,7 @@ public class CrawlerService : ICrawlerService
         FilaProcessamento item,
         ExecucaoCrawler execucao,
         string competencia,
-        System.Collections.Concurrent.ConcurrentDictionary<string, int> consecutiveMissesByGroup,
+        ConcurrentDictionary<string, int> consecutiveMissesByGroup,
         CancellationToken cancellationToken)
     {
         // Extract base: "01.01.00" → item="01", subitem="01"

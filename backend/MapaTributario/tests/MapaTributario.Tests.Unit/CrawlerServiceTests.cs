@@ -192,13 +192,15 @@ public class CrawlerServiceTests
 
         // Queue processing: return items once, then empty
         bool firstCall = true;
-        _filaRepo.Setup(r => r.GetPendingAsync(It.IsAny<int>()))
+        _filaRepo.Setup(r => r.GetDistinctPendingUfsAsync())
+            .ReturnsAsync(new List<string> { "MG" });
+        _filaRepo.Setup(r => r.GetPendingByUfAsync("MG", It.IsAny<int>()))
             .ReturnsAsync(() =>
             {
                 if (firstCall)
                 {
                     firstCall = false;
-                    FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", CrawlerService.GetCompetenciaAtual(), "exec1");
+                    FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", CrawlerService.GetCompetenciaAtual(), "exec1", "MG");
                     return new List<FilaProcessamento> { item };
                 }
 
@@ -327,7 +329,7 @@ public class CrawlerServiceTests
     public async Task ProcessarItemAsync_ComResultado_FazUpsertEMarcaConcluido()
     {
         // Arrange
-        FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", "2026-04-01", "exec1");
+        FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", "2026-04-01", "exec1", "MG");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
         System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
@@ -351,7 +353,7 @@ public class CrawlerServiceTests
     public async Task ProcessarItemAsync_Sem404_IncrementaMissesEMarcaConcluido()
     {
         // Arrange
-        FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", "2026-04-01", "exec1");
+        FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", "2026-04-01", "exec1", "MG");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
         System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
@@ -370,7 +372,7 @@ public class CrawlerServiceTests
     public async Task ProcessarItemAsync_ComErroHttp5xx_MarcaErroComRetry()
     {
         // Arrange
-        FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", "2026-04-01", "exec1");
+        FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", "2026-04-01", "exec1", "MG");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
         System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
@@ -390,7 +392,7 @@ public class CrawlerServiceTests
     public async Task ProcessarItemAsync_ComErroHttp403_MarcaErroSemRetry()
     {
         // Arrange
-        FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", "2026-04-01", "exec1");
+        FilaProcessamento item = FilaProcessamento.Create("3106200", "01.01.01", "2026-04-01", "exec1", "MG");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
         System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
@@ -416,11 +418,13 @@ public class CrawlerServiceTests
         List<FilaProcessamento> items = new();
         for (int i = 1; i <= 10; i++)
         {
-            items.Add(FilaProcessamento.Create("3106200", $"01.01.01", competencia, "exec1"));
+            items.Add(FilaProcessamento.Create("3106200", $"01.01.01", competencia, "exec1", "MG"));
         }
 
         int callCount = 0;
-        _filaRepo.Setup(r => r.GetPendingAsync(It.IsAny<int>()))
+        _filaRepo.Setup(r => r.GetDistinctPendingUfsAsync())
+            .ReturnsAsync(new List<string> { "MG" });
+        _filaRepo.Setup(r => r.GetPendingByUfAsync("MG", It.IsAny<int>()))
             .ReturnsAsync(() =>
             {
                 callCount++;
@@ -517,10 +521,12 @@ public class CrawlerServiceTests
 
         _certProtection.Setup(c => c.BudgetExhausted).Returns(true);
 
-        _filaRepo.Setup(r => r.GetPendingAsync(It.IsAny<int>()))
+        _filaRepo.Setup(r => r.GetDistinctPendingUfsAsync())
+            .ReturnsAsync(new List<string> { "MG" });
+        _filaRepo.Setup(r => r.GetPendingByUfAsync("MG", It.IsAny<int>()))
             .ReturnsAsync(new List<FilaProcessamento>
             {
-                FilaProcessamento.Create("3106200", "01.01.01", competencia, "exec1")
+                FilaProcessamento.Create("3106200", "01.01.01", competencia, "exec1", "MG")
             });
 
         // Act
@@ -539,10 +545,12 @@ public class CrawlerServiceTests
 
         _certProtection.Setup(c => c.ShouldHalt).Returns(true);
 
-        _filaRepo.Setup(r => r.GetPendingAsync(It.IsAny<int>()))
+        _filaRepo.Setup(r => r.GetDistinctPendingUfsAsync())
+            .ReturnsAsync(new List<string> { "MG" });
+        _filaRepo.Setup(r => r.GetPendingByUfAsync("MG", It.IsAny<int>()))
             .ReturnsAsync(new List<FilaProcessamento>
             {
-                FilaProcessamento.Create("3106200", "01.01.01", competencia, "exec1")
+                FilaProcessamento.Create("3106200", "01.01.01", competencia, "exec1", "MG")
             });
 
         // Act
@@ -805,7 +813,7 @@ public class CrawlerServiceTests
     public async Task ProcessarItemAsync_ComCodigoSeed00_UsaIteracaoDetalhamento()
     {
         // Arrange — seed code "01.01.00" should trigger iteration
-        FilaProcessamento item = FilaProcessamento.Create("2800308", "01.01.00", "2026-04-01", "exec1");
+        FilaProcessamento item = FilaProcessamento.Create("2800308", "01.01.00", "2026-04-01", "exec1", "SE");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
         System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
@@ -855,7 +863,7 @@ public class CrawlerServiceTests
     public async Task ProcessarItemAsync_ComCodigoSeed00_SemDadosNenhumDetalhamento_IncrementaMisses()
     {
         // Arrange — seed code "07.02.00", all detalhamentos return null
-        FilaProcessamento item = FilaProcessamento.Create("2800308", "07.02.00", "2026-04-01", "exec1");
+        FilaProcessamento item = FilaProcessamento.Create("2800308", "07.02.00", "2026-04-01", "exec1", "SE");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
         System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
@@ -879,7 +887,7 @@ public class CrawlerServiceTests
     public async Task ProcessarItemAsync_ComCodigoNaoSeed_UsaFluxoDireto()
     {
         // Arrange — code "01.01.01" has detalhamento 01 (not 00), so direct path
-        FilaProcessamento item = FilaProcessamento.Create("2800308", "01.01.01", "2026-04-01", "exec1");
+        FilaProcessamento item = FilaProcessamento.Create("2800308", "01.01.01", "2026-04-01", "exec1", "SE");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
         System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
@@ -902,7 +910,7 @@ public class CrawlerServiceTests
     public async Task ProcessarItemComIteracaoAsync_ComDesdobramentos_SalvaTodos()
     {
         // Arrange — seed code "01.01.00", detalhamento 01 has desdobramentos 000 and 001
-        FilaProcessamento item = FilaProcessamento.Create("2800308", "01.01.00", "2026-04-01", "exec1");
+        FilaProcessamento item = FilaProcessamento.Create("2800308", "01.01.00", "2026-04-01", "exec1", "SE");
         ExecucaoCrawler execucao = ExecucaoCrawler.Create(TipoExecucao.Manual);
         System.Collections.Concurrent.ConcurrentDictionary<string, int> misses = new();
 
@@ -1284,7 +1292,9 @@ public class CrawlerServiceTests
         _aliquotaRepo.Setup(r => r.UpsertAsync(It.IsAny<Aliquota>())).Returns(Task.CompletedTask);
 
         bool primeiraChamada = true;
-        _filaRepo.Setup(r => r.GetPendingAsync(It.IsAny<int>()))
+        _filaRepo.Setup(r => r.GetDistinctPendingUfsAsync())
+            .ReturnsAsync(new List<string> { "MG" });
+        _filaRepo.Setup(r => r.GetPendingByUfAsync("MG", It.IsAny<int>()))
             .ReturnsAsync(() =>
             {
                 if (primeiraChamada)
@@ -1292,7 +1302,7 @@ public class CrawlerServiceTests
                     primeiraChamada = false;
                     return new List<FilaProcessamento>
                     {
-                        FilaProcessamento.Create("3106200", "01.01.01", CrawlerService.GetCompetenciaAtual(), "exec1")
+                        FilaProcessamento.Create("3106200", "01.01.01", CrawlerService.GetCompetenciaAtual(), "exec1", "MG")
                     };
                 }
                 return new List<FilaProcessamento>();

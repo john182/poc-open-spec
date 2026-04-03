@@ -95,7 +95,7 @@ describe('CrawlerService', () => {
       id: '1',
       cronSchedule: '0 2 * * *',
       limiteRequisicoesPorSegundo: 15,
-      orcamentoDiario: 50000,
+      limiteDiarioRequisicoes: 50000,
       tamanhoLoteCertificado: 200,
       pausaLoteSegundos: 5,
       tamanhoLoteMongo: 50,
@@ -128,7 +128,7 @@ describe('CrawlerService', () => {
     const requestMock = {
       cronSchedule: '0 3 * * *',
       limiteRequisicoesPorSegundo: 20,
-      orcamentoDiario: 60000,
+      limiteDiarioRequisicoes: 60000,
       tamanhoLoteCertificado: 250,
       pausaLoteSegundos: 10,
       tamanhoLoteMongo: 100,

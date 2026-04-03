@@ -6,6 +6,8 @@ public interface IFilaProcessamentoRepository
 {
     Task InsertManyAsync(IEnumerable<FilaProcessamento> itens);
     Task<IReadOnlyList<FilaProcessamento>> GetPendingAsync(int batchSize);
+    Task<IReadOnlyList<FilaProcessamento>> GetPendingByUfAsync(string uf, int batchSize);
+    Task<IReadOnlyList<string>> GetDistinctPendingUfsAsync();
     Task UpdateStatusAsync(FilaProcessamento item);
     Task<Dictionary<StatusFila, long>> CountByStatusAsync();
     Task<FilaProcessamento?> GetByMunicipioAndServicoAsync(

@@ -14,7 +14,7 @@ public class AtualizarConfiguracaoCrawlerRequestValidatorTests
         {
             CronSchedule = "0 */6 * * *",
             LimiteRequisicoesPorSegundo = 10,
-            OrcamentoDiario = 1000,
+            LimiteDiarioRequisicoes = 1000,
             TamanhoLoteCertificado = 50,
             PausaLoteSegundos = 5,
             TamanhoLoteMongo = 100,
@@ -25,6 +25,7 @@ public class AtualizarConfiguracaoCrawlerRequestValidatorTests
             MaxFalhasConsecutivasDetalhamento = 5,
             MaxFalhasConsecutivasDesdobramento = 5,
             MaxItensParalelos = 10,
+            MaxUfsParalelas = 5,
             CodigosSondagem = ["01.01.01", "02.02.02"],
             ValidadeDiasProcessamento = 30,
             CircuitBreakerLimiarErroPercent = 50,
@@ -135,48 +136,48 @@ public class AtualizarConfiguracaoCrawlerRequestValidatorTests
         resultado.IsValid.ShouldBeTrue();
     }
 
-    // ── OrcamentoDiario ─────────────────────────────────────────────
+    // ── LimiteDiarioRequisicoes ─────────────────────────────────────────────
 
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task Given_OrcamentoDiarioMenorOuIgualZero_Should_FalharValidacao(int orcamento)
+    public async Task Given_LimiteDiarioRequisicoesMenorOuIgualZero_Should_FalharValidacao(int limiteDiario)
     {
         // Arrange
         var request = CriarRequestValido();
-        request.OrcamentoDiario = orcamento;
+        request.LimiteDiarioRequisicoes = limiteDiario;
 
         // Act
         var resultado = await _validador.ValidateAsync(request);
 
         // Assert
         resultado.IsValid.ShouldBeFalse();
-        resultado.Errors.ShouldContain(e => e.PropertyName == "OrcamentoDiario");
+        resultado.Errors.ShouldContain(e => e.PropertyName == "LimiteDiarioRequisicoes");
     }
 
     [Fact]
-    public async Task Given_OrcamentoDiarioMaiorQue500000_Should_FalharValidacao()
+    public async Task Given_LimiteDiarioRequisicoesMaiorQue500000_Should_FalharValidacao()
     {
         // Arrange
         var request = CriarRequestValido();
-        request.OrcamentoDiario = 500001;
+        request.LimiteDiarioRequisicoes = 500001;
 
         // Act
         var resultado = await _validador.ValidateAsync(request);
 
         // Assert
         resultado.IsValid.ShouldBeFalse();
-        resultado.Errors.ShouldContain(e => e.PropertyName == "OrcamentoDiario");
+        resultado.Errors.ShouldContain(e => e.PropertyName == "LimiteDiarioRequisicoes");
     }
 
     [Theory]
     [InlineData(1)]
     [InlineData(500000)]
-    public async Task Given_OrcamentoDiarioNosLimites_Should_PassarValidacao(int orcamento)
+    public async Task Given_LimiteDiarioRequisicoesNosLimites_Should_PassarValidacao(int limiteDiario)
     {
         // Arrange
         var request = CriarRequestValido();
-        request.OrcamentoDiario = orcamento;
+        request.LimiteDiarioRequisicoes = limiteDiario;
 
         // Act
         var resultado = await _validador.ValidateAsync(request);

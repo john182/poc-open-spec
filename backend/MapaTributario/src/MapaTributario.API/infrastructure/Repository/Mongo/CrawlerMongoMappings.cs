@@ -41,13 +41,15 @@ public static class CrawlerMongoMappings
                 .SetSerializer(new EnumSerializer<StatusExecucao>(BsonType.String));
             cm.MapMember(e => e.Tipo).SetElementName("tipo")
                 .SetSerializer(new EnumSerializer<TipoExecucao>(BsonType.String));
+            cm.MapMember(e => e.FaseAtual).SetElementName("faseAtual")
+                .SetSerializer(new EnumSerializer<FaseCrawler>(BsonType.String));
             cm.MapMember(e => e.TotalMunicipios).SetElementName("totalMunicipios");
             cm.MapMember(e => e.TotalServicos).SetElementName("totalServicos");
             cm.MapMember(e => e.Processados).SetElementName("processados");
             cm.MapMember(e => e.Erros).SetElementName("erros");
             cm.MapMember(e => e.DetalhesErro).SetElementName("detalhesErro");
             cm.MapMember(e => e.UfsProcessadas).SetElementName("ufsProcessadas");
-            cm.MapMember(e => e.UfAtual).SetElementName("ufAtual");
+            cm.MapMember(e => e.UfsEmAndamento).SetElementName("ufsEmAndamento");
             cm.MapMember(e => e.ProgressoUfs).SetElementName("progressoUfs");
             cm.SetIgnoreExtraElements(true);
         });
@@ -102,7 +104,7 @@ public static class CrawlerMongoMappings
                 .SetSerializer(new StringSerializer(BsonType.ObjectId));
             cm.MapMember(c => c.CronSchedule).SetElementName("cronSchedule");
             cm.MapMember(c => c.LimiteRequisicoesPorSegundo).SetElementName("limiteRequisicoesPorSegundo");
-            cm.MapMember(c => c.OrcamentoDiario).SetElementName("orcamentoDiario");
+            cm.MapMember(c => c.LimiteDiarioRequisicoes).SetElementName("limiteDiarioRequisicoes");
             cm.MapMember(c => c.TamanhoLoteCertificado).SetElementName("tamanhoLoteCertificado");
             cm.MapMember(c => c.PausaLoteSegundos).SetElementName("pausaLoteSegundos");
             cm.MapMember(c => c.TamanhoLoteMongo).SetElementName("tamanhoLoteMongo");
@@ -113,6 +115,7 @@ public static class CrawlerMongoMappings
             cm.MapMember(c => c.MaxFalhasConsecutivasDetalhamento).SetElementName("maxFalhasConsecutivasDetalhamento");
             cm.MapMember(c => c.MaxFalhasConsecutivasDesdobramento).SetElementName("maxFalhasConsecutivasDesdobramento");
             cm.MapMember(c => c.MaxItensParalelos).SetElementName("maxItensParalelos");
+            cm.MapMember(c => c.MaxUfsParalelas).SetElementName("maxUfsParalelas");
             cm.MapMember(c => c.CodigosSondagem).SetElementName("codigosSondagem");
             cm.MapMember(c => c.ValidadeDiasProcessamento).SetElementName("validadeDiasProcessamento");
             cm.MapMember(c => c.CircuitBreakerLimiarErroPercent).SetElementName("circuitBreakerLimiarErroPercent");

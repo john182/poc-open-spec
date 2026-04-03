@@ -4,7 +4,7 @@ public class AtualizarParcialConfiguracaoCrawlerRequest
 {
     public string? CronSchedule { get; set; }
     public int? LimiteRequisicoesPorSegundo { get; set; }
-    public int? OrcamentoDiario { get; set; }
+    public int? LimiteDiarioRequisicoes { get; set; }
     public int? TamanhoLoteCertificado { get; set; }
     public int? PausaLoteSegundos { get; set; }
     public int? TamanhoLoteMongo { get; set; }
@@ -15,6 +15,7 @@ public class AtualizarParcialConfiguracaoCrawlerRequest
     public int? MaxFalhasConsecutivasDetalhamento { get; set; }
     public int? MaxFalhasConsecutivasDesdobramento { get; set; }
     public int? MaxItensParalelos { get; set; }
+    public int? MaxUfsParalelas { get; set; }
     public List<string>? CodigosSondagem { get; set; }
     public int? ValidadeDiasProcessamento { get; set; }
     public int? CircuitBreakerLimiarErroPercent { get; set; }

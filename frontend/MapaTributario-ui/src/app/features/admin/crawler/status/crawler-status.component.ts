@@ -23,6 +23,27 @@ const SIGLAS_UF = [
 
 const INTERVALO_POLLING_MS = 5000;
 
+const FASES_CRAWLER = [
+  'DescobertaConvenios',
+  'Sondagem',
+  'ProcessamentoFila',
+] as const;
+
+const LABELS_FASES_CRAWLER: Record<string, string> = {
+  DescobertaConvenios: 'Descoberta de Convênios',
+  Sondagem: 'Sondagem',
+  ProcessamentoFila: 'Processamento da Fila',
+};
+
+const LABELS_STATUS: Record<string, string> = {
+  EmAndamento: 'Em andamento',
+  Concluido: 'Concluído',
+  FalhaParcial: 'Falha parcial',
+  Falha: 'Falha',
+  NenhumaExecucao: 'Nenhuma execução',
+  Interrompido: 'Interrompido',
+};
+
 @Component({
   selector: 'app-crawler-status',
   standalone: true,
@@ -142,6 +163,44 @@ export class CrawlerStatusComponent implements OnInit, OnDestroy {
       case 'interrompido': return 'warn';
       default: return 'secondary';
     }
+  }
+
+  readonly fasesCrawler = FASES_CRAWLER;
+  readonly labelsFasesCrawler = LABELS_FASES_CRAWLER;
+
+  obterLabelStatus(status: string): string {
+    return LABELS_STATUS[status] ?? status;
+  }
+
+  obterIndiceFaseAtual(): number {
+    const faseAtual = this.statusAtual()?.faseAtual;
+    if (faseAtual === 'Concluido') return FASES_CRAWLER.length;
+    const indice = FASES_CRAWLER.indexOf(faseAtual as typeof FASES_CRAWLER[number]);
+    return indice >= 0 ? indice : -1;
+  }
+
+  obterSeveridadeFase(fase: string): 'success' | 'info' | 'secondary' {
+    const indiceFaseAtual = this.obterIndiceFaseAtual();
+    const indiceFase = FASES_CRAWLER.indexOf(fase as typeof FASES_CRAWLER[number]);
+
+    if (indiceFase < indiceFaseAtual) return 'success';
+    if (indiceFase === indiceFaseAtual) return 'info';
+    return 'secondary';
+  }
+
+  obterIconeFase(fase: string): string {
+    const indiceFaseAtual = this.obterIndiceFaseAtual();
+    const indiceFase = FASES_CRAWLER.indexOf(fase as typeof FASES_CRAWLER[number]);
+
+    if (indiceFase < indiceFaseAtual) return 'pi pi-check';
+    if (indiceFase === indiceFaseAtual) return 'pi pi-spin pi-spinner';
+    return 'pi pi-circle';
+  }
+
+  obterLabelProgressoUf(status: string): string {
+    if (status === 'Concluido') return 'Convênios verificados';
+    if (status === 'EmAndamento') return 'Em andamento';
+    return LABELS_STATUS[status] ?? status;
   }
 
   private _carregarStatus(): void {

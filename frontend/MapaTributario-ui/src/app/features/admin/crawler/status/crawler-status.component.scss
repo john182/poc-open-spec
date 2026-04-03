@@ -203,7 +203,7 @@
 
 .progresso-uf-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 0.75rem;
 }
 
@@ -221,6 +221,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
+
+  ::ng-deep .p-tag {
+    white-space: nowrap;
+    font-size: 0.75rem;
+  }
 }
 
 .progresso-uf-sigla {
@@ -234,5 +240,34 @@
   flex-direction: column;
   gap: 0.15rem;
   font-size: 0.75rem;
+  color: var(--text-color-secondary);
+}
+
+.indicador-fases {
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+
+  h4 {
+    margin-bottom: 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-color);
+  }
+}
+
+.fases-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.fase-item {
+  display: flex;
+  align-items: center;
+}
+
+.fase-seta {
+  font-size: 0.85rem;
   color: var(--text-color-secondary);
 }

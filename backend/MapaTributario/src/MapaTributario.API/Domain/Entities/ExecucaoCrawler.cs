@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 namespace MapaTributario.API.Domain.Entities;
 
 public class ExecucaoCrawler
@@ -7,6 +9,7 @@ public class ExecucaoCrawler
     public DateTime? Fim { get; private set; }
     public StatusExecucao Status { get; private set; }
     public TipoExecucao Tipo { get; private set; }
+    public FaseCrawler FaseAtual { get; private set; }
     public int TotalMunicipios { get; private set; }
     public int TotalServicos { get; private set; }
 
@@ -18,8 +21,8 @@ public class ExecucaoCrawler
 
     public List<string> DetalhesErro { get; private set; } = new();
     public List<string> UfsProcessadas { get; private set; } = new();
-    public string? UfAtual { get; private set; }
-    public Dictionary<string, ProgressoUf> ProgressoUfs { get; private set; } = new();
+    public List<string> UfsEmAndamento { get; private set; } = new();
+    public ConcurrentDictionary<string, ProgressoUf> ProgressoUfs { get; private set; } = new();
 
     private ExecucaoCrawler() { }
 
@@ -30,14 +33,15 @@ public class ExecucaoCrawler
             Inicio = DateTime.UtcNow,
             Status = StatusExecucao.EmAndamento,
             Tipo = tipo,
+            FaseAtual = FaseCrawler.DescobertaConvenios,
             TotalMunicipios = 0,
             TotalServicos = 0,
             Processados = 0,
             Erros = 0,
             DetalhesErro = new List<string>(),
             UfsProcessadas = new List<string>(),
-            UfAtual = null,
-            ProgressoUfs = new Dictionary<string, ProgressoUf>()
+            UfsEmAndamento = new List<string>(),
+            ProgressoUfs = new ConcurrentDictionary<string, ProgressoUf>()
         };
     }
 
@@ -47,6 +51,8 @@ public class ExecucaoCrawler
     }
 
     public void SetId(string id) => Id = id;
+
+    public void AvancarFase(FaseCrawler fase) => FaseAtual = fase;
 
     public void SetTotais(int totalMunicipios, int totalServicos)
     {
@@ -70,77 +76,130 @@ public class ExecucaoCrawler
     public void Finalizar(StatusExecucao status)
     {
         Status = status;
+        FaseAtual = FaseCrawler.Concluido;
         Fim = DateTime.UtcNow;
     }
 
     public void IniciarProcessamentoUf(string uf)
     {
-        UfAtual = uf.ToUpperInvariant();
-        if (!ProgressoUfs.ContainsKey(UfAtual))
-        {
-            ProgressoUfs[UfAtual] = new ProgressoUf
+        string ufNormalizada = uf.ToUpperInvariant();
+
+        ProgressoUfs.AddOrUpdate(
+            ufNormalizada,
+            _ => new ProgressoUf
             {
-                Uf = UfAtual,
+                Uf = ufNormalizada,
                 Status = StatusProgressoUf.EmAndamento,
                 Inicio = DateTime.UtcNow
-            };
-        }
-        else
+            },
+            (_, existente) =>
+            {
+                existente.Status = StatusProgressoUf.EmAndamento;
+                existente.Inicio = DateTime.UtcNow;
+                return existente;
+            });
+
+        lock (_lock)
         {
-            ProgressoUfs[UfAtual].Status = StatusProgressoUf.EmAndamento;
-            ProgressoUfs[UfAtual].Inicio = DateTime.UtcNow;
+            if (!UfsEmAndamento.Contains(ufNormalizada))
+            {
+                UfsEmAndamento.Add(ufNormalizada);
+            }
         }
     }
 
     public void FinalizarProcessamentoUf(string uf, int municipiosEncontrados, int municipiosAtivos)
     {
         string ufNormalizada = uf.ToUpperInvariant();
-        if (ProgressoUfs.ContainsKey(ufNormalizada))
+        if (ProgressoUfs.TryGetValue(ufNormalizada, out ProgressoUf? progresso))
         {
-            ProgressoUfs[ufNormalizada].Status = StatusProgressoUf.Concluido;
-            ProgressoUfs[ufNormalizada].MunicipiosEncontrados = municipiosEncontrados;
-            ProgressoUfs[ufNormalizada].MunicipiosAtivos = municipiosAtivos;
-            ProgressoUfs[ufNormalizada].Fim = DateTime.UtcNow;
+            progresso.Status = StatusProgressoUf.Concluido;
+            progresso.MunicipiosEncontrados = municipiosEncontrados;
+            progresso.MunicipiosAtivos = municipiosAtivos;
+            progresso.Fim = DateTime.UtcNow;
         }
 
-        // Limpar UfAtual se era esta UF
-        if (UfAtual == ufNormalizada)
+        lock (_lock)
         {
-            UfAtual = null;
+            UfsEmAndamento.Remove(ufNormalizada);
         }
     }
 
     public void FalharProcessamentoUf(string uf, int municipiosEncontrados)
     {
         string ufNormalizada = uf.ToUpperInvariant();
-        if (ProgressoUfs.ContainsKey(ufNormalizada))
+        if (ProgressoUfs.TryGetValue(ufNormalizada, out ProgressoUf? progresso))
         {
-            ProgressoUfs[ufNormalizada].Status = StatusProgressoUf.Falha;
-            ProgressoUfs[ufNormalizada].MunicipiosEncontrados = municipiosEncontrados;
-            ProgressoUfs[ufNormalizada].MunicipiosAtivos = 0;
-            ProgressoUfs[ufNormalizada].Fim = DateTime.UtcNow;
+            progresso.Status = StatusProgressoUf.Falha;
+            progresso.MunicipiosEncontrados = municipiosEncontrados;
+            progresso.MunicipiosAtivos = 0;
+            progresso.Fim = DateTime.UtcNow;
         }
 
-        if (UfAtual == ufNormalizada)
+        lock (_lock)
         {
-            UfAtual = null;
+            UfsEmAndamento.Remove(ufNormalizada);
+        }
+    }
+
+    /// <summary>
+    /// Retorna uma cópia thread-safe da lista de UFs em andamento.
+    /// Use este método para leituras externas (ex: controller/API) ao invés de acessar UfsEmAndamento diretamente.
+    /// </summary>
+    public List<string> ObterUfsEmAndamentoSnapshot()
+    {
+        lock (_lock)
+        {
+            return new List<string>(UfsEmAndamento);
         }
     }
 
     public void InterromperProcessamentoUf(string uf, int municipiosEncontrados, int municipiosAtivosAteAgora)
     {
         string ufNormalizada = uf.ToUpperInvariant();
-        if (ProgressoUfs.ContainsKey(ufNormalizada))
+        if (ProgressoUfs.TryGetValue(ufNormalizada, out ProgressoUf? progresso))
         {
-            ProgressoUfs[ufNormalizada].Status = StatusProgressoUf.Interrompido;
-            ProgressoUfs[ufNormalizada].MunicipiosEncontrados = municipiosEncontrados;
-            ProgressoUfs[ufNormalizada].MunicipiosAtivos = municipiosAtivosAteAgora;
-            ProgressoUfs[ufNormalizada].Fim = DateTime.UtcNow;
+            progresso.Status = StatusProgressoUf.Interrompido;
+            progresso.MunicipiosEncontrados = municipiosEncontrados;
+            progresso.MunicipiosAtivos = municipiosAtivosAteAgora;
+            progresso.Fim = DateTime.UtcNow;
         }
 
-        if (UfAtual == ufNormalizada)
+        lock (_lock)
         {
-            UfAtual = null;
+            UfsEmAndamento.Remove(ufNormalizada);
+        }
+    }
+
+    /// <summary>
+    /// Marca uma UF como em andamento na Fase 3 (processamento de fila).
+    /// Diferente de IniciarProcessamentoUf, NÃO sobrescreve ProgressoUfs — preserva dados da Fase 1.
+    /// Apenas adiciona a UF à lista de UfsEmAndamento para observabilidade.
+    /// </summary>
+    public void IniciarProcessamentoFilaUf(string uf)
+    {
+        string ufNormalizada = uf.ToUpperInvariant();
+
+        lock (_lock)
+        {
+            if (!UfsEmAndamento.Contains(ufNormalizada))
+            {
+                UfsEmAndamento.Add(ufNormalizada);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Remove a UF da lista de UfsEmAndamento ao concluir o processamento de fila (Fase 3).
+    /// NÃO altera ProgressoUfs para preservar os dados originais da Fase 1.
+    /// </summary>
+    public void FinalizarProcessamentoFilaUf(string uf)
+    {
+        string ufNormalizada = uf.ToUpperInvariant();
+
+        lock (_lock)
+        {
+            UfsEmAndamento.Remove(ufNormalizada);
         }
     }
 }
@@ -157,6 +216,14 @@ public enum TipoExecucao
 {
     Agendado,
     Manual
+}
+
+public enum FaseCrawler
+{
+    DescobertaConvenios,
+    Sondagem,
+    ProcessamentoFila,
+    Concluido
 }
 
 public class ProgressoUf

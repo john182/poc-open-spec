@@ -6,6 +6,7 @@ public class FilaProcessamento
     public string CodigoMunicipio { get; private set; } = null!;
     public string CodigoServico { get; private set; } = null!;
     public string Competencia { get; private set; } = null!;
+    public string Uf { get; private set; } = null!;
     public StatusFila Status { get; private set; }
     public int Tentativas { get; private set; }
     public string? UltimoErro { get; private set; }
@@ -20,7 +21,8 @@ public class FilaProcessamento
         string codigoMunicipio,
         string codigoServico,
         string competencia,
-        string execucaoId)
+        string execucaoId,
+        string uf)
     {
         DateTime agora = DateTime.UtcNow;
         return new FilaProcessamento
@@ -28,6 +30,7 @@ public class FilaProcessamento
             CodigoMunicipio = codigoMunicipio,
             CodigoServico = codigoServico,
             Competencia = competencia,
+            Uf = uf.ToUpperInvariant(),
             Status = StatusFila.Pendente,
             Tentativas = 0,
             ExecucaoId = execucaoId,

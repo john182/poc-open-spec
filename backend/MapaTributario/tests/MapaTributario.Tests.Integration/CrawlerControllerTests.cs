@@ -5,6 +5,7 @@ using MapaTributario.API.Application.Auth.Contracts;
 using MapaTributario.API.Application.Crawler;
 using MapaTributario.API.Application.Crawler.Contracts;
 using MapaTributario.API.Infrastructure.External;
+using MapaTributario.API.Infrastructure.External.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Shouldly;
@@ -177,5 +178,63 @@ public class CrawlerControllerTests : IntegrationTestBase
         var response = await unauthClient.GetAsync("/api/v1/crawler/status");
 
         response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Status_AposExecucaoComMultiplasUfs_ProgressoUfsDeveConterTodasAsUfsProcessadas()
+    {
+        // Arrange: IbgeSeedService already seeds 5,570 municipalities.
+        // Mock NFS-e API: return active convenio quickly (no delay needed — we verify post-execution state)
+        _mockNfseClient
+            .Setup(c => c.GetConvenioAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ConvenioNfseResponse
+            {
+                ParametrosConvenio = new ParametrosConvenio { AderenteAmbienteNacional = 1 }
+            });
+
+        // Mock GetAliquotaAsync to avoid probe/fila failures
+        _mockNfseClient
+            .Setup(c => c.GetAliquotaAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AliquotaNfseResponse?)null);
+
+        using var authClient = Factory.CreateClient();
+        var token = await GetAdminTokenAsync();
+        authClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        // Act: trigger execution filtering SE and RR (small UFs with few municipalities)
+        var executarRequest = new ExecutarCrawlerRequest { Ufs = new List<string> { "SE", "RR" } };
+        var execResponse = await authClient.PostAsJsonAsync("/api/v1/crawler/executar", executarRequest);
+        execResponse.StatusCode.ShouldBe(HttpStatusCode.Accepted);
+
+        // Poll until execution finishes (status != EmAndamento), max 60s
+        StatusCrawlerResponse? statusFinal = null;
+        for (int tentativa = 0; tentativa < 120; tentativa++)
+        {
+            await Task.Delay(500);
+            var statusResp = await authClient.GetAsync("/api/v1/crawler/status");
+            if (statusResp.StatusCode != HttpStatusCode.OK)
+                continue;
+
+            var status = await statusResp.Content.ReadFromJsonAsync<StatusCrawlerResponse>();
+            if (status is not null && status.Status != "EmAndamento" && !string.IsNullOrEmpty(status.Id))
+            {
+                statusFinal = status;
+                break;
+            }
+        }
+
+        // Assert: execution completed, ProgressoUfs contains SE and RR
+        statusFinal.ShouldNotBeNull("Execução nunca finalizou dentro do timeout");
+        statusFinal.ProgressoUfs.ShouldContainKey("SE");
+        statusFinal.ProgressoUfs.ShouldContainKey("RR");
+        statusFinal.ProgressoUfs["SE"].Status.ShouldBe("Concluido");
+        statusFinal.ProgressoUfs["RR"].Status.ShouldBe("Concluido");
+
+        // After completion, UfsEmAndamento should be empty (all UFs finished)
+        statusFinal.UfsEmAndamento.ShouldBeEmpty();
+
+        // UfsProcessadas should contain both UFs
+        statusFinal.UfsProcessadas.ShouldContain("SE");
+        statusFinal.UfsProcessadas.ShouldContain("RR");
     }
 }

@@ -13,6 +13,15 @@ public class FilaProcessamentoRepository : IFilaProcessamentoRepository
     public FilaProcessamentoRepository(IMongoDatabase database)
     {
         _fila = database.GetCollection<FilaProcessamento>("filaProcessamento");
+
+        // Índice composto para consulta eficiente por UF + Status
+        IndexKeysDefinition<FilaProcessamento> indexKeys = Builders<FilaProcessamento>.IndexKeys
+            .Ascending(f => f.Uf)
+            .Ascending(f => f.Status);
+
+        _fila.Indexes.CreateOne(new CreateIndexModel<FilaProcessamento>(
+            indexKeys,
+            new CreateIndexOptions { Name = "ix_uf_status", Background = true }));
     }
 
     public async Task InsertManyAsync(IEnumerable<FilaProcessamento> itens)
@@ -50,6 +59,57 @@ public class FilaProcessamentoRepository : IFilaProcessamentoRepository
             .Find(filter)
             .Limit(batchSize)
             .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<FilaProcessamento>> GetPendingByUfAsync(string uf, int batchSize)
+    {
+        DateTime agora = DateTime.UtcNow;
+
+        FilterDefinition<FilaProcessamento> filter = Builders<FilaProcessamento>.Filter.And(
+            Builders<FilaProcessamento>.Filter.Eq(f => f.Uf, uf.ToUpperInvariant()),
+            Builders<FilaProcessamento>.Filter.Or(
+                Builders<FilaProcessamento>.Filter.Eq(f => f.Status, StatusFila.Pendente),
+                Builders<FilaProcessamento>.Filter.And(
+                    Builders<FilaProcessamento>.Filter.Eq(f => f.Status, StatusFila.Erro),
+                    Builders<FilaProcessamento>.Filter.Lte(f => f.ProximaTentativa, agora)
+                )
+            )
+        );
+
+        return await _fila
+            .Find(filter)
+            .Limit(batchSize)
+            .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<string>> GetDistinctPendingUfsAsync()
+    {
+        DateTime agora = DateTime.UtcNow;
+
+        FilterDefinition<FilaProcessamento> filter = Builders<FilaProcessamento>.Filter.And(
+            // Excluir documentos legados sem campo Uf (null ou vazio)
+            Builders<FilaProcessamento>.Filter.Ne(f => f.Uf, null!),
+            Builders<FilaProcessamento>.Filter.Ne(f => f.Uf, ""),
+            Builders<FilaProcessamento>.Filter.Or(
+                Builders<FilaProcessamento>.Filter.Eq(f => f.Status, StatusFila.Pendente),
+                Builders<FilaProcessamento>.Filter.And(
+                    Builders<FilaProcessamento>.Filter.Eq(f => f.Status, StatusFila.Erro),
+                    Builders<FilaProcessamento>.Filter.Lte(f => f.ProximaTentativa, agora)
+                )
+            )
+        );
+
+        List<string> ufs = await _fila
+            .Distinct(f => f.Uf, filter)
+            .ToListAsync();
+
+        // Normalizar para upper-case e remover possíveis nulls residuais
+        return ufs
+            .Where(u => !string.IsNullOrEmpty(u))
+            .Select(u => u.ToUpperInvariant())
+            .Distinct()
+            .ToList()
+            .AsReadOnly();
     }
 
     public async Task UpdateStatusAsync(FilaProcessamento item)

@@ -3,6 +3,7 @@ export interface StatusCrawler {
   inicio: string;
   fim: string | null;
   status: string;
+  faseAtual?: string;
   tipo: string;
   totalMunicipios: number;
   totalServicos: number;
@@ -49,7 +50,7 @@ export interface ConfiguracaoCrawler {
   id: string;
   cronSchedule: string;
   limiteRequisicoesPorSegundo: number;
-  orcamentoDiario: number;
+  limiteDiarioRequisicoes: number;
   tamanhoLoteCertificado: number;
   pausaLoteSegundos: number;
   tamanhoLoteMongo: number;
@@ -74,7 +75,7 @@ export interface ConfiguracaoCrawler {
 export interface AtualizarConfiguracaoCrawlerRequest {
   cronSchedule: string;
   limiteRequisicoesPorSegundo: number;
-  orcamentoDiario: number;
+  limiteDiarioRequisicoes: number;
   tamanhoLoteCertificado: number;
   pausaLoteSegundos: number;
   tamanhoLoteMongo: number;

@@ -77,7 +77,7 @@ public static class InfrastructureServiceExtensions
         await configuracaoCrawlerSeed.SeedAsync();
 
         // Carregar certificado do MongoDB para o cache em memória
-        var certificadoStore = app.Services.GetRequiredService<ICertificadoStore>();
+        var certificadoStore = scope.ServiceProvider.GetRequiredService<ICertificadoStore>();
         await certificadoStore.CarregarDoBancoAsync();
     }
 

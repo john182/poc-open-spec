@@ -2,6 +2,11 @@ namespace MapaTributario.API.Domain.Entities;
 
 public class CertificadoDigital
 {
+    /// <summary>
+    /// Id fixo para documento único (singleton) — garante upsert atômico.
+    /// </summary>
+    public const string IdFixo = "certificado-unico";
+
     public string Id { get; set; } = null!;
     public byte[] PfxBytes { get; set; } = null!;
     public string Senha { get; set; } = null!;
@@ -21,6 +26,7 @@ public class CertificadoDigital
     {
         return new CertificadoDigital
         {
+            Id = IdFixo,
             PfxBytes = pfxBytes,
             Senha = senha,
             Thumbprint = thumbprint,

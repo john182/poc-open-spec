@@ -45,14 +45,14 @@ public class CertificadoDigitalTests
     }
 
     [Fact]
-    public void Criar_IdDeveSerNuloPorPadrao()
+    public void Criar_DeveDefinirIdComoIdFixo()
     {
         // Arrange & Act
         CertificadoDigital resultado = CertificadoDigital.Criar(
             [0x01], "senha", "thumb", "CN=Teste", DateTime.UtcNow.AddYears(1));
 
-        // Assert — Id é preenchido pelo MongoDB (StringObjectIdGenerator)
-        resultado.Id.ShouldBeNull();
+        // Assert — Id fixo para garantir upsert atômico (documento singleton)
+        resultado.Id.ShouldBe(CertificadoDigital.IdFixo);
     }
 
     [Fact]

@@ -24,8 +24,8 @@ public class CertificadoDigitalRepository : ICertificadoDigitalRepository
 
     public async Task SalvarAsync(CertificadoDigital certificado)
     {
-        await _certificados.DeleteManyAsync(_ => true);
-        await _certificados.InsertOneAsync(certificado);
+        var filtro = Builders<CertificadoDigital>.Filter.Eq(c => c.Id, CertificadoDigital.IdFixo);
+        await _certificados.ReplaceOneAsync(filtro, certificado, new ReplaceOptions { IsUpsert = true });
     }
 
     public async Task RemoverAsync()

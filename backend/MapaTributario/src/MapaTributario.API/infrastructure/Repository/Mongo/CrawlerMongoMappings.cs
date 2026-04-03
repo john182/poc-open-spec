@@ -136,8 +136,7 @@ public static class CrawlerMongoMappings
         {
             cm.AutoMap();
             cm.MapIdMember(c => c.Id)
-                .SetIdGenerator(StringObjectIdGenerator.Instance)
-                .SetSerializer(new StringSerializer(BsonType.ObjectId));
+                .SetSerializer(new StringSerializer(BsonType.String));
             cm.MapMember(c => c.PfxBytes).SetElementName("pfxBytes");
             cm.MapMember(c => c.Senha).SetElementName("senha");
             cm.MapMember(c => c.Thumbprint).SetElementName("thumbprint");

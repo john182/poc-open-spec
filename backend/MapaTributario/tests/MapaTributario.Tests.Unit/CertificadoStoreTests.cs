@@ -3,6 +3,7 @@ using System.Security.Cryptography.X509Certificates;
 using MapaTributario.API.Domain.Entities;
 using MapaTributario.API.Domain.Interfaces;
 using MapaTributario.API.Infrastructure;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Shouldly;
 
@@ -11,6 +12,7 @@ namespace MapaTributario.Tests.Unit;
 public class CertificadoStoreTests
 {
     private readonly Mock<ICertificadoDigitalRepository> _repositorio = new();
+    private readonly Mock<ILogger<CertificadoStore>> _logger = new();
     private readonly CertificadoStore _sut;
 
     public CertificadoStoreTests()
@@ -18,7 +20,7 @@ public class CertificadoStoreTests
         _repositorio.Setup(r => r.SalvarAsync(It.IsAny<CertificadoDigital>())).Returns(Task.CompletedTask);
         _repositorio.Setup(r => r.RemoverAsync()).Returns(Task.CompletedTask);
         _repositorio.Setup(r => r.ObterAsync()).ReturnsAsync((CertificadoDigital?)null);
-        _sut = new CertificadoStore(_repositorio.Object);
+        _sut = new CertificadoStore(_repositorio.Object, _logger.Object);
     }
 
     private static (byte[] pfxBytes, string senha) GerarCertificadoTeste()
@@ -295,5 +297,37 @@ public class CertificadoStoreTests
         _sut.GetCertificate().ShouldNotBeNull();
         _sut.GetCertificate()!.Subject.ShouldContain("CN=DoBancoSegundo");
         _sut.UploadedAt.ShouldBe(entidade.DataUpload);
+    }
+
+    [Fact]
+    public async Task Given_PfxCorrompidoNoBanco_CarregarDoBancoAsync_Should_ManterCacheVazioELogarErro()
+    {
+        // Arrange — simular certificado corrompido armazenado no banco
+        byte[] bytesInvalidos = [0x00, 0x01, 0x02, 0x03];
+        CertificadoDigital entidadeCorrompida = CertificadoDigital.Criar(
+            bytesInvalidos, "qualquer", "THUMB", "CN=Corrompido", DateTime.UtcNow.AddYears(1));
+
+        _repositorio.Setup(r => r.ObterAsync()).ReturnsAsync(entidadeCorrompida);
+
+        // Act
+        await _sut.CarregarDoBancoAsync();
+
+        // Assert — cache deve permanecer vazio
+        _sut.HasCertificate().ShouldBeFalse();
+        _sut.GetCertificate().ShouldBeNull();
+        _sut.UploadedAt.ShouldBeNull();
+        _sut.Thumbprint.ShouldBeNull();
+        _sut.Subject.ShouldBeNull();
+        _sut.ValidoAte.ShouldBeNull();
+
+        // Verificar que o erro foi logado
+        _logger.Verify(
+            l => l.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((o, t) => true),
+                It.IsAny<CryptographicException>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 }

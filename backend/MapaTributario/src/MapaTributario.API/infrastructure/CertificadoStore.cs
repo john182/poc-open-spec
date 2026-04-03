@@ -1,13 +1,16 @@
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using MapaTributario.API.Application.Crawler;
 using MapaTributario.API.Domain.Entities;
 using MapaTributario.API.Domain.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace MapaTributario.API.Infrastructure;
 
 public class CertificadoStore : ICertificadoStore
 {
     private readonly ICertificadoDigitalRepository _repositorio;
+    private readonly ILogger<CertificadoStore> _logger;
     private readonly object _lock = new();
     private byte[]? _pfxBytes;
     private string? _password;
@@ -17,9 +20,10 @@ public class CertificadoStore : ICertificadoStore
     private string? _subject;
     private DateTime? _validoAte;
 
-    public CertificadoStore(ICertificadoDigitalRepository repositorio)
+    public CertificadoStore(ICertificadoDigitalRepository repositorio, ILogger<CertificadoStore> logger)
     {
         _repositorio = repositorio;
+        _logger = logger;
     }
 
     public DateTime? UploadedAt
@@ -117,18 +121,26 @@ public class CertificadoStore : ICertificadoStore
             return;
         }
 
-        X509Certificate2 certificado = X509CertificateLoader.LoadPkcs12(entidade.PfxBytes, entidade.Senha);
-
-        lock (_lock)
+        try
         {
-            _certificate?.Dispose();
-            _pfxBytes = entidade.PfxBytes;
-            _password = entidade.Senha;
-            _certificate = certificado;
-            _uploadedAt = entidade.DataUpload;
-            _thumbprint = entidade.Thumbprint;
-            _subject = entidade.Subject;
-            _validoAte = entidade.ValidoAte;
+            X509Certificate2 certificado = X509CertificateLoader.LoadPkcs12(entidade.PfxBytes, entidade.Senha);
+
+            lock (_lock)
+            {
+                _certificate?.Dispose();
+                _pfxBytes = entidade.PfxBytes;
+                _password = entidade.Senha;
+                _certificate = certificado;
+                _uploadedAt = entidade.DataUpload;
+                _thumbprint = entidade.Thumbprint;
+                _subject = entidade.Subject;
+                _validoAte = entidade.ValidoAte;
+            }
+        }
+        catch (CryptographicException ex)
+        {
+            _logger.LogError(ex,
+                "Certificado armazenado no MongoDB está corrompido ou com senha inválida. Cache permanecerá vazio.");
         }
     }
 }

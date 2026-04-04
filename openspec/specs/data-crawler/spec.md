@@ -64,15 +64,20 @@ The worker SHALL call the NFS-e API at `adn.nfse.gov.br` using HTTPS with client
 ---
 
 ### Requirement: Concurrency control
-The worker SHALL limit concurrent API calls using a configurable semaphore (default: 2 concurrent calls). The worker SHALL enforce a configurable rate limit (default: max 5 requests/second). These conservative defaults exist to protect the PFX certificate from being blocked by the API provider.
+The worker SHALL limit concurrent API calls using a configurable semaphore (default: 20 concurrent calls). The worker SHALL enforce a configurable rate limit (default: max 50 requests/second). The worker SHALL support parallel UF processing with a configurable degree of parallelism (default: 5 UFs simultaneous) via `MaxUfsParalelas`. The rate limiter and certificate protection are shared across all parallel UFs.
 
 #### Scenario: Concurrency limit respected
 - **WHEN** the worker is processing items
-- **THEN** at most N items (default 2) are being fetched from the API simultaneously
+- **THEN** at most N items (default 20) are being fetched from the API simultaneously
 
 #### Scenario: Rate limit enforcement
 - **WHEN** requests would exceed the rate limit
 - **THEN** the worker delays additional requests to stay within the limit
+
+#### Scenario: UF parallelism control
+- **WHEN** the worker starts Phase 1 with `MaxUfsParalelas = 5`
+- **THEN** at most 5 UFs are being discovered simultaneously
+- **AND** the global rate limiter is shared across all UF threads
 
 ---
 
@@ -124,19 +129,48 @@ The worker SHALL retry failed items up to a configurable maximum (default: 3 att
 ---
 
 ### Requirement: Execution tracking
-The worker SHALL record each execution cycle in the `execucoes_crawler` collection with: id, inicio, fim, status (em_andamento/concluido/falha_parcial/falha), tipo (agendado/manual), totalMunicipios, totalServicos, processados, erros, detalhesErro[].
+The worker SHALL record each execution cycle in the `execucoes_crawler` collection with: id, inicio, fim, status (em_andamento/concluido/falha_parcial/falha), tipo (agendado/manual), totalMunicipios, totalServicos, processados, erros, detalhesErro[], ufsProcessadas[], ufsEmAndamento[], progressoUfs{}, faseAtual (descoberta_convenios/sondagem/processamento_fila/concluido). The field `ufsEmAndamento` replaces the previous `ufAtual` to support multiple simultaneous UFs. The worker SHALL also track per-UF progress in `progressoUfs`, where each UF entry SHALL include: uf, status (Pendente/EmAndamento/Concluido/Falha/Interrompido), municipiosEncontrados (count from local database), municipiosAtivos (count confirmed via external API), inicio, fim. The per-UF status SHALL reflect the actual result of the external API calls for that UF, not merely the local database read.
 
 #### Scenario: Execution completed
 - **WHEN** all queue items are processed
-- **THEN** the execution record is updated with final counts and status
+- **THEN** the execution record is updated with final counts, status, and faseAtual set to Concluido
 
 #### Scenario: Execution status endpoint
 - **WHEN** an admin user (role Admin) calls `GET /api/v1/crawler/status`
-- **THEN** the system returns the latest execution record
+- **THEN** the system returns the latest execution record with `ufsEmAndamento` array showing currently processing UFs, including the current phase (faseAtual) and per-UF progress with both municipiosEncontrados and municipiosAtivos
 
 #### Scenario: Execution history
 - **WHEN** an admin user (role Admin) calls `GET /api/v1/crawler/execucoes`
 - **THEN** the system returns the last 20 execution records
+
+#### Scenario: Multiple UFs in progress
+- **WHEN** the crawler is processing 3 UFs simultaneously
+- **THEN** `ufsEmAndamento` contains 3 UF codes
+- **AND** `progressoUfs` shows `EmAndamento` status for each
+
+#### Scenario: Phase tracking during execution
+- **WHEN** the crawler transitions between phases (convenio discovery → probe → queue processing)
+- **THEN** the execution record SHALL be updated with the new faseAtual value and persisted to MongoDB before the new phase begins
+
+#### Scenario: UF progress reflects actual API result
+- **WHEN** the worker verifies convenio for all municipalities of a UF and at least one is active
+- **THEN** the UF progress status SHALL be "Concluido" with municipiosAtivos reflecting the count of active municipalities
+
+#### Scenario: UF progress when all convenio calls fail
+- **WHEN** the worker attempts to verify convenio for all municipalities of a UF and ALL calls fail with HTTP errors
+- **THEN** the UF progress status SHALL be "Falha" with municipiosAtivos = 0
+
+#### Scenario: UF progress when no municipalities are active
+- **WHEN** the worker verifies convenio for all municipalities of a UF and none are active (all return inactive or null)
+- **THEN** the UF progress status SHALL be "Concluido" with municipiosAtivos = 0
+
+#### Scenario: UF progress when processing is interrupted
+- **WHEN** the CertificateProtection halts or budget is exhausted during processing of a UF
+- **THEN** the current UF progress status SHALL be "Interrompido" and remaining unprocessed UFs SHALL remain "Pendente"
+
+#### Scenario: UF progress municipiosEncontrados reflects local database
+- **WHEN** the worker reads municipalities from the local database for a UF
+- **THEN** municipiosEncontrados SHALL reflect the count of municipalities found in the local database, regardless of API call results
 
 ---
 
@@ -227,11 +261,11 @@ The worker SHALL process data for the current competência (current month, forma
 ---
 
 ### Requirement: PFX certificate management via API
-The system SHALL allow administrators to upload, check, and remove the PFX certificate used for mTLS authentication with the NFS-e API. Certificate management endpoints SHALL require Admin role.
+The system SHALL allow administrators to upload, check, and remove the PFX certificate used for mTLS authentication with the NFS-e API. Certificate management endpoints SHALL require Admin role. The certificate SHALL be persisted in MongoDB (collection `certificados_digitais`) for durability across restarts. The system SHALL maintain an in-memory cache for fast access. On application startup, the system SHALL automatically load the certificate from MongoDB. The static file fallback (`NfseApi:CertificatePath`) SHALL be removed — MongoDB is the single source of truth.
 
 #### Scenario: Upload certificate
 - **WHEN** an admin user uploads a PFX file with password via `POST /api/v1/crawler/certificado`
-- **THEN** the system validates the certificate, stores it securely, and returns upload confirmation
+- **THEN** the system validates the certificate, persists it in MongoDB with extracted metadata (thumbprint, subject, validity), updates the in-memory cache, and returns upload confirmation
 
 #### Scenario: Invalid certificate upload
 - **WHEN** an admin user uploads an invalid PFX file or provides wrong password
@@ -239,11 +273,11 @@ The system SHALL allow administrators to upload, check, and remove the PFX certi
 
 #### Scenario: Check certificate status
 - **WHEN** an admin user calls `GET /api/v1/crawler/certificado`
-- **THEN** the system returns whether a certificate is loaded and when it was uploaded
+- **THEN** the system returns certificate availability, upload date, thumbprint, subject, and validity date
 
 #### Scenario: Remove certificate
 - **WHEN** an admin user calls `DELETE /api/v1/crawler/certificado`
-- **THEN** the system removes the stored certificate and returns HTTP 204
+- **THEN** the system removes the certificate from MongoDB, clears the in-memory cache, and returns HTTP 204
 
 #### Scenario: Non-admin access to certificate endpoints
 - **WHEN** a non-admin user attempts any certificate endpoint
@@ -252,6 +286,15 @@ The system SHALL allow administrators to upload, check, and remove the PFX certi
 #### Scenario: Crawler requires certificate
 - **WHEN** the crawler attempts to call the NFS-e API without a loaded certificate
 - **THEN** the system logs the error and marks the execution as failed
+
+#### Scenario: Certificate survives application restart
+- **WHEN** the application restarts after a certificate was previously uploaded
+- **THEN** the system automatically loads the certificate from MongoDB during startup
+- **AND** the crawler can execute without requiring a new manual upload
+
+#### Scenario: Unified availability check
+- **WHEN** any component (Controller, BackgroundService, CrawlerService) checks certificate availability
+- **THEN** all components SHALL use `ICertificadoStore.HasCertificate()` as the single source of truth
 
 ---
 

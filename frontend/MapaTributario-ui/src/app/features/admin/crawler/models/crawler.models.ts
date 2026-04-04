@@ -44,6 +44,9 @@ export interface ExecutarCrawlerResponse {
 export interface CertificadoStatus {
   hasCertificate: boolean;
   uploadedAt: string | null;
+  thumbprint: string | null;
+  subject: string | null;
+  validoAte: string | null;
 }
 
 export interface ConfiguracaoCrawler {

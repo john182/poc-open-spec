@@ -5,7 +5,6 @@ using MapaTributario.API.Domain.Entities;
 using MapaTributario.API.Domain.Interfaces;
 using MapaTributario.API.Infrastructure.External;
 using MapaTributario.API.Infrastructure.External.Contracts;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Shouldly;
@@ -26,7 +25,6 @@ public class CrawlerServiceTests
     private readonly Mock<ICertificateProtection> _certProtection = new();
     private readonly Mock<ICrawlerExecutionGuard> _executionGuard = new();
     private readonly Mock<ICertificadoStore> _certificadoStore = new();
-    private readonly Mock<IConfiguration> _configuration = new();
     private readonly Mock<ILogger<CrawlerService>> _logger = new();
     private readonly CrawlerService _sut;
 
@@ -65,7 +63,6 @@ public class CrawlerServiceTests
             _certProtection.Object,
             _executionGuard.Object,
             _certificadoStore.Object,
-            _configuration.Object,
             _logger.Object);
     }
 
@@ -126,26 +123,6 @@ public class CrawlerServiceTests
 
         // Não deve ter adquirido o guard
         _executionGuard.Verify(g => g.TryAcquire(), Times.Never);
-    }
-
-    [Fact]
-    public void CertificadoDisponivel_ComCertificadoDinamico_RetornaTrue()
-    {
-        // Arrange
-        _certificadoStore.Setup(s => s.HasCertificate()).Returns(true);
-
-        // Act & Assert
-        _sut.CertificadoDisponivel().ShouldBeTrue();
-    }
-
-    [Fact]
-    public void CertificadoDisponivel_SemNenhumCertificado_RetornaFalse()
-    {
-        // Arrange
-        _certificadoStore.Setup(s => s.HasCertificate()).Returns(false);
-
-        // Act & Assert
-        _sut.CertificadoDisponivel().ShouldBeFalse();
     }
 
     [Fact]

@@ -21,12 +21,34 @@ describe('CrawlerCertificadoComponent', () => {
   const certificadoAtivoMock = {
     hasCertificate: true,
     uploadedAt: '2026-03-01T10:00:00Z',
+    thumbprint: 'AB12CD34EF56',
+    subject: 'CN=Empresa Teste LTDA',
+    validoAte: '2027-06-15T12:00:00Z',
   };
 
   const certificadoInativoMock = {
     hasCertificate: false,
     uploadedAt: null,
+    thumbprint: null,
+    subject: null,
+    validoAte: null,
   };
+
+  function criarMockProximoVencimento(): typeof certificadoAtivoMock {
+    const daquiA15Dias = new Date();
+    daquiA15Dias.setDate(daquiA15Dias.getDate() + 15);
+    return {
+      ...certificadoAtivoMock,
+      validoAte: daquiA15Dias.toISOString(),
+    };
+  }
+
+  function criarMockVencido(): typeof certificadoAtivoMock {
+    return {
+      ...certificadoAtivoMock,
+      validoAte: '2025-01-01T00:00:00Z',
+    };
+  }
 
   it('deve exibir loading inicialmente', async () => {
     const { container } = await setup();
@@ -309,5 +331,130 @@ describe('CrawlerCertificadoComponent', () => {
     await waitFor(() => {
       expect(screen.getByText(/Nenhum certificado PFX carregado/)).toBeTruthy();
     });
+  });
+
+  it('Given_CertificadoAtivoComMetadados_Should_ExibirSubjectThumbprintValidade', async () => {
+    // Arrange & Act
+    const { container, httpTesting, fixture } = await setup();
+    httpTesting.expectOne('/api/v1/crawler/certificado').flush(certificadoAtivoMock);
+    fixture.detectChanges();
+
+    // Assert
+    await waitFor(() => {
+      const secaoMetadados = container.querySelector('[data-cy="metadados-certificado"]');
+      expect(secaoMetadados).toBeTruthy();
+      expect(container.querySelector('[data-cy="certificado-subject"]')?.textContent).toContain('CN=Empresa Teste LTDA');
+      expect(container.querySelector('[data-cy="certificado-thumbprint"]')?.textContent).toContain('AB12CD34EF56');
+      expect(container.querySelector('[data-cy="certificado-validade"]')?.textContent).toContain('15/06/2027');
+    });
+  });
+
+  it('Given_CertificadoInativo_Should_NaoExibirMetadados', async () => {
+    // Arrange & Act
+    const { container, httpTesting, fixture } = await setup();
+    httpTesting.expectOne('/api/v1/crawler/certificado').flush(certificadoInativoMock);
+    fixture.detectChanges();
+
+    // Assert
+    await waitFor(() => {
+      expect(container.querySelector('[data-cy="metadados-certificado"]')).toBeNull();
+    });
+  });
+
+  it('Given_CertificadoProximoDoVencimento_Should_ExibirAlertaProximoVencimento', async () => {
+    // Arrange
+    const mock = criarMockProximoVencimento();
+    const { container, httpTesting, fixture } = await setup();
+
+    // Act
+    httpTesting.expectOne('/api/v1/crawler/certificado').flush(mock);
+    fixture.detectChanges();
+
+    // Assert
+    await waitFor(() => {
+      expect(container.querySelector('[data-cy="tag-proximo-vencimento"]')).toBeTruthy();
+      expect(container.querySelector('[data-cy="alerta-certificado-proximo-vencimento"]')).toBeTruthy();
+      expect(container.querySelector('[data-cy="alerta-certificado-proximo-vencimento"]')?.textContent).toContain('vence em');
+    });
+  });
+
+  it('Given_CertificadoVencido_Should_ExibirAlertaVencido', async () => {
+    // Arrange
+    const mock = criarMockVencido();
+    const { container, httpTesting, fixture } = await setup();
+
+    // Act
+    httpTesting.expectOne('/api/v1/crawler/certificado').flush(mock);
+    fixture.detectChanges();
+
+    // Assert
+    await waitFor(() => {
+      expect(container.querySelector('[data-cy="tag-vencido"]')).toBeTruthy();
+      expect(container.querySelector('[data-cy="alerta-certificado-vencido"]')).toBeTruthy();
+      expect(container.querySelector('[data-cy="alerta-certificado-vencido"]')?.textContent).toContain('vencido');
+    });
+  });
+
+  it('Given_CertificadoComValidadeLonga_Should_NaoExibirAlerta', async () => {
+    // Arrange & Act
+    const { container, httpTesting, fixture } = await setup();
+    httpTesting.expectOne('/api/v1/crawler/certificado').flush(certificadoAtivoMock);
+    fixture.detectChanges();
+
+    // Assert
+    await waitFor(() => {
+      expect(container.querySelector('[data-cy="alerta-certificado-vencido"]')).toBeNull();
+      expect(container.querySelector('[data-cy="alerta-certificado-proximo-vencimento"]')).toBeNull();
+      expect(screen.getByText('Ativo')).toBeTruthy();
+    });
+  });
+
+  it('Given_CertificadoProximoDoVencimento_Should_ComputedSinaisCorretos', async () => {
+    // Arrange
+    const mock = criarMockProximoVencimento();
+    const { httpTesting, fixture } = await setup();
+
+    // Act
+    httpTesting.expectOne('/api/v1/crawler/certificado').flush(mock);
+    fixture.detectChanges();
+
+    // Assert
+    const componente = fixture.componentInstance;
+    expect(componente.certificadoProximoDoVencimento()).toBe(true);
+    expect(componente.certificadoVencido()).toBe(false);
+    expect(componente.diasParaVencimento()).toBeLessThanOrEqual(30);
+    expect(componente.diasParaVencimento()).toBeGreaterThan(0);
+  });
+
+  it('Given_CertificadoVencido_Should_ComputedSinaisCorretos', async () => {
+    // Arrange
+    const mock = criarMockVencido();
+    const { httpTesting, fixture } = await setup();
+
+    // Act
+    httpTesting.expectOne('/api/v1/crawler/certificado').flush(mock);
+    fixture.detectChanges();
+
+    // Assert
+    const componente = fixture.componentInstance;
+    expect(componente.certificadoVencido()).toBe(true);
+    expect(componente.certificadoProximoDoVencimento()).toBe(false);
+    expect(componente.diasParaVencimento()).toBeLessThan(0);
+  });
+
+  it('Given_CertificadoSemValidoAte_Should_ComputedSinaisRetornarFalsoOuNull', async () => {
+    // Arrange
+    const mockSemValidade = { ...certificadoAtivoMock, validoAte: null };
+    const { httpTesting, fixture } = await setup();
+
+    // Act
+    httpTesting.expectOne('/api/v1/crawler/certificado').flush(mockSemValidade);
+    fixture.detectChanges();
+
+    // Assert
+    const componente = fixture.componentInstance;
+    expect(componente.certificadoVencido()).toBe(false);
+    expect(componente.certificadoProximoDoVencimento()).toBe(false);
+    expect(componente.diasParaVencimento()).toBeNull();
   });
 });

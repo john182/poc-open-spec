@@ -7,6 +7,10 @@ public interface ICertificadoStore
     Task StoreAsync(byte[] pfxBytes, string password);
     X509Certificate2? GetCertificate();
     bool HasCertificate();
-    void Remove();
+    Task RemoveAsync();
+    Task CarregarDoBancoAsync();
     DateTime? UploadedAt { get; }
+    string? Thumbprint { get; }
+    string? Subject { get; }
+    DateTime? ValidoAte { get; }
 }

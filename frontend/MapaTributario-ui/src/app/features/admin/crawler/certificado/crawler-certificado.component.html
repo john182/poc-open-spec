@@ -11,10 +11,51 @@
       <h3>Status do certificado</h3>
       <div class="status-card">
         @if (statusCertificado()?.hasCertificate) {
-          <p-tag value="Ativo" severity="success" />
-          <span class="status-detalhe">
-            Enviado em: {{ statusCertificado()!.uploadedAt | date:'dd/MM/yyyy HH:mm' }}
-          </span>
+          @if (certificadoVencido()) {
+            <p-tag value="Vencido" severity="danger" data-cy="tag-vencido" />
+          } @else if (certificadoProximoDoVencimento()) {
+            <p-tag value="Próximo do vencimento" severity="warn" data-cy="tag-proximo-vencimento" />
+          } @else {
+            <p-tag value="Ativo" severity="success" />
+          }
+
+          <div class="metadados-certificado" data-cy="metadados-certificado">
+            @if (statusCertificado()!.subject) {
+              <div class="metadado-item">
+                <span class="metadado-label">Titular:</span>
+                <span class="metadado-valor" data-cy="certificado-subject">{{ statusCertificado()!.subject }}</span>
+              </div>
+            }
+            @if (statusCertificado()!.thumbprint) {
+              <div class="metadado-item">
+                <span class="metadado-label">Impressão digital:</span>
+                <span class="metadado-valor metadado-thumbprint" data-cy="certificado-thumbprint">{{ statusCertificado()!.thumbprint }}</span>
+              </div>
+            }
+            @if (statusCertificado()!.validoAte) {
+              <div class="metadado-item">
+                <span class="metadado-label">Validade:</span>
+                <span class="metadado-valor" data-cy="certificado-validade">{{ statusCertificado()!.validoAte | date:'dd/MM/yyyy' }}</span>
+              </div>
+            }
+            <div class="metadado-item">
+              <span class="metadado-label">Enviado em:</span>
+              <span class="metadado-valor">{{ statusCertificado()!.uploadedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          </div>
+
+          @if (certificadoVencido()) {
+            <div class="alerta-vencimento alerta-vencido" data-cy="alerta-certificado-vencido">
+              <i class="pi pi-exclamation-triangle"></i>
+              Este certificado está vencido. Envie um novo certificado.
+            </div>
+          } @else if (certificadoProximoDoVencimento()) {
+            <div class="alerta-vencimento alerta-proximo" data-cy="alerta-certificado-proximo-vencimento">
+              <i class="pi pi-exclamation-triangle"></i>
+              Atenção: o certificado vence em {{ diasParaVencimento() }} dia(s).
+            </div>
+          }
+
           <p-button
             label="Remover certificado"
             icon="pi pi-trash"

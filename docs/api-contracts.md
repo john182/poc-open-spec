@@ -275,7 +275,7 @@ Content-Type: application/json
 
 ## Consulta de Dados
 
-Endpoints **publicos** — nao requerem autenticacao. Qualquer usuario (autenticado ou nao) pode consultar dados.
+Endpoints protegidos — requerem autenticacao JWT via `[Authorize]`. Qualquer usuario autenticado pode consultar dados.
 
 ---
 
@@ -283,7 +283,7 @@ Endpoints **publicos** — nao requerem autenticacao. Qualquer usuario (autentic
 
 Retorna a lista de todos os 27 estados brasileiros.
 
-**Autenticacao:** Nenhuma (endpoint publico)
+**Autenticacao:** JWT Bearer (obrigatorio)
 
 **Parametros:** Nenhum
 
@@ -314,7 +314,7 @@ Retorna a lista de todos os 27 estados brasileiros.
 |-------|------|-----------|
 | sigla | string | Sigla da UF (2 caracteres) |
 | nome | string | Nome completo do estado |
-| regiao | string | Regiao geografica (Norte, Nordeste, Centro-Oeste, Sudeste, Sul) |
+| regiao | string | Sigla da regiao geografica: `N` (Norte), `NE` (Nordeste), `CO` (Centro-Oeste), `SE` (Sudeste), `S` (Sul) |
 
 > **Nota:** O campo `codigo` (codigo IBGE do estado) nao e exposto no response. A sigla da UF e usada como identificador nos endpoints de consulta.
 
@@ -322,6 +322,7 @@ Retorna a lista de todos os 27 estados brasileiros.
 
 ```http
 GET /api/v1/estados HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 
 **Exemplo de resposta (200):**
@@ -331,9 +332,9 @@ HTTP/1.1 200 OK
 Content-Type: application/json
 
 [
-  { "sigla": "AC", "nome": "Acre", "regiao": "Norte" },
-  { "sigla": "AL", "nome": "Alagoas", "regiao": "Nordeste" },
-  { "sigla": "AM", "nome": "Amazonas", "regiao": "Norte" }
+  { "sigla": "AC", "nome": "Acre", "regiao": "N" },
+  { "sigla": "AL", "nome": "Alagoas", "regiao": "NE" },
+  { "sigla": "AM", "nome": "Amazonas", "regiao": "N" }
 ]
 ```
 
@@ -341,9 +342,9 @@ Content-Type: application/json
 
 ### GET /api/v1/estados/:uf/municipios
 
-Retorna a lista de municipios de um estado especifico.
+Retorna a lista de municipios de um estado especifico, com informacoes sobre o status de processamento do crawler.
 
-**Autenticacao:** Nenhuma (endpoint publico)
+**Autenticacao:** JWT Bearer (obrigatorio)
 
 **Path Parameters:**
 
@@ -355,31 +356,45 @@ Retorna a lista de municipios de um estado especifico.
 
 | Status | Descricao |
 |--------|-----------|
-| 200 OK | Lista de municipios do estado |
+| 200 OK | Lista de municipios do estado com status de processamento |
 | 404 Not Found | UF invalida ou nao encontrada |
 
 **Response Body (200):**
 
 ```json
-[
-  {
-    "codigoIbge": 3106200,
-    "nome": "Belo Horizonte",
-    "siglaEstado": "MG"
-  },
-  {
-    "codigoIbge": 3118601,
-    "nome": "Contagem",
-    "siglaEstado": "MG"
-  }
-]
+{
+  "statusProcessamento": "processando",
+  "ultimoProcessamento": "2026-03-15T02:00:00Z",
+  "semCertificado": false,
+  "municipios": [
+    {
+      "codigoIbge": "3106200",
+      "nome": "Belo Horizonte",
+      "siglaEstado": "MG",
+      "possuiAliquotas": true
+    },
+    {
+      "codigoIbge": "3118601",
+      "nome": "Contagem",
+      "siglaEstado": "MG",
+      "possuiAliquotas": false
+    }
+  ]
+}
 ```
 
 | Campo | Tipo | Descricao |
 |-------|------|-----------|
-| codigoIbge | string | Codigo IBGE do municipio (7 digitos) |
-| nome | string | Nome do municipio |
-| siglaEstado | string | Sigla da UF a que pertence |
+| statusProcessamento | string | Status do processamento do crawler para esta UF: `aguardandoProcessamento`, `processando`, `concluido` |
+| ultimoProcessamento | string (ISO 8601) ou null | Data/hora do ultimo processamento concluido |
+| semCertificado | boolean | Se `true`, nao ha certificado PFX disponivel para o crawler |
+| municipios | array | Lista de municipios encontrados pelo crawler |
+| municipios[].codigoIbge | string | Codigo IBGE do municipio (7 digitos) |
+| municipios[].nome | string | Nome do municipio |
+| municipios[].siglaEstado | string | Sigla da UF a que pertence |
+| municipios[].possuiAliquotas | boolean | Se `true`, o municipio ja possui aliquotas coletadas |
+
+> **Nota:** A lista de municipios retornada depende do processamento do crawler. Se o crawler ainda nao processou a UF, a lista pode estar vazia mesmo que existam municipios cadastrados no seed IBGE. O campo `semCertificado` indica se o upload de certificado PFX e necessario antes de iniciar o crawler.
 
 **Response Body (404):**
 
@@ -393,6 +408,7 @@ Retorna a lista de municipios de um estado especifico.
 
 ```http
 GET /api/v1/estados/MG/municipios HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 
 ---
@@ -401,7 +417,7 @@ GET /api/v1/estados/MG/municipios HTTP/1.1
 
 Retorna lista paginada de aliquotas de servicos para um municipio.
 
-**Autenticacao:** Nenhuma (endpoint publico)
+**Autenticacao:** JWT Bearer (obrigatorio)
 
 **Path Parameters:**
 
@@ -499,7 +515,7 @@ GET /api/v1/municipios/3106200/aliquotas HTTP/1.1
 
 Retorna o detalhe de uma aliquota especifica para um servico em um municipio.
 
-**Autenticacao:** Nenhuma (endpoint publico)
+**Autenticacao:** JWT Bearer (obrigatorio)
 
 **Path Parameters:**
 
@@ -524,7 +540,7 @@ Retorna o detalhe de uma aliquota especifica para um servico em um municipio.
   "codigoServico": "010101001",
   "codigoServicoFormatado": "01.01.01.001",
   "descricaoServico": "Analise e desenvolvimento de sistemas",
-  "valorAliquota": 2.00,
+  "aliquota": 2.00,
   "competencia": "2026-03-01",
   "coletadoEm": "2026-03-15T02:34:12Z"
 }
@@ -537,7 +553,7 @@ Retorna o detalhe de uma aliquota especifica para um servico em um municipio.
 | codigoServico | string | Codigo numerico puro |
 | codigoServicoFormatado | string | Codigo formatado com pontos |
 | descricaoServico | string | Descricao do servico |
-| valorAliquota | decimal | Aliquota de ISS em percentual |
+| aliquota | decimal | Aliquota de ISS em percentual (ex: 2.00 = 2%) |
 | competencia | string | Competencia (YYYY-MM-01) |
 | coletadoEm | string (ISO 8601) | Data/hora em que o dado foi coletado da API NFS-e |
 
@@ -559,9 +575,9 @@ GET /api/v1/municipios/3106200/aliquotas/01.01.01.001 HTTP/1.1
 
 ## Crawler Admin
 
-Endpoints para gerenciamento do worker/crawler. Requerem autenticacao JWT via `[Authorize]`. O frontend exibe estes endpoints apenas para administradores (usuarios cujo email consta na configuracao `Admin:Emails`).
+Endpoints para gerenciamento do worker/crawler. Requerem autenticacao JWT com role `Admin` via `[Authorize(Roles = "Admin")]`.
 
-> **Nota:** Atualmente, os endpoints do crawler e certificado exigem apenas `[Authorize]` (qualquer usuario autenticado). A restricao por role Admin e aplicada no frontend. Em versao futura, a validacao de role Admin sera adicionada ao backend.
+> **Nota:** Somente usuarios com a role `Admin` podem acessar estes endpoints. O usuario admin seed (`admin@admin.com`) ja possui esta role.
 
 ---
 
@@ -569,7 +585,7 @@ Endpoints para gerenciamento do worker/crawler. Requerem autenticacao JWT via `[
 
 Dispara uma execucao manual do crawler.
 
-**Autenticacao:** JWT Bearer (obrigatorio)
+**Autenticacao:** JWT Bearer + role Admin
 
 **Request Body (opcional):**
 
@@ -594,7 +610,9 @@ Dispara uma execucao manual do crawler.
 | Status | Descricao |
 |--------|-----------|
 | 202 Accepted | Execucao iniciada com sucesso |
+| 400 Bad Request | Nenhum certificado disponivel |
 | 401 Unauthorized | Token ausente ou invalido |
+| 403 Forbidden | Usuario nao possui role Admin |
 | 409 Conflict | Ja existe uma execucao em andamento |
 
 **Response Body (202):**
@@ -646,7 +664,7 @@ Content-Type: application/json
 
 Retorna o status da execucao mais recente do crawler.
 
-**Autenticacao:** JWT Bearer (obrigatorio)
+**Autenticacao:** JWT Bearer + role Admin
 
 **Parametros:** Nenhum
 
@@ -654,11 +672,11 @@ Retorna o status da execucao mais recente do crawler.
 
 | Status | Descricao |
 |--------|-----------|
-| 200 OK | Status da ultima execucao |
-| 404 Not Found | Nenhuma execucao registrada |
+| 200 OK | Status da ultima execucao (ou status `NenhumaExecucao` se nenhuma execucao registrada) |
 | 401 Unauthorized | Token ausente ou invalido |
+| 403 Forbidden | Usuario nao possui role Admin |
 
-**Response Body (200):**
+**Response Body (200 - com execucao):**
 
 ```json
 {
@@ -667,14 +685,28 @@ Retorna o status da execucao mais recente do crawler.
   "fim": "2026-03-15T03:45:22Z",
   "status": "Concluido",
   "tipo": "Agendado",
-  "totalMunicipios": 27,
-  "totalServicos": 598,
+  "faseAtual": "ProcessamentoFila",
+  "totalMunicipios": 609,
+  "totalServicos": 203,
   "processados": 16146,
   "erros": 12,
   "detalhesErro": [
-    "Timeout apos 30s para municipio 1302603 servico 010101001",
-    "Erro de conexao para municipio 3550308 servico 010102001"
-  ]
+    "Timeout apos 30s para municipio 1302603 servico 010101001"
+  ],
+  "temCertificado": true,
+  "ufAtual": "SP",
+  "ufsEmAndamento": ["SP"],
+  "ufsProcessadas": ["SP", "RJ"],
+  "progressoUfs": {
+    "SP": {
+      "uf": "SP",
+      "status": "EmAndamento",
+      "municipiosEncontrados": 609,
+      "municipiosAtivos": 609,
+      "inicio": "2026-03-15T02:00:00Z",
+      "fim": null
+    }
+  }
 }
 ```
 
@@ -683,23 +715,44 @@ Retorna o status da execucao mais recente do crawler.
 | id | string | Identificador unico da execucao (ObjectId) |
 | inicio | string (ISO 8601) | Data/hora de inicio |
 | fim | string (ISO 8601) ou null | Data/hora de termino (null se em andamento) |
-| status | string | `EmAndamento`, `Concluido`, `FalhaParcial`, `Falha` (valor do enum `StatusExecucao.ToString()`) |
-| tipo | string | `Agendado` ou `Manual` (valor do enum `TipoExecucao.ToString()`) |
-| totalMunicipios | integer | Total de municipios processados |
-| totalServicos | integer | Total de codigos de servico distintos processados |
+| status | string | `NenhumaExecucao`, `EmAndamento`, `Concluido`, `FalhaParcial`, `Falha` |
+| tipo | string | `Agendado` ou `Manual` |
+| faseAtual | string ou null | Fase atual do crawler: `DescobertaConvenios`, `GeraDaFila`, `ProcessamentoFila`, ou null se finalizado |
+| totalMunicipios | integer | Total de municipios a processar |
+| totalServicos | integer | Total de codigos de servico distintos |
 | processados | integer | Total de itens processados com sucesso |
 | erros | integer | Total de itens com erro |
 | detalhesErro | string[] | Lista de mensagens de erro em texto livre |
+| temCertificado | boolean | Se ha certificado PFX disponivel |
+| ufAtual | string ou null | UF sendo processada no momento |
+| ufsEmAndamento | string[] | Lista de UFs em processamento |
+| ufsProcessadas | string[] | Lista de UFs ja processadas |
+| progressoUfs | object | Mapa de progresso por UF, com status individual |
 
-> **Nota:** O campo `detalhesErro` e uma lista de strings (nao objetos estruturados). Quando nao ha execucoes registradas, o endpoint retorna 404 com `{ "erro": "Nenhuma execucao encontrada" }`.
-
-**Response Body (404):**
+**Response Body (200 - sem execucao):**
 
 ```json
 {
-  "erro": "Nenhuma execucao encontrada"
+  "id": "",
+  "inicio": "0001-01-01T00:00:00",
+  "fim": null,
+  "status": "NenhumaExecucao",
+  "tipo": "",
+  "faseAtual": null,
+  "totalMunicipios": 0,
+  "totalServicos": 0,
+  "processados": 0,
+  "erros": 0,
+  "detalhesErro": [],
+  "temCertificado": false,
+  "ufAtual": null,
+  "ufsEmAndamento": [],
+  "ufsProcessadas": [],
+  "progressoUfs": {}
 }
 ```
+
+> **Nota:** Quando nao ha execucoes registradas, o endpoint retorna 200 com status `NenhumaExecucao` (nao 404).
 
 **Exemplo de requisicao:**
 
@@ -714,7 +767,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 Retorna o historico das ultimas 20 execucoes do crawler.
 
-**Autenticacao:** JWT Bearer (obrigatorio)
+**Autenticacao:** JWT Bearer + role Admin
 
 **Parametros:** Nenhum
 
@@ -724,6 +777,7 @@ Retorna o historico das ultimas 20 execucoes do crawler.
 |--------|-----------|
 | 200 OK | Lista de execucoes |
 | 401 Unauthorized | Token ausente ou invalido |
+| 403 Forbidden | Usuario nao possui role Admin |
 
 **Response Body (200):**
 
@@ -777,7 +831,7 @@ Endpoints para gerenciamento do certificado digital PFX usado pelo worker para a
 
 Faz upload de um certificado PFX com senha. Substitui o certificado anterior, se existir.
 
-**Autenticacao:** JWT Bearer (obrigatorio)
+**Autenticacao:** JWT Bearer + role Admin
 
 **Content-Type:** `multipart/form-data`
 
@@ -795,6 +849,7 @@ Faz upload de um certificado PFX com senha. Substitui o certificado anterior, se
 | 200 OK | Certificado carregado com sucesso |
 | 400 Bad Request | Arquivo PFX invalido ou senha incorreta |
 | 401 Unauthorized | Token ausente ou invalido |
+| 403 Forbidden | Usuario nao possui role Admin |
 
 **Response Body (200):**
 
@@ -837,7 +892,7 @@ minhaSenha123
 
 Retorna o status do certificado PFX atualmente carregado.
 
-**Autenticacao:** JWT Bearer (obrigatorio)
+**Autenticacao:** JWT Bearer + role Admin
 
 **Parametros:** Nenhum
 
@@ -847,13 +902,17 @@ Retorna o status do certificado PFX atualmente carregado.
 |--------|-----------|
 | 200 OK | Status do certificado |
 | 401 Unauthorized | Token ausente ou invalido |
+| 403 Forbidden | Usuario nao possui role Admin |
 
 **Response Body (200 - com certificado):**
 
 ```json
 {
   "hasCertificate": true,
-  "uploadedAt": "2024-01-01T00:00:00Z"
+  "uploadedAt": "2026-01-01T00:00:00Z",
+  "thumbprint": "B046004B8CB474EF2A2265B9B5255AD75461AB67",
+  "subject": "CN=EMPRESA LTDA:12345678000199, OU=Certificado PJ A1, ...",
+  "validoAte": "2026-09-29T14:15:00+00:00"
 }
 ```
 
@@ -862,9 +921,20 @@ Retorna o status do certificado PFX atualmente carregado.
 ```json
 {
   "hasCertificate": false,
-  "uploadedAt": null
+  "uploadedAt": null,
+  "thumbprint": null,
+  "subject": null,
+  "validoAte": null
 }
 ```
+
+| Campo | Tipo | Descricao |
+|-------|------|-----------|
+| hasCertificate | boolean | Se ha certificado carregado |
+| uploadedAt | string (ISO 8601) ou null | Data/hora do upload |
+| thumbprint | string ou null | Thumbprint SHA1 do certificado |
+| subject | string ou null | Subject (CN) do certificado |
+| validoAte | string (ISO 8601) ou null | Data de validade do certificado |
 
 **Exemplo de requisicao:**
 
@@ -879,7 +949,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 Remove o certificado PFX atualmente carregado.
 
-**Autenticacao:** JWT Bearer (obrigatorio)
+**Autenticacao:** JWT Bearer + role Admin
 
 **Parametros:** Nenhum
 
@@ -889,6 +959,7 @@ Remove o certificado PFX atualmente carregado.
 |--------|-----------|
 | 200 OK | Certificado removido com sucesso |
 | 401 Unauthorized | Token ausente ou invalido |
+| 403 Forbidden | Usuario nao possui role Admin |
 
 **Response Body (200):**
 

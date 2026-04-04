@@ -825,6 +825,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 Endpoints para gerenciamento do certificado digital PFX usado pelo worker para autenticacao mTLS com a API NFS-e.
 
+> **Persistencia:** O certificado e armazenado no MongoDB (colecao `certificados_digitais`) e carregado em cache de memoria na inicializacao da aplicacao. Isso garante que o certificado sobrevive a reinicializacoes do container sem necessidade de re-upload.
+
 ---
 
 ### POST /api/v1/crawler/certificado

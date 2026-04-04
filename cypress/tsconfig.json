@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["cypress", "@testing-library/cypress"],
+    "types": ["cypress"],
     "moduleResolution": "bundler",
     "module": "ES2022",
     "strict": true,

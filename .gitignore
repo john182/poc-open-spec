@@ -26,5 +26,10 @@ Thumbs.db
 mongo-data/coverage/
 nul
 
+# Cypress
+cypress/cypress/screenshots/
+cypress/cypress/videos/
+cypress/cypress/downloads/
+
 # Playwright MCP
 .playwright-mcp/

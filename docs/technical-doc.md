@@ -50,8 +50,8 @@ graph TB
             WK["Worker BackgroundService<br/>CrawlerService, NfseApiClient"]
         end
 
-        subgraph "Container: MongoDB 7 - porta 27017"
-            DB["MongoDB<br/>8 colecoes"]
+        subgraph "Container: MongoDB 7 - porta 27018 (host) / 27017 (interno)"
+            DB["MongoDB<br/>9 colecoes"]
         end
 
         subgraph "Container: Cypress - apenas dev/CI"
@@ -93,7 +93,7 @@ graph TB
 | **Documentacao API** | OpenAPI | 3.0 | Endpoint JSON bruto em `/openapi/v1.json` (apenas em Development); sem Swagger UI; gerado automaticamente pelo ASP.NET Core `AddOpenApi()` |
 | **Testes Backend** | xUnit | latest | Padrao .NET; suporte a injecao de dependencia e paralelismo |
 | **Testes Frontend** | Vitest | 4.x | Rapido; ja configurado no projeto Angular |
-| **E2E Tests** | Cypress | 13.x | DX excelente para testes de UI; seletores estaveis; bom suporte a SPA |
+| **E2E Tests** | Cypress | 14.4.1 | DX excelente para testes de UI; seletores estaveis; bom suporte a SPA |
 | **Servidor Web** | Nginx | alpine | Embutido no container frontend (multi-stage build); serve SPA Angular; proxy reverso para backend |
 | **Containerizacao** | Docker | - | Ambiente reprodutivel; multi-stage builds para imagens otimizadas |
 | **Orquestracao** | Docker Compose | v2 | Orquestracao local simples; define servicos, redes, volumes |
@@ -134,6 +134,7 @@ erDiagram
     FILA_PROCESSAMENTO }|--|| MUNICIPIOS : "referencia"
     FILA_PROCESSAMENTO }|--|| SERVICOS : "referencia"
     CONFIGURACOES_CRAWLER ||--|| CONFIGURACOES_CRAWLER : "singleton ativo"
+    CERTIFICADOS_DIGITAIS ||--|| CERTIFICADOS_DIGITAIS : "singleton unico"
 
     ESTADOS {
         ObjectId _id PK
@@ -220,6 +221,16 @@ erDiagram
         int paralelismo
         datetime criadoEm
         datetime atualizadoEm
+    }
+
+    CERTIFICADOS_DIGITAIS {
+        string _id PK
+        bytes pfxBytes
+        string senha
+        string thumbprint
+        string subject
+        datetime validoAte
+        datetime criadoEm
     }
 ```
 
@@ -396,6 +407,24 @@ Configuracoes de comportamento do crawler (timeouts, retry, paralelismo, CRON, e
 
 ---
 
+#### `certificados_digitais`
+
+Armazena o certificado digital PFX para autenticacao mTLS com a API NFS-e. Singleton com ID fixo — apenas um certificado ativo por vez. Persistido em MongoDB e carregado em cache de memoria na inicializacao da aplicacao.
+
+| Campo | Tipo | Descricao | Exemplo |
+|-------|------|-----------|---------|
+| `_id` | string | Identificador fixo (sempre `"certificado_digital_unico"`) | `"certificado_digital_unico"` |
+| `pfxBytes` | bytes | Conteudo binario do arquivo PFX | (binario) |
+| `senha` | string | Senha do certificado PFX (texto plano) | `"MinhaSenha"` |
+| `thumbprint` | string | Thumbprint (hash) do certificado | `"AB12CD34..."` |
+| `subject` | string | Subject (CN) do certificado | `"EMPRESA LTDA:12345678000190"` |
+| `validoAte` | datetime | Data de expiracao do certificado | `2027-01-15T00:00:00Z` |
+| `criadoEm` | datetime | Timestamp de upload do certificado | `2026-04-01T10:30:00Z` |
+
+> **Nota:** O certificado PFX e armazenado sem criptografia adicional no MongoDB. Esta e uma decisao consciente para o POC. Em producao, considerar criptografia at-rest ou um vault dedicado (Azure Key Vault, HashiCorp Vault).
+
+---
+
 ## 4. Fluxo de Autenticacao JWT
 
 ### 4.1 Registro e Login
@@ -466,7 +495,7 @@ sequenceDiagram
         B-->>F: 200 OK { dados }
     end
 
-    Note over F,B: Nota: Endpoints de consulta (/api/v1/estados, municipios, aliquotas) sao publicos e nao requerem JWT.
+    Note over F,B: Nota: Endpoints de consulta (/api/v1/estados, municipios, aliquotas) requerem JWT (qualquer usuario autenticado) mas nao exigem role Admin.
 
     rect rgb(255, 230, 230)
         Note over F,B: Token Expirado - Refresh Automatico
@@ -731,7 +760,7 @@ graph TB
 
             BE["backend<br/>build: ./backend/MapaTributario<br/>image: .NET 10 runtime<br/>ports: 5000:5000<br/>depends_on: mongodb<br/>env: JWT_SECRET, MONGO_URI"]
 
-            MG["mongodb<br/>image: mongo:7<br/>ports: 27017:27017<br/>volumes: mongo-data:/data/db"]
+            MG["mongodb<br/>image: mongo:7<br/>ports: 27018:27017<br/>volumes: mongo-data:/data/db"]
         end
     end
 
@@ -978,15 +1007,17 @@ backend/MapaTributario/
 │       │   ├── Resilience/
 │       │   │   ├── RateLimiter.cs
 │       │   │   └── CircuitBreaker.cs
-│       │   └── Crawler/
-│       │       ├── CertificadoStore.cs    # Armazenamento de certificado PFX em memoria
-│       │       └── ExecutionGuard.cs      # Controle de execucao concorrente do crawler
+│       │   ├── Crawler/
+│       │   │   ├── CertificadoStore.cs    # Armazenamento de certificado PFX: persistido em MongoDB + cache em memoria
+│       │   │   └── ExecutionGuard.cs      # Controle de execucao concorrente do crawler
+│       │   └── Repository/
+│       │       ├── CertificadoDigitalRepository.cs # Repositorio MongoDB para colecao certificados_digitais
 │       │
 │       ├── Controllers/
 │       │   ├── AuthController.cs
-│       │   ├── ConsultaController.cs      # Endpoints publicos (sem [Authorize])
-│       │   ├── CrawlerController.cs       # Requer JWT ([Authorize])
-│       │   ├── CertificadoController.cs   # Requer JWT ([Authorize])
+│       │   ├── ConsultaController.cs      # Requer JWT ([Authorize], qualquer usuario autenticado)
+│       │   ├── CrawlerController.cs       # Requer JWT + Role Admin ([Authorize(Roles = "Admin")])
+│       │   ├── CertificadoController.cs   # Requer JWT + Role Admin ([Authorize(Roles = "Admin")])
 │       │   └── HealthController.cs
 │       ├── Middleware/
 │       │   └── ErrorHandlingMiddleware.cs
@@ -1017,8 +1048,8 @@ backend/MapaTributario/
 
 - **Projeto unico com separacao por pastas:** As camadas Domain, Application, Infrastructure e API/Host coexistem em um unico projeto (`MapaTributario.API`). A separacao e logica, via pastas e namespaces. Isso simplifica build e deploy sem sacrificar organizacao.
 - **DI por camada:** O `Program.cs` chama `AddMapaTributarioInfrastructure()` (MongoDB, repositorios, auth infra, certificado, seed, API client) e `AddMapaTributarioApplication()` (services, use cases, resiliencia, JWT auth, FluentValidation, background service). Cada extension registra apenas os componentes de sua camada.
-- **Indices centralizados:** A classe `MongoIndexSetup` cria todos os indices de todas as 8 colecoes em um unico ponto, chamado na inicializacao via `app.ApplyMongoIndexesAsync()`. Repositorios nao criam indices em seus construtores.
-- **Endpoints de consulta publicos:** Os endpoints `/api/v1/estados`, `/api/v1/estados/:uf/municipios`, `/api/v1/municipios/:codigoIbge/aliquotas` e `/api/v1/municipios/:codigoIbge/aliquotas/:codigoServico` nao possuem `[Authorize]`. Os endpoints do crawler e certificado exigem JWT (`[Authorize]`), mas sem validacao de role Admin no backend; a restricao por perfil e aplicada pelo frontend.
+- **Indices centralizados:** A classe `MongoIndexSetup` cria todos os indices de todas as 9 colecoes em um unico ponto, chamado na inicializacao via `app.ApplyMongoIndexesAsync()`. Repositorios nao criam indices em seus construtores.
+- **Endpoints de consulta autenticados:** Os endpoints `/api/v1/estados`, `/api/v1/estados/:uf/municipios`, `/api/v1/municipios/:codigoIbge/aliquotas` e `/api/v1/municipios/:codigoIbge/aliquotas/:codigoServico` possuem `[Authorize]` (qualquer usuario autenticado). Os endpoints do crawler e certificado exigem `[Authorize(Roles = "Admin")]`.
 
 ### 8.2 Frontend Angular - Feature Modules
 
@@ -1289,3 +1320,4 @@ Os contratos de API estao documentados manualmente em [`docs/api-contracts.md`](
 | Data | Versao | Descricao |
 |------|--------|-----------|
 | 2026-03-31 | 1.0 | Versao inicial do documento tecnico |
+| 2026-04-04 | 1.1 | Atualizacao pos-implementacao: correcao de portas MongoDB (27018), versao Cypress (14.4.1), adicao colecao certificados_digitais, correcao de autorizacao dos endpoints de consulta ([Authorize]), atualizacao do numero de colecoes (9) |

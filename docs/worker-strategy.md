@@ -626,7 +626,7 @@ Os parametros abaixo permanecem em `appsettings.json` por serem relacionados a i
 | CircuitBreaker.MinimumSamples | 10 | Minimo de amostras para avaliar o circuito |
 | MunicipalityRediscoveryDays | 30 | Dias para reverificar municipios inativos |
 | EnableHistoricalCollection | false | Habilitar coleta historica de aliquotas |
-| Certificate (via API) | - | O certificado PFX e gerenciado via endpoints REST: `POST /api/v1/crawler/certificado` (upload), `GET /api/v1/crawler/certificado` (status), `DELETE /api/v1/crawler/certificado` (remover). Nao requer variavel de ambiente. |
+| Certificate (via API) | - | O certificado PFX e gerenciado via endpoints REST: `POST /api/v1/crawler/certificado` (upload), `GET /api/v1/crawler/certificado` (status), `DELETE /api/v1/crawler/certificado` (remover). Nao requer variavel de ambiente. O certificado e **persistido no MongoDB** (colecao `certificados_digitais`) e carregado em cache de memoria na inicializacao da aplicacao, sobrevivendo a reinicializacoes do container. |
 
 ### Variaveis de ambiente
 

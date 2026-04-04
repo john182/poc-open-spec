@@ -5,7 +5,7 @@
 
 ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
 ![Angular 21](https://img.shields.io/badge/Angular-21-DD0031?logo=angular&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-8.0-47A248?logo=mongodb&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248?logo=mongodb&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
 [![SonarQube Cloud](https://sonarcloud.io/images/project_badges/sonarcloud-light.svg)](https://sonarcloud.io/summary/new_code?id=john182_poc-open-spec)
@@ -108,6 +108,7 @@ docker compose up --build
 | [Design Tokens](docs/design-tokens.md) | Tokens CSS, variaveis de tema, personalizacao PrimeNG |
 | [Estrategia de PRs](docs/pr-strategy.md) | Fluxo de branches, convencao de commits, processo de review |
 | [API Externa NFS-e](docs/external-api-analysis.md) | Analise da API adn.nfse.gov.br, endpoints, autenticacao mTLS |
+| [Benchmark do Crawler](docs/crawler-benchmark-otimizacao.md) | Resultados de benchmark e otimizacoes de performance do crawler |
 
 ---
 
@@ -126,7 +127,7 @@ docker compose up --build
 cd backend/MapaTributario
 dotnet restore
 dotnet run --project src/MapaTributario.API
-# API disponivel em https://localhost:5001
+# API disponivel em http://localhost:5000
 ```
 
 ### Frontend
@@ -141,8 +142,10 @@ ng serve
 ### MongoDB (standalone)
 
 ```bash
-docker run -d -p 27017:27017 --name mongo mongo:8
+docker run -d -p 27018:27017 --name mongo mongo:7
 ```
+
+> **Nota:** A porta padrão do host para o MongoDB neste projeto e `27018` (mapeada para `27017` dentro do container), conforme definido no `docker-compose.yml`.
 
 ---
 
@@ -174,7 +177,7 @@ npx cypress run
 | POST | /api/v1/auth/login | Login (retorna JWT) |
 | POST | /api/v1/auth/refresh | Refresh do access token |
 
-### Consulta (publicos)
+### Consulta (requerem JWT)
 
 | Metodo | Endpoint | Descricao |
 |--------|----------|-----------|
@@ -210,7 +213,7 @@ npx cypress run
 ### Round 1 — Concluido
 
 - [x] **Infra Docker** — Docker Compose, Dockerfiles, Nginx, .env
-- [x] **Backend Auth** — JWT auth (register/login/refresh), DDD, FluentResults, FluentValidation, 97% coverage
+- [x] **Backend Auth** — JWT auth (register/login/refresh), DDD, FluentResults, FluentValidation
 - [x] **Frontend Foundation** — Layout PrimeNG, design tokens, componentes base, rotas, Vitest + Cypress base
 
 ### Round 2 — Concluido
@@ -221,8 +224,6 @@ npx cypress run
 - [x] **Frontend Role Control** — RoleService, AdminGuard, menu condicional por role
 - [x] **Frontend Consulta** — Mapa do Brasil, selecao estado/municipio, listagem aliquotas com filtros
 - [x] **Frontend Crawler Admin** — Status, execucao manual, certificado, historico de execucoes
-- [x] **E2E Cypress** — Testes de auth, layout, navegacao, consulta e crawler admin
-- [x] **Docs** — Contratos, especificacoes, estrategias documentadas
 
 ### Round 3 — Concluido
 
@@ -231,7 +232,22 @@ npx cypress run
 - [x] **Tela Angular Admin** — Configuracao do crawler, tooltips, labels sem detalhes de implementacao
 - [x] **Tracking por UF** — Progresso por UF com polling 5s na tela de status
 - [x] **Capitais Primeiro** — Botao que processa capitais estaduais primeiro, depois demais municipios
-- [x] **Testes** — 230 unit backend, 210 unit frontend, 7 specs E2E Cypress
+
+### Integracao e Qualidade — Concluido
+
+- [x] **Integracao Ponta a Ponta (Issue #9)** — Fluxo completo admin: upload certificado, configurar crawler, executar, consultar aliquotas coletadas
+- [x] **E2E Cypress (Issue #10)** — 48 testes E2E cobrindo auth, layout, consulta, crawler admin e erros
+- [x] **Persistencia de Certificado PFX** — Certificado armazenado em MongoDB (colecao `certificados_digitais`) com cache em memoria
+- [x] **Documentacao Final (Issue #11)** — Atualizacao de README, contratos, diagramas e estrategia de testes
+
+### Metricas de Teste
+
+| Camada | Testes | Framework |
+|--------|--------|-----------|
+| Backend unitario | 457 | xUnit + Moq + Shouldly |
+| Backend integracao | 38 | xUnit + Testcontainers + MongoDB |
+| Frontend unitario | 281 | Vitest + Angular Testing Library |
+| E2E | 48 (5 specs) | Cypress 14.4.1 |
 
 ---
 
@@ -244,4 +260,4 @@ GET /parametrizacao/{municipio}/{servico}/{competencia}/aliquota
 GET /parametrizacao/{municipio}/convenio
 ```
 
-Consulte `openspec/changes/full-stack-aliquotas-municipais/docs/external-api-analysis.md` para detalhes completos.
+Consulte `docs/external-api-analysis.md` para detalhes completos.

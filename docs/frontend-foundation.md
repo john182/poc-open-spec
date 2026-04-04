@@ -802,7 +802,7 @@ export interface ProgressoUf {
 
 ### Cobertura Atual
 
-- **210 testes unitarios** passando (Vitest + Testing Library)
+- **281 testes unitarios** passando (Vitest + Testing Library)
 - Build de producao sem erros
 
 ### Testes do Crawler

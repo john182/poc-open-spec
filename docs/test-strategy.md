@@ -27,8 +27,8 @@ A estrategia segue a piramide classica de testes, priorizando testes unitarios n
 ### Framework e Ferramentas
 
 - **Framework:** xUnit
-- **Mocking:** NSubstitute
-- **Assertions:** FluentAssertions
+- **Mocking:** Moq
+- **Assertions:** Shouldly
 - **Dados de teste:** Bogus (quando necessario gerar massa)
 
 ### O que testar
@@ -204,96 +204,60 @@ frontend/
 ### Estrutura do Projeto
 
 ```
-e2e/
-  cypress/
-    e2e/
-      auth.cy.ts
-      navigation.cy.ts
-      map.cy.ts
-      consultation.cy.ts
-      errors.cy.ts
-    fixtures/
-      users.json
-      estados.json
-      municipios.json
-      servicos.json
-    support/
-      commands.ts
-      e2e.ts
-    plugins/
-      index.ts
-  cypress.config.ts
-  tsconfig.json
+cypress/
+  e2e/
+    auth.cy.ts
+    navigation.cy.ts
+    map.cy.ts
+    consultation.cy.ts
+    errors.cy.ts
+  support/
+    commands.ts
+    e2e.ts
+cypress.config.ts
 ```
 
 ### Ambiente de Teste
 
-O ambiente E2E roda inteiramente via Docker Compose com perfil de teste.
+Os testes E2E rodam contra o ambiente Docker Compose do projeto (`docker compose up`). Os containers do backend, frontend e MongoDB precisam estar rodando.
 
-```yaml
-# docker-compose.e2e.yml
-services:
-  api:
-    build: ./backend
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Test
-      - MongoDB__ConnectionString=mongodb://mongodb-e2e:27017
-      - MongoDB__DatabaseName=mapatributario_e2e
-    depends_on:
-      - mongodb-e2e
+```bash
+# Subir ambiente
+docker compose up -d
 
-  mongodb-e2e:
-    image: mongo:7
-    ports:
-      - "27019:27017"
+# Rodar testes E2E (da raiz do projeto)
+npx cypress run
 
-  frontend:
-    build: ./frontend
-    ports:
-      - "4200:80"
-    depends_on:
-      - api
-
-  seed:
-    build: ./backend
-    command: ["dotnet", "run", "--project", "Seed", "--", "--environment", "e2e"]
-    depends_on:
-      - mongodb-e2e
+# Ou em modo interativo
+npx cypress open
 ```
+
+O Cypress se conecta ao frontend via `http://localhost:4200` (configuravel no `cypress.config.ts`). O seed automatico do backend garante dados iniciais (estados, municipios, servicos, usuario admin `admin@admin.com` / `12345678`).
 
 ### Estrategia de Seed
 
-A massa de dados para E2E deve ser:
+A massa de dados para E2E vem do seed automatico do backend (que roda na inicializacao):
 
-1. **Deterministica:** Mesmos dados toda vez, sem aleatoriedade
-2. **Minima:** Apenas o necessario para cobrir os cenarios
-3. **Isolada:** Cada execucao comeca com dados limpos
+1. **Deterministica:** Seed via `AdminSeedService`, `EstadosSeed`, `MunicipiosSeed`, `ServicosSeed`, `ConfiguracaoCrawlerSeed`
+2. **Completa:** Todos os 27 estados, ~5.570 municipios, 203 servicos, usuario admin com role Admin
+3. **Automatica:** Executada na inicializacao do backend, sem necessidade de setup manual
 
-**Dados de seed:**
-- 2 usuarios (um valido, um para teste de permissao)
-- 3 estados com dados completos (SP, RJ, MG)
-- 5 municipios por estado de teste
-- 10 servicos com aliquotas variadas por municipio de teste
-- 1 municipio sem servicos (para testar estado vazio)
+**Dados de seed disponiveis:**
+- 1 usuario admin (email: `admin@admin.com`, senha: `12345678`, role: Admin)
+- 27 estados brasileiros
+- ~5.570 municipios (todos os municipios IBGE)
+- 203 codigos de servico (LC 116/2003)
+- 1 configuracao padrao do crawler
 
 ### Custom Commands
 
 ```typescript
 // support/commands.ts
 
-// Autenticacao
+// Autenticacao via UI (login atraves do formulario)
 Cypress.Commands.add('login', (email?: string, password?: string) => { /* ... */ });
-Cypress.Commands.add('logout', () => { /* ... */ });
-Cypress.Commands.add('register', (user: RegisterPayload) => { /* ... */ });
 
-// Navegacao
-Cypress.Commands.add('navigateTo', (route: string) => { /* ... */ });
-
-// API
-Cypress.Commands.add('seedDatabase', () => { /* ... */ });
-Cypress.Commands.add('resetDatabase', () => { /* ... */ });
-
-// Seletores
+// Seletores por atributo data-cy
 Cypress.Commands.add('getByCy', (selector: string) => {
   return cy.get(`[data-cy="${selector}"]`);
 });
@@ -382,69 +346,39 @@ Usar atributo `data-cy` para todos os elementos que serao acessados nos testes E
 
 ## Massa de Dados
 
-### Fixtures
+Os testes E2E utilizam os dados de seed do backend (carregados automaticamente na inicializacao). O login padrao para testes e:
 
 ```json
-// fixtures/users.json
 {
-  "validUser": {
-    "name": "Usuario Teste",
-    "email": "teste@mapatributario.com",
-    "password": "Teste@123"
-  },
-  "invalidUser": {
-    "email": "invalido@teste.com",
-    "password": "senhaerrada"
-  }
+  "email": "admin@admin.com",
+  "password": "12345678"
 }
 ```
 
-```json
-// fixtures/estados.json
-{
-  "estados": [
-    { "uf": "SP", "nome": "Sao Paulo", "totalMunicipios": 5 },
-    { "uf": "RJ", "nome": "Rio de Janeiro", "totalMunicipios": 5 },
-    { "uf": "MG", "nome": "Minas Gerais", "totalMunicipios": 5 }
-  ]
-}
-```
-
-```json
-// fixtures/municipios.json
-{
-  "SP": [
-    { "codigo": "3550308", "nome": "Sao Paulo", "totalServicos": 10 },
-    { "codigo": "3509502", "nome": "Campinas", "totalServicos": 8 },
-    { "codigo": "3547809", "nome": "Santos", "totalServicos": 0 }
-  ]
-}
-```
+Os testes que precisam de um usuario novo utilizam o fluxo de registro via UI.
 
 ### Estrategia de Reset
 
-Antes de cada suite:
-1. Chamar endpoint de reset do banco de teste: `POST /api/test/reset`
-2. Executar seed: `POST /api/test/seed`
-3. Verificar que seed foi aplicado: `GET /api/test/health`
-
-Esses endpoints so existem quando `ASPNETCORE_ENVIRONMENT=Test`.
+Os testes sao projetados para funcionar com o seed existente, sem necessidade de reset entre execucoes. O custom command `cy.login()` realiza login via UI e armazena o token para uso nas requisicoes subsequentes.
 
 ---
 
 ## Ambiente de Teste
 
-### Docker Compose - Perfil de Teste
+### Como Executar
 
 ```bash
-# Subir ambiente de testes
-docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d
+# 1. Subir ambiente completo
+docker compose up -d
 
-# Rodar testes E2E
-cd e2e && npx cypress run
+# 2. Rodar testes unitarios backend
+cd backend/MapaTributario && dotnet test --no-restore --verbosity minimal
 
-# Derrubar ambiente
-docker compose -f docker-compose.yml -f docker-compose.e2e.yml down -v
+# 3. Rodar testes unitarios frontend
+cd frontend/MapaTributario-ui && npx ng test --watch=false
+
+# 4. Rodar testes E2E (da raiz do projeto, com containers rodando)
+npx cypress run
 ```
 
 ### CI Pipeline
@@ -459,6 +393,17 @@ docker compose -f docker-compose.yml -f docker-compose.e2e.yml down -v
 7. Coletar relatorios de cobertura
 8. Derrubar ambiente
 ```
+
+---
+
+## Metricas Atuais (pos-implementacao)
+
+| Camada | Testes | Framework | Status |
+|--------|--------|-----------|--------|
+| Backend unitario | 457 | xUnit + Moq + Shouldly | Passando |
+| Backend integracao | 38 | xUnit + Testcontainers + MongoDB | Passando |
+| Frontend unitario | 281 | Vitest + Angular Testing Library | Passando |
+| E2E | 48 (5 specs) | Cypress 14.4.1 | Passando |
 
 ---
 

@@ -166,8 +166,9 @@ describe('Autenticação', () => {
       cy.visit('/consulta');
       cy.getByDataCy('consulta-page').should('be.visible');
 
-      // Act
-      cy.getByDataCy('logout-button').click();
+      // Act — abrir popover do menu de usuário e clicar em Sair
+      cy.getByDataCy('user-menu-trigger').click();
+      cy.getByDataCy('menu-sair').click();
 
       // Assert
       cy.url().should('include', '/auth/login');

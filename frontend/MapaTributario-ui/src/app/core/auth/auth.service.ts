@@ -95,6 +95,11 @@ export class AuthService {
     this._refreshInProgress = value;
   }
 
+  atualizarToken(novoToken: string): void {
+    this._setItem('accessToken', novoToken);
+    this._updateUserFromToken(novoToken);
+  }
+
   private _handleAuthSuccess(authResponse: AuthResponse): void {
     this._setItem('accessToken', authResponse.accessToken);
     this._setItem('refreshToken', authResponse.refreshToken);

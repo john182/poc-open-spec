@@ -4,6 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import { PLATFORM_ID } from '@angular/core';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { AppTopbarComponent } from './app-topbar.component';
 import { LayoutService } from '../services/layout.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -14,6 +15,7 @@ describe('AppTopbarComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideAnimationsAsync(),
         provideRouter([
           { path: '', component: {} as any },
           { path: 'auth/login', component: {} as any },
@@ -94,14 +96,28 @@ describe('AppTopbarComponent', () => {
   });
 
   it('Given_CliqueBotaoLogout_Should_ChamarLogout', async () => {
-    // Arrange
+    // Arrange — simular token válido para que o menu do usuário apareça
+    const header = btoa(JSON.stringify({ alg: 'HS256' }));
+    const payload = btoa(JSON.stringify({ sub: '1', email: 'user@test.com', name: 'João Silva', exp: Math.floor(Date.now() / 1000) + 3600 }));
+    const token = `${header}.${payload}.sig`;
+    localStorage.setItem('rememberMe', 'true');
+    localStorage.setItem('accessToken', token);
+
     const { container, authService } = await setup();
-    const espiao = vi.spyOn(authService, 'logout');
-    const botaoLogout = container.querySelector('[data-cy="logout-button"]') as HTMLButtonElement;
-    expect(botaoLogout).toBeTruthy();
+    // Espionar logout sem executar a navegação para evitar problemas de teardown do Popover
+    const espiao = vi.spyOn(authService, 'logout').mockImplementation(() => {});
+
+    // Abrir o menu do usuário
+    const menuTrigger = container.querySelector('[data-cy="user-menu-trigger"]') as HTMLButtonElement;
+    expect(menuTrigger).toBeTruthy();
+    fireEvent.click(menuTrigger);
+
+    // Clicar no botão "Sair" dentro do popover
+    const botaoSair = document.querySelector('[data-cy="menu-sair"]') as HTMLButtonElement;
+    expect(botaoSair).toBeTruthy();
 
     // Act
-    fireEvent.click(botaoLogout);
+    fireEvent.click(botaoSair);
 
     // Assert
     expect(espiao).toHaveBeenCalledTimes(1);
@@ -151,5 +167,49 @@ describe('AppTopbarComponent', () => {
     // Assert
     expect(botaoDarkMode!.getAttribute('aria-label')).toBe('Ativar tema escuro');
     expect(botaoDarkMode!.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('Given_UsuarioAutenticado_Should_ExibirBotaoMenuUsuario', async () => {
+    // Arrange
+    const header = btoa(JSON.stringify({ alg: 'HS256' }));
+    const payload = btoa(JSON.stringify({ sub: '1', email: 'user@test.com', name: 'João Silva', exp: Math.floor(Date.now() / 1000) + 3600 }));
+    const token = `${header}.${payload}.sig`;
+    localStorage.setItem('rememberMe', 'true');
+    localStorage.setItem('accessToken', token);
+
+    const { container } = await setup();
+
+    // Assert
+    const menuTrigger = container.querySelector('[data-cy="user-menu-trigger"]') as HTMLButtonElement;
+    expect(menuTrigger).toBeTruthy();
+    expect(menuTrigger.getAttribute('aria-label')).toBe('Menu do usuário');
+  });
+
+  it('Given_CliqueMenuUsuario_Should_ExibirLinkMeuPerfil', async () => {
+    // Arrange
+    const header = btoa(JSON.stringify({ alg: 'HS256' }));
+    const payload = btoa(JSON.stringify({ sub: '1', email: 'user@test.com', name: 'João Silva', exp: Math.floor(Date.now() / 1000) + 3600 }));
+    const token = `${header}.${payload}.sig`;
+    localStorage.setItem('rememberMe', 'true');
+    localStorage.setItem('accessToken', token);
+
+    const { container } = await setup();
+
+    // Abrir o menu
+    const menuTrigger = container.querySelector('[data-cy="user-menu-trigger"]') as HTMLButtonElement;
+    fireEvent.click(menuTrigger);
+
+    // Assert
+    const linkPerfil = document.querySelector('[data-cy="menu-meu-perfil"]') as HTMLAnchorElement;
+    expect(linkPerfil).toBeTruthy();
+    expect(linkPerfil.textContent).toContain('Meu Perfil');
+  });
+
+  it('Given_UsuarioNaoAutenticado_Should_NaoExibirBotaoMenuUsuario', async () => {
+    // Arrange — sem token
+    const { container } = await setup();
+
+    // Assert
+    expect(container.querySelector('[data-cy="user-menu-trigger"]')).toBeNull();
   });
 });

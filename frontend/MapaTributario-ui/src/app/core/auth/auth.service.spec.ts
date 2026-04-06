@@ -204,6 +204,33 @@ describe('AuthService', () => {
     });
   });
 
+  describe('atualizarToken', () => {
+    it('deve atualizar token local e userName', () => {
+      localStorage.setItem('rememberMe', 'true');
+      const novoPayload = { ...validPayload, 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name': 'Nome Atualizado' };
+      const novoToken = makeJwt(novoPayload);
+
+      service.atualizarToken(novoToken);
+
+      expect(service.getAccessToken()).toBe(novoToken);
+      expect(service.userName()).toBe('Nome Atualizado');
+    });
+
+    it('deve preservar userName de email quando name nao existe no token', () => {
+      localStorage.setItem('rememberMe', 'true');
+      const payloadSemNome = {
+        'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier': 'user-123',
+        'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress': 'email@test.com',
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      };
+      const token = makeJwt(payloadSemNome);
+
+      service.atualizarToken(token);
+
+      expect(service.userName()).toBe('email@test.com');
+    });
+  });
+
   describe('token decode', () => {
     it('deve extrair userName de claims padrao quando claims .NET nao existem', () => {
       const stdPayload = { sub: 'u1', email: 'std@test.com', name: 'Std User', exp: Math.floor(Date.now() / 1000) + 3600 };

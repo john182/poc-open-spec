@@ -66,7 +66,7 @@ describe('PerfilComponent', () => {
     expect(nomeInput.value).toBe('João Silva');
     expect(emailInput).toBeTruthy();
     expect(emailInput.value).toBe('joao@test.com');
-    expect(emailInput.disabled).toBe(true);
+    expect(emailInput.readOnly).toBe(true);
   });
 
   it('deve exibir mensagem de erro ao falhar ao carregar perfil', async () => {

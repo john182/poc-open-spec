@@ -111,6 +111,20 @@ public class PerfilControllerTests
         notFound.Value!.ToString().ShouldContain("Usuário não encontrado");
     }
 
+    [Fact]
+    public async Task Given_UsuarioSemClaimDeId_ObterPerfil_Should_RetornarUnauthorized()
+    {
+        // Arrange
+        var sut = CriarSut(null);
+
+        // Act
+        var resultado = await sut.ObterPerfil();
+
+        // Assert
+        UnauthorizedObjectResult unauthorized = resultado.ShouldBeOfType<UnauthorizedObjectResult>();
+        unauthorized.Value!.ToString().ShouldContain("Usuário não identificado");
+    }
+
     // ── AtualizarPerfil (PUT) ───────────────────────────────────────
 
     [Fact]
@@ -200,5 +214,38 @@ public class PerfilControllerTests
         // Assert
         BadRequestObjectResult badRequest = resultado.ShouldBeOfType<BadRequestObjectResult>();
         badRequest.Value!.ToString().ShouldContain("Validação falhou");
+    }
+
+    [Fact]
+    public async Task Given_UsuarioSemClaimDeId_AtualizarPerfil_Should_RetornarUnauthorized()
+    {
+        // Arrange
+        var sut = CriarSut(null);
+        ConfigurarValidacaoComSucesso();
+        var request = new AtualizarPerfilRequest { Nome = "Novo Nome" };
+
+        // Act
+        var resultado = await sut.AtualizarPerfil(request, _atualizarValidator.Object);
+
+        // Assert
+        UnauthorizedObjectResult unauthorized = resultado.ShouldBeOfType<UnauthorizedObjectResult>();
+        unauthorized.Value!.ToString().ShouldContain("Usuário não identificado");
+    }
+
+    [Fact]
+    public async Task Given_UsuarioNaoEncontrado_AtualizarPerfil_Should_RetornarNotFound()
+    {
+        // Arrange
+        var sut = CriarSut();
+        ConfigurarValidacaoComSucesso();
+        _userRepository.Setup(r => r.GetByIdAsync(UsuarioId)).ReturnsAsync((User?)null);
+        var request = new AtualizarPerfilRequest { Nome = "Novo Nome" };
+
+        // Act
+        var resultado = await sut.AtualizarPerfil(request, _atualizarValidator.Object);
+
+        // Assert
+        NotFoundObjectResult notFound = resultado.ShouldBeOfType<NotFoundObjectResult>();
+        notFound.Value!.ToString().ShouldContain("Usuário não encontrado");
     }
 }

@@ -38,7 +38,7 @@ export class PerfilComponent implements OnInit {
   readonly form = this._fb.nonNullable.group(
     {
       nome: ['', [Validators.required, Validators.minLength(2)]],
-      email: [{ value: '', disabled: true }],
+      email: [''],
       senhaAtual: [''],
       novaSenha: [''],
       confirmarNovaSenha: [''],

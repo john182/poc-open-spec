@@ -229,6 +229,31 @@ describe('AuthService', () => {
 
       expect(service.userName()).toBe('email@test.com');
     });
+
+    it('deve atualizar token no sessionStorage quando token original esta em sessionStorage', () => {
+      localStorage.setItem('rememberMe', 'false');
+      sessionStorage.setItem('accessToken', 'token-antigo');
+      const novoPayload = { ...validPayload, 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name': 'Nome Session' };
+      const novoToken = makeJwt(novoPayload);
+
+      service.atualizarToken(novoToken);
+
+      expect(sessionStorage.getItem('accessToken')).toBe(novoToken);
+      expect(localStorage.getItem('accessToken')).toBeNull();
+      expect(service.userName()).toBe('Nome Session');
+    });
+
+    it('deve atualizar token no localStorage quando token original esta em localStorage', () => {
+      localStorage.setItem('rememberMe', 'false');
+      localStorage.setItem('accessToken', 'token-antigo-local');
+      const novoPayload = { ...validPayload, 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name': 'Nome Local' };
+      const novoToken = makeJwt(novoPayload);
+
+      service.atualizarToken(novoToken);
+
+      expect(localStorage.getItem('accessToken')).toBe(novoToken);
+      expect(service.userName()).toBe('Nome Local');
+    });
   });
 
   describe('token decode', () => {

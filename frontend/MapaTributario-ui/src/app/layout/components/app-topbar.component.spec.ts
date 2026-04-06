@@ -105,7 +105,7 @@ describe('AppTopbarComponent', () => {
 
     const { container, authService } = await setup();
     // Espionar logout sem executar a navegação para evitar problemas de teardown do Popover
-    const espiao = vi.spyOn(authService, 'logout').mockImplementation(() => {});
+    const espiao = vi.spyOn(authService, 'logout').mockImplementation(() => { /* noop para evitar teardown do Popover */ });
 
     // Abrir o menu do usuário
     const menuTrigger = container.querySelector('[data-cy="user-menu-trigger"]') as HTMLButtonElement;

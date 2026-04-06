@@ -11,16 +11,27 @@
   <div class="layout-topbar-actions">
     <div class="layout-config-menu">
       @if (authService.userName()) {
-        <div class="layout-topbar-action flex items-center gap-2" data-cy="user-name">
+        <button type="button" class="layout-topbar-action flex items-center gap-2" data-cy="user-menu-trigger" (click)="toggleMenuUsuario($event)" aria-label="Menu do usuário">
           <i class="pi pi-user"></i>
-          <span class="text-surface-700 dark:text-surface-200 font-medium">{{ authService.userName() }}</span>
-        </div>
+          <span class="text-surface-700 dark:text-surface-200 font-medium" data-cy="user-name">{{ authService.userName() }}</span>
+          <i class="pi pi-chevron-down text-xs"></i>
+        </button>
+
+        <p-popover #menuUsuario data-cy="user-menu-popover">
+          <div class="flex flex-col gap-1 w-48">
+            <a routerLink="/perfil" class="flex items-center gap-2 p-3 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 cursor-pointer no-underline text-surface-700 dark:text-surface-200" data-cy="menu-meu-perfil" (click)="fecharMenuUsuario()">
+              <i class="pi pi-user-edit"></i>
+              <span>Meu Perfil</span>
+            </a>
+            <button type="button" class="flex items-center gap-2 p-3 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 cursor-pointer w-full border-none bg-transparent text-surface-700 dark:text-surface-200 text-left" data-cy="menu-sair" (click)="logout()">
+              <i class="pi pi-sign-out"></i>
+              <span>Sair</span>
+            </button>
+          </div>
+        </p-popover>
       }
       <button type="button" class="layout-topbar-action" (click)="toggleDarkMode()" [attr.aria-label]="layoutService.isDarkTheme() ? 'Ativar tema claro' : 'Ativar tema escuro'" [attr.aria-pressed]="layoutService.isDarkTheme()">
         <i [ngClass]="{ 'pi': true, 'pi-moon': layoutService.isDarkTheme(), 'pi-sun': !layoutService.isDarkTheme() }"></i>
-      </button>
-      <button type="button" class="layout-topbar-action" (click)="logout()" aria-label="Sair" data-cy="logout-button">
-        <i class="pi pi-sign-out"></i>
       </button>
     </div>
   </div>

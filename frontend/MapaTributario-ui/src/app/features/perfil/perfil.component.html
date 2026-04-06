@@ -1,0 +1,63 @@
+<div class="perfil-container flex justify-center p-6" data-cy="perfil-page">
+  <p-card header="Meu Perfil" styleClass="w-full max-w-2xl">
+    @if (carregando()) {
+      <div class="flex justify-center p-8">
+        <i class="pi pi-spinner pi-spin text-4xl"></i>
+      </div>
+    } @else {
+      @if (mensagemSucesso()) {
+        <p-message severity="success" [text]="mensagemSucesso()" styleClass="w-full mb-4" />
+      }
+      @if (mensagemErro()) {
+        <p-message severity="error" [text]="mensagemErro()" styleClass="w-full mb-4" />
+      }
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="flex flex-col gap-4">
+          <div>
+            <label for="nome" class="block font-medium mb-2">Nome</label>
+            <input pInputText id="nome" formControlName="nome" class="w-full" data-cy="perfil-nome" />
+            @if (form.controls.nome.touched && form.controls.nome.errors) {
+              <small class="text-red-500 block mt-1">
+                @if (form.controls.nome.errors['required']) { Nome é obrigatório. }
+                @else if (form.controls.nome.errors['minlength']) { Nome deve ter pelo menos 2 caracteres. }
+              </small>
+            }
+          </div>
+
+          <div>
+            <label for="email" class="block font-medium mb-2">Email</label>
+            <input pInputText id="email" formControlName="email" class="w-full" data-cy="perfil-email" readonly />
+            <small class="text-muted-color block mt-1">O email não pode ser alterado.</small>
+          </div>
+
+          <p-divider />
+
+          <h3 class="text-lg font-medium m-0">Alterar Senha <span class="text-muted-color text-sm font-normal">(opcional)</span></h3>
+
+          <div>
+            <label for="senhaAtual" class="block font-medium mb-2">Senha Atual</label>
+            <p-password id="senhaAtual" formControlName="senhaAtual" [toggleMask]="true" [fluid]="true" [feedback]="false" data-cy="perfil-senha-atual" />
+          </div>
+
+          <div>
+            <label for="novaSenha" class="block font-medium mb-2">Nova Senha</label>
+            <p-password id="novaSenha" formControlName="novaSenha" [toggleMask]="true" [fluid]="true" [feedback]="false" data-cy="perfil-nova-senha" />
+          </div>
+
+          <div>
+            <label for="confirmarNovaSenha" class="block font-medium mb-2">Confirmar Nova Senha</label>
+            <p-password id="confirmarNovaSenha" formControlName="confirmarNovaSenha" [toggleMask]="true" [fluid]="true" [feedback]="false" data-cy="perfil-confirmar-nova-senha" />
+            @if (form.hasError('senhasNaoConferem') && form.controls.confirmarNovaSenha.touched) {
+              <small class="text-red-500 block mt-1">As senhas não coincidem.</small>
+            }
+          </div>
+        </div>
+
+        <div class="flex justify-end mt-6">
+          <p-button type="submit" label="Salvar" icon="pi pi-check" [loading]="salvando()" [disabled]="salvando()" data-cy="perfil-salvar" />
+        </div>
+      </form>
+    }
+  </p-card>
+</div>

@@ -95,6 +95,11 @@ export class AuthService {
     this._refreshInProgress = value;
   }
 
+  atualizarToken(novoToken: string): void {
+    this._atualizarTokenNoStorageCorreto('accessToken', novoToken);
+    this._updateUserFromToken(novoToken);
+  }
+
   private _handleAuthSuccess(authResponse: AuthResponse): void {
     this._setItem('accessToken', authResponse.accessToken);
     this._setItem('refreshToken', authResponse.refreshToken);
@@ -169,6 +174,17 @@ export class AuthService {
   private _setRemember(lembrar: boolean): void {
     if (isPlatformBrowser(this._platformId)) {
       localStorage.setItem('rememberMe', String(lembrar));
+    }
+  }
+
+  private _atualizarTokenNoStorageCorreto(chave: string, valor: string): void {
+    if (!isPlatformBrowser(this._platformId)) return;
+    if (localStorage.getItem(chave) !== null) {
+      localStorage.setItem(chave, valor);
+    } else if (sessionStorage.getItem(chave) !== null) {
+      sessionStorage.setItem(chave, valor);
+    } else {
+      this._setItem(chave, valor);
     }
   }
 }

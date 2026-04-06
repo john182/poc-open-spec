@@ -30,4 +30,14 @@ public class UserRepository : IUserRepository
     {
         return await _users.Find(u => u.Id == id).FirstOrDefaultAsync();
     }
+
+    public async Task AtualizarAsync(User user)
+    {
+        var filtro = Builders<User>.Filter.Eq(u => u.Id, user.Id);
+        var atualizacao = Builders<User>.Update
+            .Set(u => u.Nome, user.Nome)
+            .Set(u => u.PasswordHash, user.PasswordHash);
+
+        await _users.UpdateOneAsync(filtro, atualizacao);
+    }
 }

@@ -12,6 +12,9 @@
   - [POST /api/v1/auth/register](#post-apiv1authregister)
   - [POST /api/v1/auth/login](#post-apiv1authlogin)
   - [POST /api/v1/auth/refresh](#post-apiv1authrefresh)
+- [Perfil do Usuario](#perfil-do-usuario)
+  - [GET /api/v1/perfil](#get-apiv1perfil)
+  - [PUT /api/v1/perfil](#put-apiv1perfil)
 - [Consulta de Dados](#consulta-de-dados)
   - [GET /api/v1/estados](#get-apiv1estados)
   - [GET /api/v1/estados/:uf/municipios](#get-apiv1estadosufmunicipios)
@@ -268,6 +271,179 @@ Content-Type: application/json
   "accessToken": "eyJhbGciOiJIUzI1NiIs...(novo token)",
   "refreshToken": "dGhpcyBpcyBhIG5vdm8gcmVm...(novo refresh)",
   "expiresIn": 3600
+}
+```
+
+---
+
+## Perfil do Usuario
+
+Endpoints protegidos para visualizacao e edicao do perfil do usuario autenticado.
+
+---
+
+### GET /api/v1/perfil
+
+Retorna os dados do perfil do usuario autenticado.
+
+**Autenticacao:** JWT Bearer (obrigatorio)
+
+**Parametros:** Nenhum
+
+**Respostas:**
+
+| Status | Descricao |
+|--------|-----------|
+| 200 OK | Dados do perfil retornados com sucesso |
+| 401 Unauthorized | Token ausente ou invalido |
+
+**Response Body (200):**
+
+```json
+{
+  "id": "string",
+  "nome": "string",
+  "email": "string"
+}
+```
+
+| Campo | Tipo | Descricao |
+|-------|------|-----------|
+| id | string | Identificador unico do usuario (ObjectId) |
+| nome | string | Nome do usuario |
+| email | string | Email do usuario |
+
+**Exemplo de requisicao:**
+
+```http
+GET /api/v1/perfil HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+**Exemplo de resposta (200):**
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "id": "660f1a2b3c4d5e6f7a8b9c0d",
+  "nome": "Maria Silva",
+  "email": "maria@exemplo.com"
+}
+```
+
+---
+
+### PUT /api/v1/perfil
+
+Atualiza o perfil do usuario autenticado. Permite alterar o nome e, opcionalmente, a senha.
+
+**Autenticacao:** JWT Bearer (obrigatorio)
+
+**Request Body:**
+
+```json
+{
+  "nome": "string (required, min 2 caracteres)",
+  "senhaAtual": "string (required se novaSenha informada)",
+  "novaSenha": "string (optional, min 8 caracteres)"
+}
+```
+
+| Campo | Tipo | Obrigatorio | Descricao |
+|-------|------|-------------|-----------|
+| nome | string | Sim | Novo nome do usuario (min 2 caracteres) |
+| senhaAtual | string | Condicional | Senha atual para verificacao. Obrigatoria quando `novaSenha` e informada |
+| novaSenha | string | Nao | Nova senha desejada (min 8 caracteres). Se omitida ou vazia, a senha nao e alterada |
+
+> **Nota:** Se apenas `nome` for informado (sem `senhaAtual` e `novaSenha`), somente o nome e atualizado. Se `novaSenha` for informada, `senhaAtual` e obrigatoria para validacao.
+
+**Respostas:**
+
+| Status | Descricao |
+|--------|-----------|
+| 200 OK | Perfil atualizado com sucesso |
+| 400 Bad Request | Validacao falhou ou senha atual incorreta |
+| 401 Unauthorized | Token ausente ou invalido |
+
+**Response Body (200):**
+
+```json
+{
+  "id": "string",
+  "nome": "string",
+  "email": "string",
+  "accessToken": "string (JWT)"
+}
+```
+
+| Campo | Tipo | Descricao |
+|-------|------|-----------|
+| id | string | Identificador unico do usuario |
+| nome | string | Nome atualizado |
+| email | string | Email do usuario (nao alteravel) |
+| accessToken | string | Novo JWT contendo o nome atualizado nos claims |
+
+> **Nota:** O endpoint retorna um novo `accessToken` para que o frontend atualize imediatamente o nome exibido na topbar sem necessidade de re-login.
+
+**Response Body (400 — validacao):**
+
+```json
+{
+  "erro": "Validacao falhou",
+  "detalhes": [
+    "Nome e obrigatorio",
+    "Nova senha deve ter no minimo 8 caracteres"
+  ]
+}
+```
+
+**Response Body (400 — senha incorreta):**
+
+```json
+{
+  "erro": "Senha atual incorreta"
+}
+```
+
+**Exemplo de requisicao (somente nome):**
+
+```http
+PUT /api/v1/perfil HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+Content-Type: application/json
+
+{
+  "nome": "Maria Silva Atualizada"
+}
+```
+
+**Exemplo de requisicao (nome + senha):**
+
+```http
+PUT /api/v1/perfil HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+Content-Type: application/json
+
+{
+  "nome": "Maria Silva",
+  "senhaAtual": "MinhaSenh@123",
+  "novaSenha": "NovaSenha@456"
+}
+```
+
+**Exemplo de resposta (200):**
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "id": "660f1a2b3c4d5e6f7a8b9c0d",
+  "nome": "Maria Silva Atualizada",
+  "email": "maria@exemplo.com",
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...(novo token com nome atualizado)"
 }
 ```
 

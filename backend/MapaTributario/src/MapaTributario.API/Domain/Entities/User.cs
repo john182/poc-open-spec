@@ -28,4 +28,20 @@ public class User
     public void SetId(string id) => Id = id;
 
     public void Deactivate() => Ativo = false;
+
+    public void AtualizarNome(string nome)
+    {
+        if (string.IsNullOrWhiteSpace(nome))
+            throw new ArgumentException("Nome não pode ser vazio.", nameof(nome));
+
+        Nome = nome;
+    }
+
+    public void AtualizarSenha(string novoHash)
+    {
+        if (string.IsNullOrWhiteSpace(novoHash))
+            throw new ArgumentException("Hash da senha não pode ser vazio.", nameof(novoHash));
+
+        PasswordHash = novoHash;
+    }
 }
